@@ -2,10 +2,13 @@ package app.aaps.pump.omnipod.common.bledriver.comm.legacy.io
 
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
+import android.os.SystemClock
 import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.logging.LTag
 import app.aaps.pump.omnipod.common.bledriver.comm.OmnipodDashBleManagerImpl
 import app.aaps.pump.omnipod.common.bledriver.comm.command.BleCommand
 import app.aaps.pump.omnipod.common.bledriver.comm.command.BleCommandHello
+import app.aaps.pump.omnipod.common.bledriver.comm.command.BleCommandType
 import app.aaps.pump.omnipod.common.bledriver.comm.interfaces.io.BleConfirmError
 import app.aaps.pump.omnipod.common.bledriver.comm.interfaces.io.BleConfirmIncorrectData
 import app.aaps.pump.omnipod.common.bledriver.comm.interfaces.io.BleConfirmResult
@@ -16,13 +19,13 @@ import app.aaps.pump.omnipod.common.bledriver.comm.legacy.callbacks.BleCommCallb
 import java.util.concurrent.BlockingQueue
 
 class CmdBleIO(
-    logger: AAPSLogger,
+    private val aapsLogger: AAPSLogger,
     characteristic: BluetoothGattCharacteristic,
     private val incomingPackets: BlockingQueue<ByteArray>,
     gatt: BluetoothGatt,
     bleCommCallbacks: BleCommCallbacks
 ) : BleIO(
-    logger,
+    aapsLogger,
     characteristic,
     incomingPackets,
     gatt,
@@ -37,12 +40,30 @@ class CmdBleIO(
     override fun hello() = sendAndConfirmPacket(BleCommandHello(OmnipodDashBleManagerImpl.CONTROLLER_ID).data)
 
     override fun expectCommandType(expected: BleCommand, timeoutMs: Long): BleConfirmResult {
-        return receivePacket(timeoutMs)?.let {
-            if (it.isNotEmpty() && it[0] == expected.data[0])
-                BleConfirmSuccess
-            else
-                BleConfirmIncorrectData(it)
+        val deadlineMs = SystemClock.elapsedRealtime() + timeoutMs
+        while (true) {
+            val remainingMs = deadlineMs - SystemClock.elapsedRealtime()
+            if (remainingMs <= 0) {
+                return BleConfirmError("Error reading packet")
+            }
+            val received = receivePacket(remainingMs) ?: return BleConfirmError("Error reading packet")
+            when {
+                received.isEmpty()                                       ->
+                    return BleConfirmIncorrectData(received)
+
+                received[0] == expected.data[0]                          ->
+                    return BleConfirmSuccess
+
+                received[0] == BleCommandType.PAIR_STATUS.value          -> {
+                    aapsLogger.debug(
+                        LTag.PUMPBTCOMM,
+                        "expectCommandType: skipping intermediate PAIR_STATUS while waiting for $expected"
+                    )
+                }
+
+                else                                                     ->
+                    return BleConfirmIncorrectData(received)
+            }
         }
-            ?: BleConfirmError("Error reading packet")
     }
 }

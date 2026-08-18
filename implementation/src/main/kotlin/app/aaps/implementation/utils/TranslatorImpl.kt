@@ -334,6 +334,7 @@ class TranslatorImpl @Inject internal constructor(
         Sources.Omnipod                            -> TODO()
         Sources.OmnipodEros                        -> TODO()
         Sources.OmnipodDash                        -> TODO()
+        Sources.Omnipod5                           -> TODO()
         Sources.MDI                                -> TODO()
         Sources.VirtualPump                        -> TODO()
         Sources.Treatments                         -> TODO()
