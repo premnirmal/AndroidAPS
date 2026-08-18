@@ -13,6 +13,8 @@ object BleCommandSuccess : BleCommand(BleCommandType.SUCCESS)
 
 object BleCommandFail : BleCommand(BleCommandType.FAIL)
 
+object BleCommandPairStatus : BleCommand(BleCommandType.PAIR_STATUS)
+
 data class BleCommandNack(val idx: Byte) : BleCommand(BleCommandType.NACK, byteArrayOf(idx)) {
     companion object {
 
@@ -34,8 +36,8 @@ data class BleCommandNack(val idx: Byte) : BleCommand(BleCommandType.NACK, byteA
 data class BleCommandHello(private val controllerId: Int) : BleCommand(
     BleCommandType.HELLO,
     ByteBuffer.allocate(6)
-        .put(1.toByte()) // TODO find the meaning of this constant
-        .put(4.toByte()) // TODO find the meaning of this constant
+        .put(1.toByte())
+        .put(4.toByte())
         .putInt(controllerId).array()
 )
 
@@ -92,6 +94,9 @@ sealed class BleCommand(val data: ByteArray) {
 
                     BleCommandType.FAIL      ->
                         BleCommandFail
+
+                    BleCommandType.PAIR_STATUS ->
+                        BleCommandPairStatus
 
                     BleCommandType.HELLO     ->
                         BleCommandIncorrect("Incorrect hello command received", payload)
