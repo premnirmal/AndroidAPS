@@ -153,6 +153,7 @@ class UserEntryPresentationHelperImpl @Inject constructor(
         Sources.Omnipod             -> IcPatchPump
         Sources.OmnipodDash         -> IcPatchPump
         Sources.OmnipodEros         -> IcPatchPump
+        Sources.Omnipod5            -> IcPatchPump
         Sources.Ottai               -> IcPluginSyai
         Sources.Overview            -> Icons.Default.Home
         Sources.PocTech             -> IcPluginPocTec
@@ -240,6 +241,7 @@ class UserEntryPresentationHelperImpl @Inject constructor(
         Sources.Omnipod             -> ElementType.PUMP.color()
         Sources.OmnipodDash         -> ElementType.PUMP.color()
         Sources.OmnipodEros         -> ElementType.PUMP.color()
+        Sources.Omnipod5            -> ElementType.PUMP.color()
         Sources.Ottai               -> ElementType.CGM_DEX.color()
         Sources.Overview            -> ElementType.AAPS.color()
         Sources.PocTech             -> ElementType.CGM_DEX.color()
