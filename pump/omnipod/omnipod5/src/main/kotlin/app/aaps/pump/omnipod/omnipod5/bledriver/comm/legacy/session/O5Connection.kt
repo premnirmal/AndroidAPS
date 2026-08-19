@@ -117,10 +117,11 @@ class O5Connection(
             connectionWaitCond.timeoutMs = newTimeout
         }
         podState.bluetoothConnectionState = O5PodStateManager.BluetoothConnectionState.CONNECTED
-
+        aapsLogger.debug(LTag.PUMPBTCOMM, "GATT connected (O5) to ${podDevice.address}, discovering services")
 
         val discoverer = ServiceDiscoverer(aapsLogger, gatt, bleCommCallbacks, this)
         val discovered = discoverer.discoverServices(connectionWaitCond, PodType.OMNIPOD_5)
+        aapsLogger.debug(LTag.PUMPBTCOMM, "Service discovery complete (O5): characteristics=${discovered.keys}")
 
         enableHeartbeatNotifications(gatt)
 
@@ -140,9 +141,11 @@ class O5Connection(
             CharacteristicType.DATA_O5
         )
         msgIO = MessageIO(aapsLogger, cmdBleIO, dataBleIO, PodType.OMNIPOD_5)
+        aapsLogger.debug(LTag.PUMPBTCOMM, "Performing O5 CMD 'hello' handshake and enabling reads")
         cmdBleIO.hello()
         cmdBleIO.readyToRead()
         dataBleIO.readyToRead()
+        aapsLogger.debug(LTag.PUMPBTCOMM, "O5 BLE connection ready (message IO established) for ${podDevice.address}")
         _connectionWaitCond = null
     }
 
@@ -251,10 +254,15 @@ class O5Connection(
      */
     override fun establishSession(ltk: ByteArray, msgSeq: Byte, ids: Ids, eapSqn: ByteArray): EapSqn? {
         val mIO = msgIO ?: throw ConnectException("Connection lost")
+        aapsLogger.debug(
+            LTag.PUMPBTCOMM,
+            "Establishing O5 session (EAP-AKA): msgSeq=$msgSeq, ltk=${ltk.size} bytes, eapSqn=${eapSqn.toHex()}, ids=$ids"
+        )
 
         val eapAkaExchanger = SessionEstablisher(aapsLogger, config, mIO, ltk, eapSqn, ids, msgSeq)
         return when (val keys = eapAkaExchanger.negotiateSessionKeys()) {
             is SessionNegotiationResynchronization -> {
+                aapsLogger.debug(LTag.PUMPBTCOMM, "O5 EAP-AKA requested SQN resynchronization: ${keys.synchronizedEapSqn}")
                 if (config.DEBUG) {
                     aapsLogger.info(LTag.PUMPCOMM, "EAP AKA resynchronization (O5): ${keys.synchronizedEapSqn}")
                 }
@@ -273,6 +281,10 @@ class O5Connection(
                 }
                 val certStore = O5CertificateStore(aapsLogger, p256KeyGenerator, controllerId)
                 session = Session(aapsLogger, mIO, ids, sessionKeys = keys, enDecrypt = enDecrypt, commandSigner = certStore)
+                aapsLogger.debug(
+                    LTag.PUMPBTCOMM,
+                    "O5 session established - encrypted channel ready (msgSeq=${keys.msgSequenceNumber})"
+                )
                 null
             }
         }

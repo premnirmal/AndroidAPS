@@ -74,6 +74,7 @@ class PodTypeAwarePodScanner(
         scanner.stopScan(collector)
 
         val found = collector.collect()
+        aapsLogger.debug(LTag.PUMPBTCOMM, "Scan for $podType complete: ${found.size} pairable pod(s) found")
         return when {
             found.isEmpty()    -> throw ScanException("No pairable $podType pod found")
             found.size > 1     -> throw ScanFailFoundTooManyException(found)
@@ -113,6 +114,10 @@ private class PodTypeAwareScanCollector(
         }
 
         found[result.device.address] = PodTypeAwareDiscoveredDevice(result, advertisement)
+        aapsLogger.debug(
+            LTag.PUMPBTCOMM,
+            "Accepted pairable $podType pod: address=${result.device.address}, podId=${advertisement.podId}"
+        )
     }
 
     override fun onScanFailed(errorCode: Int) {

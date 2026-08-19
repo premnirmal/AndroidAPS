@@ -2,6 +2,7 @@ package app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair
 
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.utils.toHex
 import app.aaps.pump.omnipod.common.bledriver.comm.exceptions.PairingException
 import app.aaps.pump.omnipod.common.bledriver.comm.pair.CommandSigner
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.util.P256Codec
@@ -65,7 +66,28 @@ class O5CertificateStore(
             )
         }
 
-        aapsLogger.debug(LTag.PUMPBTCOMM, "O5CertificateStore initialized for controller 0x%08X".format(controllerId))
+        val tlsCert = registration.tlsCertificate
+        val intermediateCA = registration.intermediateCA
+        val tlsSerial = tlsCert?.let { extractSerialNumber(it) }
+        aapsLogger.debug(
+            LTag.PUMPBTCOMM,
+            "O5CertificateStore initialized for controller 0x%08X (source=%s): tlsCert=%s bytes, intermediateCA=%s bytes, tlsSerial=%s, signingPublicKey=%d bytes"
+                .format(
+                    controllerId,
+                    O5RegistrationData.source(controllerId),
+                    tlsCert?.size?.toString() ?: "null",
+                    intermediateCA?.size?.toString() ?: "null",
+                    tlsSerial?.toHex() ?: "unavailable",
+                    signingPublicKeyRaw.size
+                )
+        )
+        if (tlsCert != null && extractP256PublicKey(tlsCert) == null) {
+            aapsLogger.warn(
+                LTag.PUMPBTCOMM,
+                "O5CertificateStore: could not extract P-256 public key from TLS certificate for controller 0x%08X"
+                    .format(controllerId)
+            )
+        }
     }
 
     /** Sign [data] with the secondary key; returns the raw signature (r || s, 64 bytes). */
@@ -74,7 +96,12 @@ class O5CertificateStore(
         val signature = Signature.getInstance(SIGNATURE_ALGORITHM)
         signature.initSign(privateKey)
         signature.update(data)
-        return derSignatureToRaw(signature.sign())
+        val raw = derSignatureToRaw(signature.sign())
+        aapsLogger.debug(
+            LTag.PUMPBTCOMM,
+            "O5 signRaw: signed ${data.size} bytes with secondary key -> ${raw.size}-byte raw signature"
+        )
+        return raw
     }
 
     companion object {
