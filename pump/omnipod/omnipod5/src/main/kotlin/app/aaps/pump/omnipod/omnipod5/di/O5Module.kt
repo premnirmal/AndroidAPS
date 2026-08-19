@@ -55,6 +55,6 @@ abstract class O5Module {
     @Binds
     @PumpDriver
     @IntoMap
-    @IntKey(1140)
+    @IntKey(1085)
     abstract fun bindO5PumpPlugin(plugin: O5PumpPlugin): PluginBase
 }
