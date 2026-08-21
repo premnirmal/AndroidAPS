@@ -124,6 +124,8 @@ class O5Connection(
         val discovered = discoverer.discoverServices(connectionWaitCond, PodType.OMNIPOD_5)
         aapsLogger.debug(LTag.PUMPBTCOMM, "Service discovery complete (O5): characteristics=${discovered.keys}")
 
+        requestLargeMtu(gatt)
+
         enableHeartbeatNotifications(gatt)
 
         val cmdBleIO = CmdBleIO(
@@ -175,6 +177,35 @@ class O5Connection(
             session = null
             msgIO = null
             podState.bluetoothConnectionState = O5PodStateManager.BluetoothConnectionState.DISCONNECTED
+        }
+    }
+
+    /**
+     * O5 messages are sent as single GATT writes up to [PodType.OMNIPOD_5]'s 244-byte
+     * packet payload (see BlePacketLayout.OMNIPOD_5), which needs an ATT MTU of at least
+     * [MIN_REQUIRED_MTU]. Android starts every connection at the 23-byte default and does
+     * NOT auto-negotiate a larger MTU (unlike iOS/CoreBluetooth, which is why OmnipodKit
+     * never has to ask). Without this, the first pairing message (SP1+SP2, ~51 bytes on
+     * the wire) is truncated to ~20 bytes and the pod replies ABORT. Dash is unaffected
+     * because its packets fit in the default MTU.
+     */
+    private fun requestLargeMtu(gatt: BluetoothGatt) {
+        if (!gatt.requestMtu(REQUESTED_MTU)) {
+            aapsLogger.warn(LTag.PUMPBTCOMM, "O5 requestMtu($REQUESTED_MTU) call returned false - continuing with default MTU")
+            return
+        }
+        val completed = bleCommCallbacks.waitForMtuChange(MTU_NEGOTIATION_TIMEOUT_MS)
+        val mtu = bleCommCallbacks.negotiatedMtu
+        if (!completed) {
+            aapsLogger.warn(LTag.PUMPBTCOMM, "O5 MTU negotiation timed out - continuing with MTU=$mtu")
+        } else {
+            aapsLogger.debug(LTag.PUMPBTCOMM, "O5 MTU negotiated: $mtu")
+        }
+        if (mtu < MIN_REQUIRED_MTU) {
+            aapsLogger.warn(
+                LTag.PUMPBTCOMM,
+                "O5 negotiated MTU=$mtu is below the required $MIN_REQUIRED_MTU - large pairing messages may be truncated and rejected by the pod"
+            )
         }
     }
 
@@ -317,6 +348,16 @@ class O5Connection(
         const val MIN_DISCOVERY_TIMEOUT_MS = 10000L
         const val MAX_WAIT_FOR_CONNECTION_SECONDS = Constants.PUMP_MAX_CONNECTION_TIME_IN_SECONDS + 10
         const val SLEEP_WHEN_FAILING_TO_CONNECT_GATT = 10000L
+
+        /** MTU we ask the phone to negotiate. 512 lets the stack settle on the highest the
+         *  phone and pod both support; O5 only needs [MIN_REQUIRED_MTU]. */
+        const val REQUESTED_MTU = 512
+
+        /** Minimum ATT MTU that fits a full 244-byte O5 packet payload (244 + 3-byte ATT
+         *  header). Below this, large pairing writes get truncated and the pod aborts. */
+        const val MIN_REQUIRED_MTU = 247
+
+        const val MTU_NEGOTIATION_TIMEOUT_MS = 5000L
 
         /** Standard Client Characteristic Configuration Descriptor UUID (BLE spec). */
         private val CLIENT_CHARACTERISTIC_CONFIG_UUID: UUID =
