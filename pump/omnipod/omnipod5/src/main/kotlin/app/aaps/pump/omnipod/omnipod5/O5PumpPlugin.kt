@@ -1159,8 +1159,7 @@ class O5PumpPlugin @Inject constructor(
                     OmnipodBooleanPreferenceKey.BolusBeepsEnabled,
                     OmnipodBooleanPreferenceKey.BasalBeepsEnabled,
                     OmnipodBooleanPreferenceKey.SmbBeepsEnabled,
-                    OmnipodBooleanPreferenceKey.TbrBeepsEnabled,
-                    DashBooleanPreferenceKey.UseBonding
+                    OmnipodBooleanPreferenceKey.TbrBeepsEnabled
                 )
             ),
             PreferenceSubScreenDef(
