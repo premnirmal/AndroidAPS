@@ -279,7 +279,7 @@ class O5BleManagerImpl @Inject constructor(
             podState.bluetoothAddress = discovered.address
 
             emitter.onNext(PodEvent.BluetoothConnecting)
-            val conn = bleConnectionFactory.createConnection(discovered.address)
+            val conn = bleConnectionFactory.createConnection(discovered.address, controllerId)
             connection = conn
             conn.connect(ConnectionWaitCondition(timeoutMs = BleConnection.DEFAULT_CONNECT_TIMEOUT_MS))
             emitter.onNext(PodEvent.BluetoothConnected(discovered.address))

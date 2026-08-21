@@ -37,7 +37,15 @@ class CmdBleIO(
         return incomingPackets.peek()
     }
 
-    override fun hello() = sendAndConfirmPacket(BleCommandHello(OmnipodDashBleManagerImpl.CONTROLLER_ID).data)
+    override fun hello() = hello(OmnipodDashBleManagerImpl.CONTROLLER_ID)
+
+    /**
+     * O5 sends its own certificate-derived controller id here (not the Dash
+     * [OmnipodDashBleManagerImpl.CONTROLLER_ID]). The id announced in this handshake must
+     * match the source id used later in the pairing messages (SP1/SP2), or the pod aborts
+     * the pairing.
+     */
+    fun hello(controllerId: Int) = sendAndConfirmPacket(BleCommandHello(controllerId).data)
 
     override fun expectCommandType(expected: BleCommand, timeoutMs: Long): BleConfirmResult {
         val deadlineMs = SystemClock.elapsedRealtime() + timeoutMs

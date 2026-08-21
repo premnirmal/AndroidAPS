@@ -65,7 +65,8 @@ class O5Connection(
     private val config: Config,
     private val context: Context,
     private val podState: O5PodStateManager,
-    private val p256KeyGenerator: P256KeyGenerator
+    private val p256KeyGenerator: P256KeyGenerator,
+    private val pairingControllerId: Long? = null
 ) : BleConnection, DisconnectHandler {
 
     private val incomingPackets = IncomingPackets()
@@ -141,8 +142,20 @@ class O5Connection(
             CharacteristicType.DATA_O5
         )
         msgIO = MessageIO(aapsLogger, cmdBleIO, dataBleIO, PodType.OMNIPOD_5)
-        aapsLogger.debug(LTag.PUMPBTCOMM, "Performing O5 CMD 'hello' handshake and enabling reads")
-        cmdBleIO.hello()
+        val helloControllerId = pairingControllerId ?: podState.controllerId
+        if (helloControllerId != null) {
+            aapsLogger.debug(
+                LTag.PUMPBTCOMM,
+                "Performing O5 CMD 'hello' handshake (controllerId=0x%08x) and enabling reads".format(helloControllerId)
+            )
+            cmdBleIO.hello(helloControllerId.toInt())
+        } else {
+            aapsLogger.warn(
+                LTag.PUMPBTCOMM,
+                "O5 'hello' handshake has no controllerId available - falling back to default, pairing will likely fail"
+            )
+            cmdBleIO.hello()
+        }
         cmdBleIO.readyToRead()
         dataBleIO.readyToRead()
         aapsLogger.debug(LTag.PUMPBTCOMM, "O5 BLE connection ready (message IO established) for ${podDevice.address}")

@@ -73,7 +73,7 @@ class O5PairingCoordinator @Inject constructor(
         podState.bluetoothAddress = discovered.address
         aapsLogger.info(LTag.PUMPBTCOMM, "Found O5 pod at ${discovered.address}, connecting")
 
-        val conn = bleConnectionFactory.createConnection(discovered.address)
+        val conn = bleConnectionFactory.createConnection(discovered.address, controllerId)
         conn.connect(ConnectionWaitCondition(timeoutMs = BleConnection.DEFAULT_CONNECT_TIMEOUT_MS))
 
         val mIO = conn.msgIO ?: throw ConnectException("Connection lost before pairing could start")
