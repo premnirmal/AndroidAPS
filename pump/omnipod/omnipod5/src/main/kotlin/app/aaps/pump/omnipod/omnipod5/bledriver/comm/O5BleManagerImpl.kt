@@ -209,6 +209,7 @@ class O5BleManagerImpl @Inject constructor(
 
                 emitter.onComplete()
             } catch (ex: Exception) {
+                aapsLogger.error(LTag.PUMPBTCOMM, "O5 connection failed", ex)
                 disconnect(false)
                 emitter.tryOnError(ex)
             } finally {
@@ -304,6 +305,7 @@ class O5BleManagerImpl @Inject constructor(
             emitter.onNext(PodEvent.Connected)
             emitter.onComplete()
         } catch (ex: Exception) {
+            aapsLogger.error(LTag.PUMPBTCOMM, "O5 pod activation failed", ex)
             disconnect(false)
             emitter.tryOnError(ex)
         } finally {
