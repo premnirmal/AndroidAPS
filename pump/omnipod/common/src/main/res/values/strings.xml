@@ -187,6 +187,8 @@
     <string name="omnipod_5_name">Omnipod 5</string>
     <string name="omnipod_5_name_short">O5</string>
     <string name="omnipod_5_pump_description">Omnipod 5 patch pump, running as a manual pod under AAPS\'s control.</string>
+    <string name="omnipod_5_certificate_store">Certificate store</string>
+    <string name="omnipod_5_certificate_store_summary">Import and manage the Omnipod 5 pairing credential.</string>
     <string name="omnipod_5_error_not_enough_insulin">Not enough insulin left in the reservoir for this bolus.</string>
     <string name="omnipod_5_error_bolus_already_in_progress">A bolus is already in progress.</string>
     <string name="omnipod_5_error_setting_basal_profile_might_have_failed">Setting the new basal profile might have failed. Refresh pod status to confirm or deny this.</string>

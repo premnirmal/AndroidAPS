@@ -28,9 +28,10 @@ import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
  * ones. No dosing/pairing/connection actions live here - purely credential management, feeding
  * [O5RegistrationData] for whenever actual O5 pairing is attempted elsewhere.
  *
- * Wired in via [app.aaps.pump.omnipod.omnipod5.ui.compose.OmnipodO5ComposeContent] - reached
- * from the settings gear icon, and auto-routed to from "Activate Pod" when no registration
- * credentials are installed yet.
+ * Wired in via [app.aaps.pump.omnipod.omnipod5.ui.compose.OmnipodO5ComposeContent] and
+ * [app.aaps.pump.omnipod.omnipod5.ui.O5CertificateStoreScreen] - reached from the certificate
+ * store subpage of the plugin settings, and auto-routed to from "Activate Pod" when no
+ * registration credentials are installed yet.
  */
 @Composable
 fun O5CredentialImportScreen(

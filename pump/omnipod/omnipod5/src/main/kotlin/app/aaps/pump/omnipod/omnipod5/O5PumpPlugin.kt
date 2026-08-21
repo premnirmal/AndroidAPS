@@ -30,7 +30,10 @@ import app.aaps.core.interfaces.queue.CommandQueue
 import app.aaps.core.interfaces.queue.CustomCommand
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.keys.interfaces.Preferences
+import app.aaps.core.keys.interfaces.withCompose
+import app.aaps.core.ui.compose.ComposeScreenContent
 import app.aaps.core.ui.compose.icons.IcPluginOmnipod
+import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.O5BleManager
 import app.aaps.pump.omnipod.common.bledriver.pod.command.DeactivateCommand
 import app.aaps.pump.omnipod.common.bledriver.pod.command.GetStatusCommand
@@ -60,6 +63,7 @@ import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.O5PodStateManager
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.basalDrift
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.basalDelivered
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.util.buildO5ExpirationAlerts
+import app.aaps.pump.omnipod.common.keys.DashBooleanPreferenceKey
 import app.aaps.pump.omnipod.common.keys.OmnipodBooleanPreferenceKey
 import app.aaps.pump.omnipod.common.keys.OmnipodIntPreferenceKey
 import app.aaps.pump.omnipod.common.queue.command.CommandDeactivatePod
@@ -72,6 +76,8 @@ import app.aaps.pump.omnipod.common.queue.command.CommandResumeDelivery
 import app.aaps.pump.omnipod.common.queue.command.CommandSilenceAlerts
 import app.aaps.pump.omnipod.common.queue.command.CommandSuspendDelivery
 import app.aaps.pump.omnipod.common.queue.command.CommandUpdateAlertConfiguration
+import app.aaps.pump.omnipod.omnipod5.keys.O5IntentKey
+import app.aaps.pump.omnipod.omnipod5.ui.O5CertificateStoreScreen
 import app.aaps.pump.omnipod.omnipod5.ui.compose.OmnipodO5ComposeContent
 import app.aaps.pump.omnipod.omnipod5.util.mapProfileToBasalProgram
 import io.reactivex.rxjava3.core.Completable
@@ -138,7 +144,10 @@ class O5PumpPlugin @Inject constructor(
         .pluginName(R.string.omnipod_5_name)
         .shortName(R.string.omnipod_5_name_short)
         .description(R.string.omnipod_5_pump_description),
-    ownPreferences = listOf(OmnipodBooleanPreferenceKey::class.java),
+    ownPreferences = listOf(
+        OmnipodBooleanPreferenceKey::class.java, OmnipodIntPreferenceKey::class.java,
+        DashBooleanPreferenceKey::class.java, O5IntentKey::class.java
+    ),
     aapsLogger, rh, preferences, commandQueue
 ), Pump {
 
@@ -1138,5 +1147,51 @@ class O5PumpPlugin @Inject constructor(
             podStateManager.basalCorrectionInProgress = false
         }
     }
+
+    override fun getPreferenceScreenContent() = PreferenceSubScreenDef(
+        key = "omnipod_5_settings",
+        titleResId = R.string.omnipod_5_name,
+        items = listOf(
+            PreferenceSubScreenDef(
+                key = "omnipod_5_beeps",
+                titleResId = app.aaps.pump.omnipod.common.R.string.omnipod_common_preferences_category_confirmation_beeps,
+                items = listOf(
+                    OmnipodBooleanPreferenceKey.BolusBeepsEnabled,
+                    OmnipodBooleanPreferenceKey.BasalBeepsEnabled,
+                    OmnipodBooleanPreferenceKey.SmbBeepsEnabled,
+                    OmnipodBooleanPreferenceKey.TbrBeepsEnabled,
+                    DashBooleanPreferenceKey.UseBonding
+                )
+            ),
+            PreferenceSubScreenDef(
+                key = "omnipod_5_alerts",
+                titleResId = app.aaps.pump.omnipod.common.R.string.omnipod_common_preferences_category_alerts,
+                items = listOf(
+                    OmnipodBooleanPreferenceKey.ExpirationReminder,
+                    OmnipodIntPreferenceKey.ExpirationReminderHours,
+                    OmnipodBooleanPreferenceKey.ExpirationAlarm,
+                    OmnipodIntPreferenceKey.ExpirationAlarmHours,
+                    OmnipodBooleanPreferenceKey.LowReservoirAlert,
+                    OmnipodIntPreferenceKey.LowReservoirAlertUnits
+                )
+            ),
+            PreferenceSubScreenDef(
+                key = "omnipod_5_notifications",
+                titleResId = app.aaps.pump.omnipod.common.R.string.omnipod_common_preferences_category_notifications,
+                items = listOf(
+                    OmnipodBooleanPreferenceKey.SoundUncertainTbrNotification,
+                    OmnipodBooleanPreferenceKey.SoundUncertainSmbNotification,
+                    OmnipodBooleanPreferenceKey.SoundUncertainBolusNotification,
+                    DashBooleanPreferenceKey.SoundDeliverySuspendedNotification
+                )
+            ),
+            O5IntentKey.CertificateStore.withCompose(
+                ComposeScreenContent { onBack ->
+                    O5CertificateStoreScreen(rh = rh, onBack = onBack)
+                }
+            )
+        ),
+        icon = pluginDescription.icon
+    )
 
 }

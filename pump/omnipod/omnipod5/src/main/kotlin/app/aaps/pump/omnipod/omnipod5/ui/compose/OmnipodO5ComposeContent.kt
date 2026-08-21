@@ -41,9 +41,10 @@ import app.aaps.pump.omnipod.common.ui.wizard.compose.OmnipodWizardScreen
  * [app.aaps.pump.omnipod.omnipod5.O5PumpPlugin]. Mirrors
  * [app.aaps.pump.omnipod.dash.ui.compose.OmnipodDashComposeContent]'s overview/wizard
  * toggle, but with a credentials screen in place of Dash's pod-history screen (O5 has no
- * history feature) - the overview is always shown first; "Activate Pod" routes to
- * [O5CredentialImportScreen] first only if no registration credentials are installed yet
- * (matches the confirmed UX choice - no auto-gating the whole screen).
+ * history feature) - the overview is always shown first; the settings gear opens the plugin
+ * preferences screen (which hosts the certificate store as a subpage), and "Activate Pod"
+ * routes to [O5CredentialImportScreen] first only if no registration credentials are installed
+ * yet (matches the confirmed UX choice - no auto-gating the whole screen).
  */
 class OmnipodO5ComposeContent(
     private val pluginName: String,
@@ -80,8 +81,10 @@ class OmnipodO5ComposeContent(
             }
         }
         val settingsAction: @Composable RowScope.() -> Unit = {
-            IconButton(onClick = { showCredentials = true }) {
-                Icon(Icons.Filled.Settings, contentDescription = stringResource(app.aaps.core.ui.R.string.settings))
+            onSettings?.let { action ->
+                IconButton(onClick = action) {
+                    Icon(Icons.Filled.Settings, contentDescription = stringResource(app.aaps.core.ui.R.string.settings))
+                }
             }
         }
 
