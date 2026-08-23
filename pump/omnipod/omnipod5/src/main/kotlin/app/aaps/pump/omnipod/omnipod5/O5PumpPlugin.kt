@@ -29,6 +29,7 @@ import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.queue.CommandQueue
 import app.aaps.core.interfaces.queue.CustomCommand
 import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.interfaces.rx.collectResilient
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.withCompose
 import app.aaps.core.ui.compose.ComposeScreenContent
@@ -82,9 +83,15 @@ import app.aaps.pump.omnipod.omnipod5.ui.compose.OmnipodO5ComposeContent
 import app.aaps.pump.omnipod.omnipod5.util.mapProfileToBasalProgram
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Single
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.rx3.rxCompletable
 import org.json.JSONObject
@@ -157,6 +164,8 @@ class O5PumpPlugin @Inject constructor(
 
     private var statusChecker: Runnable
 
+    private var scope: CoroutineScope? = null
+
     companion object {
 
         private const val BOLUS_RETRY_INTERVAL_MS = 2000L
@@ -187,11 +196,25 @@ class O5PumpPlugin @Inject constructor(
     override suspend fun onStart() {
         super.onStart()
         handler?.postDelayed(statusChecker, STATUS_CHECK_INTERVAL_MS)
+        val newScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        scope = newScope
+        // Push the pod's alert configuration as soon as any alert preference changes,
+        // instead of waiting for the next status poll. Mirrors OmnipodDashPumpPlugin.
+        merge(
+            preferences.observe(OmnipodBooleanPreferenceKey.ExpirationReminder).drop(1).map {},
+            preferences.observe(OmnipodIntPreferenceKey.ExpirationReminderHours).drop(1).map {},
+            preferences.observe(OmnipodBooleanPreferenceKey.ExpirationAlarm).drop(1).map {},
+            preferences.observe(OmnipodIntPreferenceKey.ExpirationAlarmHours).drop(1).map {},
+            preferences.observe(OmnipodBooleanPreferenceKey.LowReservoirAlert).drop(1).map {},
+            preferences.observe(OmnipodIntPreferenceKey.LowReservoirAlertUnits).drop(1).map {},
+        ).collectResilient(newScope, aapsLogger, LTag.PUMP) { commandQueue.customCommand(CommandUpdateAlertConfiguration()) }
     }
 
     override suspend fun onStop() {
         super.onStop()
         handler?.removeCallbacks(statusChecker)
+        scope?.cancel()
+        scope = null
     }
 
 
@@ -325,15 +348,6 @@ class O5PumpPlugin @Inject constructor(
         bleManager.sendCommand(cmd, AlarmStatusResponse::class).ignoreElements()
     }
 
-    /**
-     * Reconnects to the pod if the BLE link has dropped, then completes. A no-op when the
-     * session is still up - [O5BleManager.connect] emits `AlreadyConnected` and completes
-     * without sending anything (see [O5BleManagerImpl] `connect`). Used to guard the
-     * stop/status sends that run inside the long bolus-delivery wait, during which the pod
-     * routinely drops the link: [O5BleManager.sendCommand] does not connect on its own, so
-     * without this a cancel or status poll would fail on a dropped link and the bolus would
-     * keep running.
-     */
     private fun ensureConnected(): Completable = Completable.defer {
         bleManager.connect().ignoreElements()
     }
