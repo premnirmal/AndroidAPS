@@ -751,7 +751,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
         // Not bolus-active: lets the initial gate pass and the retry loop settle after one cancel.
         whenever(podStateManager.deliveryStatus).thenReturn(DeliveryStatus.BASAL_ACTIVE)
         // Reconnect is a no-op success - simulates the link being brought back up before the stop.
-        whenever(bleManager.connect(any<Long>())).thenReturn(Observable.empty())
+        whenever(bleManager.connect()).thenReturn(Observable.empty())
         // The user presses cancel while the bolus program command is in flight.
         whenever(bleManager.sendCommand(any(), any())).thenAnswer {
             plugin.stopBolusDelivering()
@@ -764,7 +764,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
         assertThat(result.success).isTrue()
         // The stop must reach the pod, and only after a (re)connect.
-        verify(bleManager).connect(any<Long>())
+        verify(bleManager).connect()
         verify(bleManager).sendCommand(argThat { this is StopDeliveryCommand }, any())
     }
 }
