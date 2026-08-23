@@ -325,14 +325,27 @@ class O5PumpPlugin @Inject constructor(
         bleManager.sendCommand(cmd, AlarmStatusResponse::class).ignoreElements()
     }
 
-    private fun fetchStatus(): Completable = Completable.defer {
+    /**
+     * Reconnects to the pod if the BLE link has dropped, then completes. A no-op when the
+     * session is still up - [O5BleManager.connect] emits `AlreadyConnected` and completes
+     * without sending anything (see [O5BleManagerImpl] `connect`). Used to guard the
+     * stop/status sends that run inside the long bolus-delivery wait, during which the pod
+     * routinely drops the link: [O5BleManager.sendCommand] does not connect on its own, so
+     * without this a cancel or status poll would fail on a dropped link and the bolus would
+     * keep running.
+     */
+    private fun ensureConnected(): Completable = Completable.defer {
+        bleManager.connect().ignoreElements()
+    }
+
+    private fun fetchStatus(): Completable = ensureConnected().andThen(Completable.defer {
         val cmd = GetStatusCommand.Builder()
             .setUniqueId(requirePodId())
             .setSequenceNumber(podStateManager.msgSequenceNumber.toShort())
             .setStatusResponseType(ResponseType.StatusResponseType.DEFAULT_STATUS_RESPONSE)
             .build()
         bleManager.sendCommand(cmd, DefaultStatusResponse::class).ignoreElements()
-    }
+    })
         .andThen(Completable.defer { fetchActivationTimeIfNeeded() })
         .andThen(Completable.defer { fetchTriggeredAlertsIfNeeded() })
 
@@ -715,7 +728,7 @@ class O5PumpPlugin @Inject constructor(
         Single.just(requestedUnits)
     }
 
-    private fun cancelBolus(): Completable = Completable.defer {
+    private fun cancelBolus(): Completable = ensureConnected().andThen(Completable.defer {
         val cmd = StopDeliveryCommand.Builder()
             .setUniqueId(requirePodId())
             .setSequenceNumber(podStateManager.msgSequenceNumber.toShort())
@@ -723,7 +736,7 @@ class O5PumpPlugin @Inject constructor(
             .setDeliveryType(StopDeliveryCommand.DeliveryType.BOLUS)
             .build()
         bleManager.sendCommand(cmd, DefaultStatusResponse::class).ignoreElements()
-    }
+    })
 
     override fun stopBolusDelivering() {
         aapsLogger.info(LTag.PUMP, "O5 stopBolusDelivering called")

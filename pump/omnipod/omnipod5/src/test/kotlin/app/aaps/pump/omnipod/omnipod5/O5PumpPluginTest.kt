@@ -20,6 +20,7 @@ import app.aaps.pump.omnipod.common.bledriver.pod.definition.AlertType
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.DeliveryStatus
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.PodStatus
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.O5PodStateManager
+import app.aaps.pump.omnipod.common.bledriver.pod.command.StopDeliveryCommand
 import app.aaps.pump.omnipod.common.queue.command.CommandDeactivatePod
 import app.aaps.pump.omnipod.common.queue.command.CommandDeliverBasalCorrection
 import app.aaps.pump.omnipod.common.queue.command.CommandDisableSuspendAlerts
@@ -42,6 +43,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.atLeast
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.argThat
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -736,5 +738,33 @@ class O5PumpPluginTest : TestBaseWithProfile() {
         runBlocking { plugin.setTempBasalAbsolute(1.0, 30, false, PumpSync.TemporaryBasalType.NORMAL) }
 
         verify(bleManager, times(1)).sendCommand(any(), any())
+    }
+
+    @Test
+    fun `a canceled bolus reconnects and re-sends the stop command when the link dropped mid-delivery`() {
+        whenever(podStateManager.pendingDoseCommand).thenReturn(null)
+        whenever(podStateManager.reservoirPulsesRemaining).thenReturn(2000)
+        whenever(podStateManager.lastStatusResponseReceived).thenReturn(System.currentTimeMillis())
+        whenever(podStateManager.lastBolusStartTime).thenReturn(null)
+        whenever(podStateManager.lastBolusRequestedUnits).thenReturn(null)
+        whenever(podStateManager.podId).thenReturn(12345L)
+        // Not bolus-active: lets the initial gate pass and the retry loop settle after one cancel.
+        whenever(podStateManager.deliveryStatus).thenReturn(DeliveryStatus.BASAL_ACTIVE)
+        // Reconnect is a no-op success - simulates the link being brought back up before the stop.
+        whenever(bleManager.connect(any<Long>())).thenReturn(Observable.empty())
+        // The user presses cancel while the bolus program command is in flight.
+        whenever(bleManager.sendCommand(any(), any())).thenAnswer {
+            plugin.stopBolusDelivering()
+            Observable.empty<PodEvent>()
+        }
+
+        val result = runBlocking {
+            plugin.deliverTreatment(DetailedBolusInfo().also { it.carbs = 0.0; it.insulin = 0.5 })
+        }
+
+        assertThat(result.success).isTrue()
+        // The stop must reach the pod, and only after a (re)connect.
+        verify(bleManager).connect(any<Long>())
+        verify(bleManager).sendCommand(argThat { this is StopDeliveryCommand }, any())
     }
 }
