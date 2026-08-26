@@ -19,12 +19,17 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Builds the expiration/expiration-imminent/user-set-expiration [AlertConfiguration]s from
- * current preferences - mirrors [app.aaps.pump.omnipod.dash.driver.OmnipodDashManagerImpl
- * .createActivationPart2Observables]'s expiration-alert delay math exactly, using O5's own
+ * current preferences - based on [app.aaps.pump.omnipod.dash.driver.OmnipodDashManagerImpl
+ * .createActivationPart2Observables]'s expiration-alert delay math, using O5's own
  * [expiry] extension in place of Dash's pod-state-manager property. Shared between
  * [app.aaps.pump.omnipod.omnipod5.ui.wizard.compose.O5OmnipodWizardViewModel] (initial
  * programming during activation) and [app.aaps.pump.omnipod.omnipod5.O5PumpPlugin] (re-sync
  * when preferences change afterward) - hoisted here rather than duplicated.
+ *
+ * Note: unlike Dash, the USER_SET_EXPIRATION reminder is always added to the returned list
+ * (with enabled=false when the reminder is disabled) rather than being omitted. The pod's
+ * ProgramAlerts command only updates the slots it contains, so omitting it would leave a
+ * previously programmed reminder beeping on the pod even after the user disables it.
  */
 fun buildO5ExpirationAlerts(podStateManager: O5PodStateManager, preferences: Preferences, aapsLogger: AAPSLogger): List<AlertConfiguration> {
     val userConfiguredExpirationReminderHours =
@@ -72,20 +77,21 @@ fun buildO5ExpirationAlerts(podStateManager: O5PodStateManager, preferences: Pre
     val userExpiryReminderDelay = podLifeLeft.minus(
         Duration.ofHours(userConfiguredExpirationReminderHours ?: (PodConstants.MAX_POD_LIFETIME.toHours() + 1))
     )
-    if (!userExpiryReminderDelay.isNegative) {
-        alerts.add(
-            AlertConfiguration(
-                AlertType.USER_SET_EXPIRATION,
-                enabled = userExpiryReminderEnabled,
-                durationInMinutes = 0,
-                autoOff = false,
-                AlertTrigger.TimerTrigger(userExpiryReminderDelay.toMinutes().toShort()),
-                BeepType.FOUR_TIMES_BIP_BEEP,
-                BeepRepetitionType.EVERY_MINUTE_AND_EVERY_15_MIN
-            )
-        )
-    } else {
+    // Always include USER_SET_EXPIRATION in the list.
+    val reminderActive = userExpiryReminderEnabled && !userExpiryReminderDelay.isNegative
+    if (userExpiryReminderEnabled && userExpiryReminderDelay.isNegative) {
         aapsLogger.warn(LTag.PUMPBTCOMM, "buildO5ExpirationAlerts negative expiryAlertDuration=$userExpiryReminderDelay")
     }
+    alerts.add(
+        AlertConfiguration(
+            AlertType.USER_SET_EXPIRATION,
+            enabled = reminderActive,
+            durationInMinutes = 0,
+            autoOff = false,
+            AlertTrigger.TimerTrigger(if (reminderActive) userExpiryReminderDelay.toMinutes().toShort() else 0),
+            BeepType.FOUR_TIMES_BIP_BEEP,
+            BeepRepetitionType.EVERY_MINUTE_AND_EVERY_15_MIN
+        )
+    )
     return alerts
 }
