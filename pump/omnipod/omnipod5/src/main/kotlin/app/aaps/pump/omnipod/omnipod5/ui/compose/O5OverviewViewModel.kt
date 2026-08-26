@@ -91,11 +91,6 @@ class O5OverviewViewModel @Inject constructor(
     companion object {
 
         private const val PLACEHOLDER = "-"
-
-        /**
-         * Last pod status check.
-         */
-        private const val STATUS_REFRESH_ON_OPEN_THROTTLE_MS = 60_000L
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -121,22 +116,6 @@ class O5OverviewViewModel @Inject constructor(
             managementActions = buildManagementActions(),
             queueStatus = communicationStatus.queueStatus()
         )
-
-    init {
-        refreshStatusOnOpen()
-    }
-
-    /**
-     * Read the pod status when the overview screen is opened
-     */
-    private fun refreshStatusOnOpen() {
-        if (podStateManager.activationProgress != ActivationProgress.COMPLETED) return
-        if (!isQueueEmpty()) return
-        val lastStatus = podStateManager.lastStatusResponseReceived
-        if (lastStatus != null && System.currentTimeMillis() - lastStatus < STATUS_REFRESH_ON_OPEN_THROTTLE_MS) return
-        viewModelScope.launch { commandQueue.readStatus(rh.gs(CoreUiR.string.refresh)) }
-    }
-
 
     private fun buildInfoRows(): List<PumpInfoRow> = buildList {
         val activated = podStateManager.activationProgress.isAtLeast(ActivationProgress.SET_UNIQUE_ID)
