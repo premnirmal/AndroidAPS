@@ -18,6 +18,7 @@ import app.aaps.pump.omnipod.common.bledriver.pod.response.PodInfoActivationTime
 import app.aaps.pump.omnipod.common.bledriver.pod.response.PodInfoTriggeredAlertsResponse
 import app.aaps.pump.omnipod.common.bledriver.pod.response.SetUniqueIdResponse
 import app.aaps.pump.omnipod.common.bledriver.pod.response.VersionResponse
+import app.aaps.pump.omnipod.omnipod5.bledriver.comm.O5IdRotation
 import app.aaps.pump.omnipod.omnipod5.keys.O5StringNonPreferenceKey
 import com.google.gson.Gson
 import java.io.Serializable
@@ -90,6 +91,13 @@ class PersistedO5PodStateManager @Inject constructor(
         get() = podState.podId
         set(value) {
             podState.podId = value
+            store()
+        }
+
+    override var nextPodId: Long?
+        get() = podState.nextPodId
+        set(value) {
+            podState.nextPodId = value
             store()
         }
 
@@ -390,8 +398,26 @@ class PersistedO5PodStateManager @Inject constructor(
         store()
     }
 
+    @Synchronized
+    override fun completeBolus(startedAt: Long, requestedUnits: Double, deliveredUnits: Double, deliveredPulses: Short?) {
+        val alreadyCompleted = podState.lastBolusStartTime == startedAt && podState.lastBolusDeliveredUnits != null
+        if (!alreadyCompleted && deliveredPulses != null) {
+            podState.cumulativeBolusPulsesDelivered =
+                ((podState.cumulativeBolusPulsesDelivered ?: 0) + deliveredPulses).toShort()
+        }
+        podState.lastBolusStartTime = startedAt
+        podState.lastBolusRequestedUnits = requestedUnits
+        podState.lastBolusDeliveredUnits = deliveredUnits
+        if (podState.pendingDoseCommand?.startedAt == startedAt) {
+            podState.pendingDoseCommand = null
+        }
+        store()
+    }
+
     override fun reset() {
-        podState = PodState()
+        val retainedControllerId = podState.controllerId
+        val retainedNextPodId = podState.podId?.let(O5IdRotation::nextPodId) ?: podState.nextPodId
+        podState = PodState(controllerId = retainedControllerId, nextPodId = retainedNextPodId)
         store()
     }
 
@@ -427,6 +453,7 @@ class PersistedO5PodStateManager @Inject constructor(
         var bluetoothAddress: String? = null,
         var controllerId: Long? = null,
         var podId: Long? = null,
+        var nextPodId: Long? = null,
         var ltk: ByteArray? = null,
         var msgSequenceNumber: Byte = 1,
         var eapAkaSequenceNumber: Long = 0,

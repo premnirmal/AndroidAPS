@@ -347,6 +347,11 @@ class O5PumpPlugin @Inject constructor(
         }
 
         val description = podStateManager.alarmType?.toString()
+            ?: if (podStateManager.isPodActivationTimeExceeded) {
+                rh.gs(R.string.omnipod_common_error_pod_fault_activation_time_exceeded)
+            } else {
+                null
+            }
             ?: podStateManager.podStatus?.toString()
             ?: return
 
@@ -449,43 +454,43 @@ class O5PumpPlugin @Inject constructor(
 
         val podSequence = podStateManager.sequenceNumberOfLastProgrammingCommand
         val sentSequence = pending.sequenceNumber
-        val acceptedByPod = podSequence != null && sentSequence != null &&
+        val acceptedByPod = pending.confirmedByStatus || podSequence != null && sentSequence != null &&
             (podSequence.toInt() and 0x0f) == (sentSequence.toInt() and 0x0f)
 
-        if (!acceptedByPod && !confirmedByDeliveryStatus(pending)) {
+        val confirmedByStatus = confirmedByDeliveryStatus(pending)
+        if (!acceptedByPod && !confirmedByStatus) {
             if (sentSequence != null && podSequence != null) {
                 aapsLogger.info(
                     LTag.PUMP,
                     "O5 pending ${pending.type} was not received by the pod " +
                         "(sent sequence $sentSequence, pod's last programming sequence $podSequence) - recording no delivery"
                 )
+                if (pending.type == O5PodStateManager.PendingDoseType.BOLUS && pending.bolusRecordExpected) {
+                    pumpSync.syncBolusWithPumpId(
+                        timestamp = pending.startedAt,
+                        amount = PumpInsulin(0.0),
+                        type = pending.bolusType ?: BS.Type.NORMAL,
+                        pumpId = pending.startedAt,
+                        pumpType = PumpType.OMNIPOD_5,
+                        pumpSerial = serialNumber()
+                    )
+                }
                 podStateManager.pendingDoseCommand = null
                 return
             }
+        }
+        if (!acceptedByPod && confirmedByStatus && pending.type == O5PodStateManager.PendingDoseType.BOLUS) {
+            podStateManager.pendingDoseCommand = pending.copy(confirmedByStatus = true)
+            return
         }
 
         when (pending.type) {
             O5PodStateManager.PendingDoseType.BOLUS              ->
                 if (podStateManager.deliveryStatus?.bolusDeliveringActive() != true) {
+                    val remainingPulses = podStateManager.bolusPulsesRemaining ?: return
                     val deliveredUnits = (pending.requestedUnits ?: 0.0) -
-                        (podStateManager.bolusPulsesRemaining?.toInt() ?: 0) * PodConstants.POD_PULSE_BOLUS_UNITS
-                    if (podStateManager.lastBolusDeliveredUnits == null) {
-                        pumpSync.syncBolusWithPumpId(
-                            timestamp = pending.startedAt,
-                            amount = PumpInsulin(deliveredUnits),
-                            type = pending.bolusType ?: BS.Type.NORMAL,
-                            pumpId = pending.startedAt,
-                            pumpType = PumpType.OMNIPOD_5,
-                            pumpSerial = serialNumber()
-                        )
-                        if (!pending.isBasalCorrection) {
-                            val deliveredPulses = Math.round(deliveredUnits / PodConstants.POD_PULSE_BOLUS_UNITS).toShort()
-                            podStateManager.cumulativeBolusPulsesDelivered =
-                                ((podStateManager.cumulativeBolusPulsesDelivered ?: 0) + deliveredPulses).toShort()
-                        }
-                    }
-                    podStateManager.lastBolusDeliveredUnits = deliveredUnits
-                    podStateManager.pendingDoseCommand = null
+                        remainingPulses.toInt() * PodConstants.POD_PULSE_BOLUS_UNITS
+                    finalizeBolus(pending, deliveredUnits)
                 }
 
             O5PodStateManager.PendingDoseType.TEMP_BASAL_START   ->
@@ -684,17 +689,14 @@ class O5PumpPlugin @Inject constructor(
             val bolusBeeps = preferences.get(bolusBeepsKey)
             val startedAt = System.currentTimeMillis()
 
-            podStateManager.pendingDoseCommand = O5PodStateManager.PendingDoseCommand(
+            val pendingDose = O5PodStateManager.PendingDoseCommand(
                 type = O5PodStateManager.PendingDoseType.BOLUS,
                 requestedUnits = requestedUnits,
                 bolusType = detailedBolusInfo.bolusType,
                 startedAt = startedAt,
                 sequenceNumber = podStateManager.msgSequenceNumber.toShort()
             )
-            armStatusChecker()
-            podStateManager.lastBolusStartTime = startedAt
-            podStateManager.lastBolusRequestedUnits = requestedUnits
-            podStateManager.lastBolusDeliveredUnits = null
+            podStateManager.pendingDoseCommand = pendingDose
 
             val cmd = ProgramBolusCommand.Builder()
                 .setUniqueId(requirePodId())
@@ -706,10 +708,14 @@ class O5PumpPlugin @Inject constructor(
                 .setO5BolusInfo(mealUnits = 0.0, correctionUnits = requestedUnits)
                 .build()
 
-            var deliveredUnits = 0.0
+            var commandMayHaveBeenSent = false
             val ret = try {
                 bleManager.sendCommand(cmd, DefaultStatusResponse::class)
                     .filter { it.isCommandSent() }
+                    .doOnNext {
+                        commandMayHaveBeenSent = true
+                        markBolusRecordExpected(startedAt)
+                    }
                     .concatMapCompletable {
                         rxCompletable(Dispatchers.IO) {
                             pumpSync.syncBolusWithPumpId(
@@ -723,14 +729,27 @@ class O5PumpPlugin @Inject constructor(
                         }
                     }
                     .blockingAwait()
-                deliveredUnits = waitForBolusDeliveryToComplete(requestedUnits).blockingGet()
-                pumpEnactResultProvider.get().success(true).enacted(true).bolusDelivered(deliveredUnits)
+                armStatusChecker()
+                val completion = waitForBolusDeliveryToComplete(requestedUnits).blockingGet()
+                val deliveredUnits = completion.deliveredUnits
+                if (deliveredUnits != null) {
+                    finalizeBolus(pendingDose, deliveredUnits)
+                    pumpEnactResultProvider.get().success(true).enacted(true).bolusDelivered(deliveredUnits)
+                } else {
+                    pumpEnactResultProvider.get().success(true).enacted(true).bolusDelivered(requestedUnits)
+                        .comment(rh.gs(R.string.omnipod_5_error_bolus_delivery_status_uncertain))
+                }
             } catch (throwable: Throwable) {
                 aapsLogger.error(LTag.PUMP, "O5 deliverTreatment error: $throwable")
+                if (!commandMayHaveBeenSent) {
+                    podStateManager.pendingDoseCommand = null
+                } else {
+                    armStatusChecker()
+                }
                 pumpEnactResultProvider.get().success(bolusCanceled).enacted(false)
             }
 
-            if (detailedBolusInfo.bolusType == BS.Type.SMB) {
+            if (detailedBolusInfo.bolusType == BS.Type.SMB && podStateManager.pendingDoseCommand != null) {
                 notifyUncertain(NotificationId.OMNIPOD_UNCERTAIN_SMB, rh.gs(R.string.omnipod_5_error_uncertain_smb, requestedUnits))
             } else if (podStateManager.pendingDoseCommand != null) {
                 notifyUncertain(NotificationId.OMNIPOD_POD_FAULT, rh.gs(R.string.omnipod_5_error_bolus_delivery_status_uncertain))
@@ -742,7 +761,9 @@ class O5PumpPlugin @Inject constructor(
         }
     }
 
-    private fun waitForBolusDeliveryToComplete(requestedUnits: Double): Single<Double> = Single.defer {
+    private data class BolusCompletion(val deliveredUnits: Double?)
+
+    private fun waitForBolusDeliveryToComplete(requestedUnits: Double): Single<BolusCompletion> = Single.defer {
         val estimatedSeconds = ceil(requestedUnits / PodConstants.POD_PULSE_BOLUS_UNITS).toLong() * 2 + 3
         var waited = 0L
         while (waited < estimatedSeconds && !bolusCanceled) {
@@ -763,7 +784,12 @@ class O5PumpPlugin @Inject constructor(
             }
             val bolusActive = podStateManager.deliveryStatus?.bolusDeliveringActive() == true
             if (bolusActive) {
-                val remainingUnits = (podStateManager.bolusPulsesRemaining?.toInt() ?: 0) * PodConstants.POD_PULSE_BOLUS_UNITS
+                val remainingPulses = podStateManager.bolusPulsesRemaining
+                if (remainingPulses == null) {
+                    Thread.sleep(BOLUS_RETRY_INTERVAL_MS)
+                    return@repeat
+                }
+                val remainingUnits = remainingPulses.toInt() * PodConstants.POD_PULSE_BOLUS_UNITS
                 val delivered = requestedUnits - remainingUnits
                 val percent = (delivered / requestedUnits) * 100
                 bolusProgressData.updateProgress(percent.toInt())
@@ -771,13 +797,44 @@ class O5PumpPlugin @Inject constructor(
                 else ceil(remainingUnits / PodConstants.POD_PULSE_BOLUS_UNITS).toLong() * 2 + 3
                 Thread.sleep(sleepSeconds * 1000)
             } else {
-                val deliveredUnits = requestedUnits - (podStateManager.bolusPulsesRemaining?.toInt() ?: 0) * PodConstants.POD_PULSE_BOLUS_UNITS
-                podStateManager.lastBolusDeliveredUnits = deliveredUnits
-                podStateManager.pendingDoseCommand = null
-                return@defer Single.just(deliveredUnits)
+                val remainingPulses = podStateManager.bolusPulsesRemaining
+                if (remainingPulses != null) {
+                    val deliveredUnits = requestedUnits - remainingPulses.toInt() * PodConstants.POD_PULSE_BOLUS_UNITS
+                    return@defer Single.just(BolusCompletion(deliveredUnits))
+                }
             }
         }
-        Single.just(requestedUnits)
+        Single.just(BolusCompletion(null))
+    }
+
+    private fun markBolusRecordExpected(startedAt: Long) {
+        val pending = podStateManager.pendingDoseCommand ?: return
+        if (pending.type == O5PodStateManager.PendingDoseType.BOLUS && pending.startedAt == startedAt) {
+            podStateManager.pendingDoseCommand = pending.copy(bolusRecordExpected = true)
+        }
+    }
+
+    private suspend fun finalizeBolus(pending: O5PodStateManager.PendingDoseCommand, deliveredUnits: Double) {
+        val finalUnits = deliveredUnits.coerceIn(0.0, pending.requestedUnits ?: deliveredUnits)
+        pumpSync.syncBolusWithPumpId(
+            timestamp = pending.startedAt,
+            amount = PumpInsulin(finalUnits),
+            type = pending.bolusType ?: BS.Type.NORMAL,
+            pumpId = pending.startedAt,
+            pumpType = PumpType.OMNIPOD_5,
+            pumpSerial = serialNumber()
+        )
+        val deliveredPulses = if (pending.isBasalCorrection) {
+            null
+        } else {
+            Math.round(finalUnits / PodConstants.POD_PULSE_BOLUS_UNITS).toShort()
+        }
+        podStateManager.completeBolus(
+            startedAt = pending.startedAt,
+            requestedUnits = pending.requestedUnits ?: finalUnits,
+            deliveredUnits = finalUnits,
+            deliveredPulses = deliveredPulses
+        )
     }
 
     private fun cancelBolus(): Completable = ensureConnected().andThen(Completable.defer {
@@ -1171,13 +1228,14 @@ class O5PumpPlugin @Inject constructor(
             return pumpEnactResultProvider.get().success(false).enacted(false)
         }
 
+        var commandMayHaveBeenSent = false
         return try {
             bolusDeliveryInProgress = true
             podStateManager.basalCorrectionInProgress = true
             aapsLogger.info(LTag.PUMP, "Delivering O5 basal correction")
 
             val startedAt = System.currentTimeMillis()
-            podStateManager.pendingDoseCommand = O5PodStateManager.PendingDoseCommand(
+            val pendingDose = O5PodStateManager.PendingDoseCommand(
                 type = O5PodStateManager.PendingDoseType.BOLUS,
                 requestedUnits = requestedInsulinAmount,
                 bolusType = BS.Type.NORMAL,
@@ -1185,10 +1243,7 @@ class O5PumpPlugin @Inject constructor(
                 isBasalCorrection = true,
                 sequenceNumber = podStateManager.msgSequenceNumber.toShort()
             )
-            armStatusChecker()
-            podStateManager.lastBolusStartTime = startedAt
-            podStateManager.lastBolusRequestedUnits = requestedInsulinAmount
-            podStateManager.lastBolusDeliveredUnits = null
+            podStateManager.pendingDoseCommand = pendingDose
 
             val cmd = ProgramBolusCommand.Builder()
                 .setUniqueId(requirePodId())
@@ -1199,7 +1254,15 @@ class O5PumpPlugin @Inject constructor(
                 .setProgramReminder(ProgramReminder(atStart = false, atEnd = false, atInterval = 0))
                 .setO5BolusInfo(mealUnits = 0.0, correctionUnits = requestedInsulinAmount)
                 .build()
-            bleManager.sendCommand(cmd, DefaultStatusResponse::class).ignoreElements().blockingAwait()
+            bleManager.sendCommand(cmd, DefaultStatusResponse::class)
+                .filter { it.isCommandSent() }
+                .doOnNext {
+                    commandMayHaveBeenSent = true
+                    markBolusRecordExpected(startedAt)
+                }
+                .ignoreElements()
+                .blockingAwait()
+            armStatusChecker()
             runBlocking {
                 pumpSync.syncBolusWithPumpId(
                     timestamp = startedAt,
@@ -1210,11 +1273,23 @@ class O5PumpPlugin @Inject constructor(
                     pumpSerial = serialNumber()
                 )
             }
-            val deliveredUnits = waitForBolusDeliveryToComplete(requestedInsulinAmount).blockingGet()
-            aapsLogger.info(LTag.PUMP, "O5 basal correction delivered: $deliveredUnits U")
-            pumpEnactResultProvider.get().success(true).enacted(true).bolusDelivered(deliveredUnits)
+            val completion = waitForBolusDeliveryToComplete(requestedInsulinAmount).blockingGet()
+            val deliveredUnits = completion.deliveredUnits
+            if (deliveredUnits != null) {
+                runBlocking { finalizeBolus(pendingDose, deliveredUnits) }
+                aapsLogger.info(LTag.PUMP, "O5 basal correction delivered: $deliveredUnits U")
+                pumpEnactResultProvider.get().success(true).enacted(true).bolusDelivered(deliveredUnits)
+            } else {
+                pumpEnactResultProvider.get().success(true).enacted(true).bolusDelivered(requestedInsulinAmount)
+                    .comment(rh.gs(R.string.omnipod_5_error_bolus_delivery_status_uncertain))
+            }
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "O5 basal correction delivery failed", e)
+            if (!commandMayHaveBeenSent) {
+                podStateManager.pendingDoseCommand = null
+            } else {
+                armStatusChecker()
+            }
             pumpEnactResultProvider.get().success(false).enacted(false)
         } finally {
             bolusDeliveryInProgress = false

@@ -108,7 +108,8 @@ class PersistedO5PodStateManagerTest : TestBase() {
             type = O5PodStateManager.PendingDoseType.BOLUS,
             requestedUnits = 1.25,
             bolusType = BS.Type.SMB,
-            startedAt = 123456789L
+            startedAt = 123456789L,
+            bolusRecordExpected = true
         )
         val writer = newManager()
         writer.pendingDoseCommand = pending
@@ -117,6 +118,7 @@ class PersistedO5PodStateManagerTest : TestBase() {
 
         assertThat(reader.pendingDoseCommand).isEqualTo(pending)
         assertThat(reader.pendingDoseCommand!!.bolusType).isEqualTo(BS.Type.SMB)
+        assertThat(reader.pendingDoseCommand!!.bolusRecordExpected).isTrue()
     }
 
     @Test
@@ -139,6 +141,51 @@ class PersistedO5PodStateManagerTest : TestBase() {
         assertThat(reader.activeTempBasalStartTime).isEqualTo(2_000L)
         assertThat(reader.activeTempBasalRate).isEqualTo(0.5)
         assertThat(reader.activeTempBasalDurationMinutes).isEqualTo(30.toShort())
+    }
+
+    @Test
+    fun `completeBolus persists accounting and clears pending in one state update`() {
+        val writer = newManager()
+        writer.cumulativeBolusPulsesDelivered = 10
+        writer.pendingDoseCommand = O5PodStateManager.PendingDoseCommand(
+            type = O5PodStateManager.PendingDoseType.BOLUS,
+            requestedUnits = 1.0,
+            startedAt = 1_000L
+        )
+
+        writer.completeBolus(1_000L, 1.0, 0.75, 15)
+
+        val reader = newManager()
+        assertThat(reader.cumulativeBolusPulsesDelivered).isEqualTo(25.toShort())
+        assertThat(reader.lastBolusDeliveredUnits).isEqualTo(0.75)
+        assertThat(reader.pendingDoseCommand).isNull()
+    }
+
+    @Test
+    fun `completeBolus does not add pulses twice`() {
+        val manager = newManager()
+        manager.cumulativeBolusPulsesDelivered = 10
+
+        manager.completeBolus(1_000L, 1.0, 0.75, 15)
+        manager.completeBolus(1_000L, 1.0, 0.75, 15)
+
+        assertThat(manager.cumulativeBolusPulsesDelivered).isEqualTo(25.toShort())
+    }
+
+    @Test
+    fun `completeBolus records a new bolus when an older bolus was already completed`() {
+        val manager = newManager()
+        manager.cumulativeBolusPulsesDelivered = 10
+        manager.lastBolusStartTime = 500L
+        manager.lastBolusRequestedUnits = 2.0
+        manager.lastBolusDeliveredUnits = 2.0
+
+        manager.completeBolus(1_000L, 1.0, 0.75, 15)
+
+        assertThat(manager.cumulativeBolusPulsesDelivered).isEqualTo(25.toShort())
+        assertThat(manager.lastBolusStartTime).isEqualTo(1_000L)
+        assertThat(manager.lastBolusRequestedUnits).isEqualTo(1.0)
+        assertThat(manager.lastBolusDeliveredUnits).isEqualTo(0.75)
     }
 
     @Test
@@ -171,6 +218,8 @@ class PersistedO5PodStateManagerTest : TestBase() {
         manager.pendingDoseCommand = O5PodStateManager.PendingDoseCommand(
             type = O5PodStateManager.PendingDoseType.BASAL_PROGRAM, startedAt = 1L
         )
+        manager.controllerId = 0x11223340L
+        manager.podId = 0x11223341L
         manager.ltk = byteArrayOf(9)
 
         manager.reset()
@@ -180,6 +229,9 @@ class PersistedO5PodStateManagerTest : TestBase() {
         assertThat(manager.primePulseRate).isNull()
         assertThat(manager.pendingDoseCommand).isNull()
         assertThat(manager.ltk).isNull()
+        assertThat(manager.controllerId).isEqualTo(0x11223340L)
+        assertThat(manager.podId).isNull()
+        assertThat(manager.nextPodId).isEqualTo(0x11223342L)
     }
 
     @Test
@@ -188,6 +240,7 @@ class PersistedO5PodStateManagerTest : TestBase() {
         writer.bluetoothAddress = "AA:BB:CC:DD:EE:FF"
         writer.controllerId = 0x11223344L
         writer.podId = 0x55667788L
+        writer.nextPodId = 0x11223345L
         writer.connectionAttempts = 3
         writer.successfulConnections = 2
         writer.eapAkaSequenceNumber = 42L
@@ -197,6 +250,7 @@ class PersistedO5PodStateManagerTest : TestBase() {
         assertThat(reader.bluetoothAddress).isEqualTo("AA:BB:CC:DD:EE:FF")
         assertThat(reader.controllerId).isEqualTo(0x11223344L)
         assertThat(reader.podId).isEqualTo(0x55667788L)
+        assertThat(reader.nextPodId).isEqualTo(0x11223345L)
         assertThat(reader.connectionAttempts).isEqualTo(3)
         assertThat(reader.successfulConnections).isEqualTo(2)
         assertThat(reader.eapAkaSequenceNumber).isEqualTo(42L)
@@ -271,6 +325,17 @@ class PersistedO5PodStateManagerTest : TestBase() {
         manager.updateFromDefaultStatusResponse(DefaultStatusResponse(hexToBytes("1D1F00A02800000463FF")))
 
         assertThat(manager.podStatus).isEqualTo(PodStatus.DEACTIVATED)
+        assertThat(manager.isPodKaput).isTrue()
+    }
+
+    @Test
+    fun `activation time exceeded is terminal`() {
+        val manager = newManager()
+
+        manager.updateFromDefaultStatusResponse(DefaultStatusResponse(hexToBytes("1D1E00A02800000463FF")))
+
+        assertThat(manager.podStatus).isEqualTo(PodStatus.LUMP_OF_COAL)
+        assertThat(manager.isPodActivationTimeExceeded).isTrue()
         assertThat(manager.isPodKaput).isTrue()
     }
 

@@ -9,6 +9,7 @@ import app.aaps.core.interfaces.pump.BlePreCheck
 import app.aaps.core.interfaces.pump.BolusProgressData
 import app.aaps.core.interfaces.pump.DetailedBolusInfo
 import app.aaps.core.interfaces.pump.PumpSync
+import app.aaps.core.interfaces.pump.PumpInsulin
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.queue.CommandQueue
 import app.aaps.core.interfaces.queue.CustomCommand
@@ -582,6 +583,30 @@ class O5PumpPluginTest : TestBaseWithProfile() {
     }
 
     @Test
+    fun `an uncertain bolus the pod never received corrects conservative accounting to zero`() {
+        whenever(podStateManager.pendingDoseCommand).thenReturn(
+            pendingBolus(sequenceNumber = 4).copy(bolusRecordExpected = true)
+        )
+        whenever(podStateManager.sequenceNumberOfLastProgrammingCommand).thenReturn(9)
+        whenever(podStateManager.deliveryStatus).thenReturn(DeliveryStatus.BASAL_ACTIVE)
+        whenever(podStateManager.podId).thenReturn(9999L)
+
+        runBlocking {
+            plugin.reconcilePendingDose()
+
+            verify(pumpSync).syncBolusWithPumpId(
+                eq(1_000L),
+                argThat<PumpInsulin> { cU == 0.0 },
+                eq(BS.Type.NORMAL),
+                eq(1_000L),
+                eq(PumpType.OMNIPOD_5),
+                eq("9999")
+            )
+        }
+        verify(podStateManager).pendingDoseCommand = null
+    }
+
+    @Test
     fun `an uncertain bolus the pod did receive is finalized`() {
         whenever(podStateManager.pendingDoseCommand).thenReturn(pendingBolus(sequenceNumber = 9))
         whenever(podStateManager.sequenceNumberOfLastProgrammingCommand).thenReturn(9)
@@ -597,18 +622,61 @@ class O5PumpPluginTest : TestBaseWithProfile() {
                 any<Long>(), any(), any(), any<Long>(), eq(PumpType.OMNIPOD_5), eq("9999")
             )
         }
-        verify(podStateManager).pendingDoseCommand = null
+        verify(podStateManager).completeBolus(1_000L, 3.0, 3.0, 60)
+    }
+
+    @Test
+    fun `a confirmed partial bolus updates accounting and cumulative pulses`() {
+        whenever(podStateManager.pendingDoseCommand).thenReturn(pendingBolus(sequenceNumber = 9))
+        whenever(podStateManager.sequenceNumberOfLastProgrammingCommand).thenReturn(9)
+        whenever(podStateManager.deliveryStatus).thenReturn(DeliveryStatus.BASAL_ACTIVE)
+        whenever(podStateManager.bolusPulsesRemaining).thenReturn(40)
+        whenever(podStateManager.lastBolusDeliveredUnits).thenReturn(null)
+        whenever(podStateManager.cumulativeBolusPulsesDelivered).thenReturn(10)
+        whenever(podStateManager.podId).thenReturn(9999L)
+
+        runBlocking {
+            plugin.reconcilePendingDose()
+
+            verify(pumpSync).syncBolusWithPumpId(
+                eq(1_000L),
+                argThat<PumpInsulin> { cU == 1.0 },
+                eq(BS.Type.NORMAL),
+                eq(1_000L),
+                eq(PumpType.OMNIPOD_5),
+                eq("9999")
+            )
+        }
+        verify(podStateManager).completeBolus(1_000L, 3.0, 1.0, 20)
+    }
+
+    @Test
+    fun `a confirmed bolus remains unresolved when remaining pulses are unavailable`() {
+        whenever(podStateManager.pendingDoseCommand).thenReturn(pendingBolus(sequenceNumber = 9))
+        whenever(podStateManager.sequenceNumberOfLastProgrammingCommand).thenReturn(9)
+        whenever(podStateManager.deliveryStatus).thenReturn(DeliveryStatus.BASAL_ACTIVE)
+        whenever(podStateManager.bolusPulsesRemaining).thenReturn(null)
+
+        runBlocking {
+            plugin.reconcilePendingDose()
+
+            verify(pumpSync, never()).syncBolusWithPumpId(
+                any<Long>(), any(), any(), any<Long>(), any(), any<String>()
+            )
+        }
+        verify(podStateManager, never()).pendingDoseCommand = null
     }
 
     @Test
     fun `a still-running bolus is confirmed by delivery status even when the sequence disagrees`() {
-        whenever(podStateManager.pendingDoseCommand).thenReturn(pendingBolus(sequenceNumber = 4))
+        val pending = pendingBolus(sequenceNumber = 4)
+        whenever(podStateManager.pendingDoseCommand).thenReturn(pending)
         whenever(podStateManager.sequenceNumberOfLastProgrammingCommand).thenReturn(9)
         whenever(podStateManager.deliveryStatus).thenReturn(DeliveryStatus.BOLUS_AND_BASAL_ACTIVE)
 
         runBlocking { plugin.reconcilePendingDose() }
 
-        verify(podStateManager, never()).pendingDoseCommand = null
+        verify(podStateManager).pendingDoseCommand = pending.copy(confirmedByStatus = true)
     }
 
     @Test

@@ -3,10 +3,6 @@ package app.aaps.pump.omnipod.omnipod5.bledriver.comm
 import com.google.common.truth.Truth.assertThat
 import org.junit.jupiter.api.Test
 
-/**
- * [O5IdRotation] - pure podId rotation logic used to retry O5 pairing with the next of 3
- * predicted podIds after a failed attempt.
- */
 class O5IdRotationTest {
 
     @Test
@@ -18,7 +14,17 @@ class O5IdRotationTest {
     }
 
     @Test
-    fun `nextPodId advances through the 3-way rotation`() {
+    fun `firstPodId normalizes every controller id suffix`() {
+        val base = 0xAABBCC00L
+
+        assertThat(O5IdRotation.firstPodId(base)).isEqualTo(base + 1)
+        assertThat(O5IdRotation.firstPodId(base + 1)).isEqualTo(base + 1)
+        assertThat(O5IdRotation.firstPodId(base + 2)).isEqualTo(base + 1)
+        assertThat(O5IdRotation.firstPodId(base + 3)).isEqualTo(base + 1)
+    }
+
+    @Test
+    fun `nextPodId advances to the identity for the next pod`() {
         val base = 0b1000L
 
         assertThat(O5IdRotation.nextPodId(base + 1)).isEqualTo(base + 2)
@@ -26,7 +32,7 @@ class O5IdRotationTest {
     }
 
     @Test
-    fun `nextPodId wraps back to base plus 1 after the third attempt`() {
+    fun `nextPodId wraps back to base plus 1 after the third pod`() {
         val base = 0b10000L
 
         assertThat(O5IdRotation.nextPodId(base + 3)).isEqualTo(base + 1)

@@ -8,7 +8,6 @@ import app.aaps.pump.omnipod.common.bledriver.comm.interfaces.device.BleDeviceMa
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.legacy.O5BleConnectionFactory
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
 import app.aaps.pump.omnipod.common.bledriver.comm.session.NotConnected
-import app.aaps.pump.omnipod.common.bledriver.event.PodEvent
 import app.aaps.pump.omnipod.common.bledriver.pod.command.base.Command
 import app.aaps.pump.omnipod.common.bledriver.pod.response.DefaultStatusResponse
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.security.SecureO5RegistrationStorage
@@ -92,14 +91,14 @@ class O5BleManagerImplTest {
     }
 
     @Test
-    fun `pairNewPod short-circuits with AlreadyPaired when an LTK is already present`() {
+    fun `pairNewPod requires a known address when an LTK is already present`() {
         whenever(podState.ltk).thenReturn(byteArrayOf(1, 2, 3))
+        whenever(podState.bluetoothAddress).thenReturn(null)
         val manager = newManager()
 
         val observer = manager.pairNewPod().test()
 
-        observer.assertComplete()
-        observer.assertValue(PodEvent.AlreadyPaired)
+        observer.assertError(FailedToConnectException::class.java)
     }
 
     @Test
