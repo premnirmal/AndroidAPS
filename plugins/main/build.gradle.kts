@@ -22,6 +22,8 @@ dependencies {
     implementation(project(":core:ui"))
     implementation(project(":core:utils"))
 
+    implementation(libs.androidx.core)
+
     testImplementation(project(":implementation"))
     testImplementation(project(":plugins:aps"))
     testImplementation(project(":shared:tests"))
