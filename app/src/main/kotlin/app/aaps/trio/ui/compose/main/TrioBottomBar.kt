@@ -76,7 +76,7 @@ fun TrioBottomBar(
             TrioTabItem(
                 selected = selectedTab == TrioNavTab.Adjustments,
                 onClick = { onTabSelected(TrioNavTab.Adjustments) },
-                label = stringResource(R.string.trio_tab_temp_targets),
+                label = stringResource(R.string.trio_tab_adjustments),
                 icon = { Icon(imageVector = Icons.Default.Tune, contentDescription = null) },
                 colors = colors
             )
