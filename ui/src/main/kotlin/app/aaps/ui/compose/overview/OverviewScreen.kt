@@ -93,6 +93,7 @@ fun OverviewScreen(
     queueStatusText: String? = null,
     isPumpCommunicating: Boolean = false,
     onStopBolus: () -> Unit = {},
+    isTrio: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     var showNotificationSheet by remember { mutableStateOf(false) }
@@ -125,7 +126,40 @@ fun OverviewScreen(
     val isTablet = configuration.smallestScreenWidthDp >= TABLET_MIN_SW_DP && isLandscape
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (isTablet) {
+        if (isTrio) {
+            TrioOverviewScreen(
+                profileName = profileName,
+                isProfileModified = isProfileModified,
+                profileProgress = profileProgress,
+                profileSceneManaged = profileSceneManaged,
+                tempTargetText = tempTargetText,
+                tempTargetState = tempTargetState,
+                tempTargetProgress = tempTargetProgress,
+                tempTargetReason = tempTargetReason,
+                tempTargetSceneManaged = tempTargetSceneManaged,
+                runningMode = runningMode,
+                runningModeText = runningModeText,
+                runningModeRemaining = runningModeRemaining,
+                runningModeProgress = runningModeProgress,
+                runningModeSceneManaged = runningModeSceneManaged,
+                smbEnabled = smbEnabled,
+                isSimpleMode = isSimpleMode,
+                tbrState = tbrState,
+                graphViewModel = graphViewModel,
+                chipsViewModel = chipsViewModel,
+                onNavigate = onNavigate,
+                onTbrChipClick = onTbrChipClick,
+                onIobChipClick = onIobChipClick,
+                paddingValues = paddingValues,
+                activeSceneState = activeSceneState,
+                sceneExpired = sceneExpired,
+                onEndScene = onEndScene,
+                onDismissScene = onDismissScene,
+                endSceneEnabled = endSceneEnabled,
+                commandsAllowed = commandsAllowed,
+                formatDuration = formatDuration
+            )
+        } else if (isTablet) {
             OverviewScreenTablet(
                 profileName = profileName,
                 isProfileModified = isProfileModified,

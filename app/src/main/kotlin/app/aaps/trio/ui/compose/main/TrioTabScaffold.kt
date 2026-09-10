@@ -67,8 +67,8 @@ fun TrioTabScaffold(
 private fun TrioTabScaffoldPreview() {
     AapsTheme {
         TrioTabScaffold(
-            selectedTab = TrioNavTab.History,
-            title = "History",
+            selectedTab = TrioNavTab.Adjustments,
+            title = "Adjustments",
             onTabSelected = {},
             onBolusClick = {},
             onCarbsClick = {},

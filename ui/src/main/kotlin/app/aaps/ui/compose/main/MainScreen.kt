@@ -285,7 +285,8 @@ fun MainScreen(
                         pumpStatusText = pumpStatusText,
                         queueStatusText = queueStatusText,
                         isPumpCommunicating = isPumpCommunicating,
-                        onStopBolus = onStopBolus
+                        onStopBolus = onStopBolus,
+                        isTrio = isTrio
                     )
 
                     // Search results overlay

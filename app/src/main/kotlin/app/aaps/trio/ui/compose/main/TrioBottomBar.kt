@@ -9,9 +9,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoGraph
-import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -64,25 +63,18 @@ fun TrioBottomBar(
                 colors = colors
             )
             TrioTabItem(
-                selected = selectedTab == TrioNavTab.Treatments,
-                onClick = { onTabSelected(TrioNavTab.Treatments) },
-                label = stringResource(CoreUiR.string.treatments),
-                icon = { Icon(imageVector = Icons.Default.LocalHospital, contentDescription = null) },
-                colors = colors
-            )
-            Spacer(modifier = Modifier.width(FAB_CUTOUT_WIDTH))
-            TrioTabItem(
-                selected = selectedTab == TrioNavTab.History,
-                onClick = { onTabSelected(TrioNavTab.History) },
-                label = stringResource(CoreUiR.string.history),
-                icon = { Icon(imageVector = Icons.Default.History, contentDescription = null) },
-                colors = colors
-            )
-            TrioTabItem(
                 selected = selectedTab == TrioNavTab.Statistics,
                 onClick = { onTabSelected(TrioNavTab.Statistics) },
                 label = stringResource(CoreUiR.string.statistics),
                 icon = { Icon(imageVector = Icons.Default.AutoGraph, contentDescription = null) },
+                colors = colors
+            )
+            Spacer(modifier = Modifier.width(FAB_CUTOUT_WIDTH))
+            TrioTabItem(
+                selected = selectedTab == TrioNavTab.Adjustments,
+                onClick = { onTabSelected(TrioNavTab.Adjustments) },
+                label = stringResource(R.string.trio_tab_adjustments),
+                icon = { Icon(imageVector = Icons.Default.Build, contentDescription = null) },
                 colors = colors
             )
             TrioTabItem(

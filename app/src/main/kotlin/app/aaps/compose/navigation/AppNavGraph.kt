@@ -114,6 +114,7 @@ import app.aaps.ui.compose.wizardDialog.WizardDialogScreen
 import app.aaps.ui.search.BuiltInSearchables
 import kotlinx.coroutines.launch
 import app.aaps.plugins.main.R as PluginsMainR
+import app.aaps.ui.R as UiR
 
 /**
  * Safe popBackStack that prevents double-navigation during transitions.
@@ -501,8 +502,8 @@ fun NavGraphBuilder.appNavGraph(
     if (isTrio) {
         composable(AppRoute.TrioTreatments.route) {
             TrioTabScaffold(
-                selectedTab = TrioNavTab.Treatments,
-                title = stringResource(app.aaps.core.ui.R.string.treatments_history),
+                selectedTab = TrioNavTab.Adjustments,
+                title = stringResource(UiR.string.trio_tab_adjustments),
                 onTabSelected = onNavigateToTrioTab,
                 onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
                 onCarbsClick = { onNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
@@ -572,7 +573,7 @@ fun NavGraphBuilder.appNavGraph(
     if (isTrio) {
         composable(AppRoute.TrioHistory.route) {
             TrioTabScaffold(
-                selectedTab = TrioNavTab.History,
+                selectedTab = TrioNavTab.Adjustments,
                 title = stringResource(PluginsMainR.string.nav_history_browser),
                 onTabSelected = onNavigateToTrioTab,
                 onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
