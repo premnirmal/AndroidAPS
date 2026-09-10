@@ -243,15 +243,17 @@ object AapsTheme {
  * }
  * ```
  *
+ * @param useSystemTheme When true, ignore the stored theme preference and follow the system theme.
  * @param content The composable content to wrap with the theme
  */
 @Composable
 fun AapsTheme(
+    useSystemTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val preferences = LocalPreferences.current
     val darkModeValue by preferences.observe(StringKey.GeneralDarkMode).collectAsState()
-    val uiMode = UiMode.fromString(darkModeValue)
+    val uiMode = if (useSystemTheme) UiMode.SYSTEM else UiMode.fromString(darkModeValue)
 
     val lightColors = lightColorScheme()
     val darkColors = darkColorScheme(

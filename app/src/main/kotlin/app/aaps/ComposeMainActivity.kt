@@ -343,7 +343,7 @@ class ComposeMainActivity : AppCompatActivity() {
             LocalClearExportPasswordStore provides { exportPasswordDataStore.clearPasswordDataStore(this@ComposeMainActivity) },
             LocalVisibilityContext provides visibilityContext
         ) {
-            AapsTheme {
+            AapsTheme(useSystemTheme = config.TRIO) {
                 val rootSnackbarHostState = remember { SnackbarHostState() }
                 CompositionLocalProvider(LocalSnackbarHostState provides rootSnackbarHostState) {
                     val initProgress by config.initProgressFlow.collectAsStateWithLifecycle()
