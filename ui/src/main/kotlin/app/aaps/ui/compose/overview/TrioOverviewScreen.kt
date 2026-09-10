@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -337,7 +338,7 @@ private fun PumpEntryPoint(
             verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
         ) {
             Icon(
-                imageVector = if (needsSetup) Icons.Default.Warning else Pump,
+                imageVector = if (needsSetup) Icons.Default.Warning else Icons.Default.Shield,
                 contentDescription = null,
                 tint = if (needsSetup) MaterialTheme.colorScheme.error else ElementType.PUMP.color()
             )
