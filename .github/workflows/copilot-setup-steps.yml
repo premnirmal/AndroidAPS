@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-    timeout-minutes: 30
+    timeout-minutes: 59
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -26,5 +26,21 @@ jobs:
           java-version: "21"
           cache: gradle
 
+      - name: Set up JetBrains Runtime 21
+        id: jbr
+        uses: actions/setup-java@v4
+        with:
+          distribution: jetbrains
+          java-version: "21"
+
+      - name: Configure Gradle Java toolchains
+        run: |
+          mkdir -p ~/.gradle
+          {
+            echo "org.gradle.java.installations.auto-download=false"
+            echo "org.gradle.java.installations.auto-detect=false"
+            echo "org.gradle.java.installations.paths=${{ steps.jbr.outputs.path }}"
+          } >> ~/.gradle/gradle.properties
+
       - name: Warm Gradle
-        run: ./gradlew --version --no-daemon
+        run: ./gradlew :ui:compileDebugKotlin --no-daemon --quiet
