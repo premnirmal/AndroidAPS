@@ -4,12 +4,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.RemoteInput
-import androidx.core.app.NotificationCompat.Metric
-import androidx.core.app.NotificationCompat.Metric.FixedFloat
-import androidx.core.app.NotificationCompat.MetricStyle
 import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.model.TrendArrow
 import app.aaps.core.data.plugin.PluginType
@@ -148,7 +144,6 @@ class PersistentNotificationPlugin @Inject constructor(
         var line1: String?
         var line2: String? = null
         var line3: String? = null
-        var bgMetric: Metric? = null
         var unreadConversationBuilder: NotificationCompat.CarExtender.UnreadConversation.Builder? = null
         if (profileFunction.isProfileValid("Notification")) {
             val lastBG = iobCobCalculator.ads.lastBg()
@@ -162,13 +157,6 @@ class PersistentNotificationPlugin @Inject constructor(
                 } else {
                     line1 += " " + rh.gs(R.string.old_data)
                 }
-                bgMetric = Metric(
-                    FixedFloat(
-                        profileUtil.fromMgdlToUnits(lastBG.recalculated).toFloat(),
-                        profileFunction.getUnits().displayLabel
-                    ),
-                    "BG"
-                )
             } else {
                 line1 = rh.gs(app.aaps.core.ui.R.string.missed_bg_readings)
             }
@@ -249,17 +237,6 @@ class PersistentNotificationPlugin @Inject constructor(
         if (includeAuto) lastAutoNotificationContent = content
         val builder = NotificationCompat.Builder(context, notificationHolder.channelID)
         builder.setOngoing(true)
-        // Live updates require Android 16, target SDK 36, and Trio's promoted-notification permission.
-        if (config.TRIO && Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
-            builder.setRequestPromotedOngoing(true)
-        }
-        if (config.TRIO && Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN && bgMetric != null) {
-            builder.setStyle(
-                MetricStyle()
-                    .addMetric(bgMetric)
-                    .setCriticalMetric(0)
-            )
-        }
         builder.setOnlyAlertOnce(true)
         builder.setCategory(NotificationCompat.CATEGORY_STATUS)
         builder.setSmallIcon(iconsProvider.getNotificationIcon())
