@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AreaChart
 import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
@@ -62,7 +64,7 @@ fun TrioBottomBar(
                 selected = selectedTab == TrioNavTab.Overview,
                 onClick = { onTabSelected(TrioNavTab.Overview) },
                 label = stringResource(R.string.trio_tab_home),
-                icon = { Icon(imageVector = Icons.Default.Home, contentDescription = null) },
+                icon = { Icon(imageVector = Icons.Default.AreaChart, contentDescription = null) },
                 colors = colors
             )
             TrioTabItem(
@@ -93,6 +95,7 @@ fun TrioBottomBar(
             onClick = onAddClick,
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
+            shape = CircleShape,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = FAB_VERTICAL_OFFSET)
