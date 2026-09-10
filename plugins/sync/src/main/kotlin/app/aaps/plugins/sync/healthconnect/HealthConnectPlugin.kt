@@ -43,23 +43,26 @@ class HealthConnectPlugin @Inject constructor(
     rh
 ) {
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var scope: CoroutineScope? = null
     private var client: HealthConnectClient? = null
 
     override suspend fun onStart() {
         super.onStart()
         if (HealthConnectClient.getSdkStatus(context) != HealthConnectClient.SDK_AVAILABLE) return
         client = HealthConnectClient.getOrCreate(context)
+        val newScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        scope = newScope
         persistenceLayer.observeAnyChange()
             .filter { changes -> GV::class in changes }
-            .collectResilient(scope, aapsLogger, LTag.CORE) {
+            .collectResilient(newScope, aapsLogger, LTag.CORE) {
                 writeRecentGlucoseValues()
             }
         writeRecentGlucoseValues()
     }
 
     override suspend fun onStop() {
-        scope.cancel()
+        scope?.cancel()
+        scope = null
         client = null
         super.onStop()
     }
