@@ -489,7 +489,7 @@ class ComposeMainActivity : AppCompatActivity() {
 
         // Auto-launch setup wizard on first run
         LaunchedEffect(Unit) {
-            if (!preferences.get(BooleanNonKey.GeneralSetupWizardProcessed) && !isRunningRealPumpTest()) {
+            if (!config.TRIO && !preferences.get(BooleanNonKey.GeneralSetupWizardProcessed) && !isRunningRealPumpTest()) {
                 protectionCheck.requestProtection(ProtectionCheck.Protection.PREFERENCES) { result ->
                     if (result == ProtectionResult.GRANTED) {
                         navController.navigate(AppRoute.SetupWizard.route)
@@ -622,7 +622,7 @@ class ComposeMainActivity : AppCompatActivity() {
                 val objectivesPlugin = objectives as PluginBase
                 val objectivesTotal = objectives.size
                 val objectivesDone = objectives.accomplishedCount
-                val showObjectivesSetup = config.APS && objectivesTotal > 0 && objectivesDone < objectivesTotal &&
+                val showObjectivesSetup = config.APS && !config.TRIO && objectivesTotal > 0 && objectivesDone < objectivesTotal &&
                     objectivesPlugin.isEnabled() && objectivesPlugin.hasComposeContent()
                 val objectivesSetupPlugin = if (showObjectivesSetup) objectivesPlugin else null
                 val objectivesProgressText = if (showObjectivesSetup) "$objectivesDone/$objectivesTotal" else null
@@ -1176,7 +1176,7 @@ class ComposeMainActivity : AppCompatActivity() {
 
             ElementType.PROFILE_HELPER          -> navController.navigate(AppRoute.ProfileHelper.route)
             ElementType.HISTORY_BROWSER         -> navController.navigate(AppRoute.HistoryBrowser.route)
-            ElementType.SETUP_WIZARD            -> navController.navigate(AppRoute.SetupWizard.route)
+            ElementType.SETUP_WIZARD            -> if (!config.TRIO) navController.navigate(AppRoute.SetupWizard.route)
             ElementType.MAINTENANCE             -> mainViewModel.setShowMaintenanceSheet(true)
             ElementType.CONFIGURATION           -> navController.navigate(AppRoute.Configuration.route)
             ElementType.ABOUT                   -> mainViewModel.setShowAboutDialog(true)

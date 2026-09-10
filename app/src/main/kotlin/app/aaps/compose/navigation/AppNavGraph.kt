@@ -849,39 +849,41 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
-    composable(AppRoute.SetupWizard.route) {
-        SetupWizardScreen(
-            swDefinition = swDefinition,
-            onFinish = {
-                preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
-                navController.safePopBackStack()
-            },
-            onBack = { navController.safePopBackStack() },
-            onImportSettings = { navController.navigate(AppRoute.ImportSettings.createRoute("LOCAL")) },
-            onPluginPreferences = { pluginId -> navController.navigate(AppRoute.PluginPreferences.createRoute(pluginId)) },
-            onPluginOpen = { pluginId -> onNavigationRequest(NavigationRequest.Plugin(pluginId), navController) },
-            onSetMasterPassword = { navController.navigate(AppRoute.PreferenceScreen.createRoute("protection", StringKey.ProtectionMasterPassword.key)) },
-            onManageInsulin = { navController.navigate(AppRoute.InsulinManagement.createRoute()) },
-            onManageProfile = { navController.navigate(AppRoute.Profile.createRoute()) },
-            onProfileSwitch = { navController.navigate(AppRoute.ProfileActivation.createRoute(0)) },
-            onOpenAuthorizedClients = { navController.navigate(AppRoute.AuthorizedClients.route) },
-            onPairWithMaster = { navController.navigate(AppRoute.PairWithMaster.route) },
-            onOpenNsReceiveSettings = { navController.navigate(AppRoute.PreferenceScreen.createRoute("ns_client_synchronization")) },
-            onRunObjectives = {
-                val index = activePlugin.getPluginsList().indexOfFirst { it is Objectives }
-                if (index >= 0) navController.navigate(AppRoute.PluginContent.createRoute(index))
-            },
-            onRequestDirectoryAccess = onRequestDirectoryAccess,
-            onRequestPermission = onRequestPermission,
-            permissionItems = {
-                val allGroups = activePlugin.collectAllPermissions(navController.context)
-                val missingGroups = activePlugin.collectMissingPermissions(navController.context)
-                val missingSets = missingGroups.map { it.permissions.toSet() }.toSet()
-                allGroups.map { group -> group to (group.permissions.toSet() !in missingSets) }
-            },
-            isDirectoryAccessGranted = { prefFileList.isDirectoryAccessGranted() },
-            rxBus = rxBus
-        )
+    if (!isTrio) {
+        composable(AppRoute.SetupWizard.route) {
+            SetupWizardScreen(
+                swDefinition = swDefinition,
+                onFinish = {
+                    preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
+                    navController.safePopBackStack()
+                },
+                onBack = { navController.safePopBackStack() },
+                onImportSettings = { navController.navigate(AppRoute.ImportSettings.createRoute("LOCAL")) },
+                onPluginPreferences = { pluginId -> navController.navigate(AppRoute.PluginPreferences.createRoute(pluginId)) },
+                onPluginOpen = { pluginId -> onNavigationRequest(NavigationRequest.Plugin(pluginId), navController) },
+                onSetMasterPassword = { navController.navigate(AppRoute.PreferenceScreen.createRoute("protection", StringKey.ProtectionMasterPassword.key)) },
+                onManageInsulin = { navController.navigate(AppRoute.InsulinManagement.createRoute()) },
+                onManageProfile = { navController.navigate(AppRoute.Profile.createRoute()) },
+                onProfileSwitch = { navController.navigate(AppRoute.ProfileActivation.createRoute(0)) },
+                onOpenAuthorizedClients = { navController.navigate(AppRoute.AuthorizedClients.route) },
+                onPairWithMaster = { navController.navigate(AppRoute.PairWithMaster.route) },
+                onOpenNsReceiveSettings = { navController.navigate(AppRoute.PreferenceScreen.createRoute("ns_client_synchronization")) },
+                onRunObjectives = {
+                    val index = activePlugin.getPluginsList().indexOfFirst { it is Objectives }
+                    if (index >= 0) navController.navigate(AppRoute.PluginContent.createRoute(index))
+                },
+                onRequestDirectoryAccess = onRequestDirectoryAccess,
+                onRequestPermission = onRequestPermission,
+                permissionItems = {
+                    val allGroups = activePlugin.collectAllPermissions(navController.context)
+                    val missingGroups = activePlugin.collectMissingPermissions(navController.context)
+                    val missingSets = missingGroups.map { it.permissions.toSet() }.toSet()
+                    allGroups.map { group -> group to (group.permissions.toSet() !in missingSets) }
+                },
+                isDirectoryAccessGranted = { prefFileList.isDirectoryAccessGranted() },
+                rxBus = rxBus
+            )
+        }
     }
 }
 

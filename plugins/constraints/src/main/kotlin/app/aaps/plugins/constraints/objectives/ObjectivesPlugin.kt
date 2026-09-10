@@ -33,7 +33,7 @@ class ObjectivesPlugin @Inject constructor(
     aapsLogger: AAPSLogger,
     rh: ResourceHelper,
     preferences: Preferences,
-    config: Config,
+    private val config: Config,
     val objectives: List<@JvmSuppressWildcards Objective>
 ) : PluginBaseWithPreferences(
     pluginDescription = PluginDescription()
@@ -42,7 +42,8 @@ class ObjectivesPlugin @Inject constructor(
         .icon(IcPluginObjectives)
         .pluginName(app.aaps.core.ui.R.string.objectives)
         .shortName(R.string.objectives_shortname)
-        .enableByDefault(config.APS)
+        .enableByDefault(config.APS && !config.TRIO)
+        .showInList { !config.TRIO }
         .description(R.string.description_objectives),
     ownPreferences = listOf(ObjectivesBooleanComposedKey::class.java, ObjectivesLongComposedKey::class.java),
     aapsLogger, rh, preferences
@@ -76,6 +77,7 @@ class ObjectivesPlugin @Inject constructor(
      * Constraints interface
      */
     override fun isLoopInvocationAllowed(value: Constraint<Boolean>): Constraint<Boolean> {
+        if (config.TRIO) return value
         // Check if initialized
         if (objectives.isEmpty()) return value
         if (!objectives[FIRST_OBJECTIVE].isStarted)
@@ -84,6 +86,7 @@ class ObjectivesPlugin @Inject constructor(
     }
 
     override fun isLgsForced(value: Constraint<Boolean>): Constraint<Boolean> {
+        if (config.TRIO) return value
         // Check if initialized
         if (objectives.isEmpty()) return value
         if (objectives[LGS_OBJECTIVE].isStarted && !objectives[LGS_OBJECTIVE].isAccomplished)
@@ -92,6 +95,7 @@ class ObjectivesPlugin @Inject constructor(
     }
 
     override suspend fun isClosedLoopAllowed(value: Constraint<Boolean>): Constraint<Boolean> {
+        if (config.TRIO) return value
         // Check if initialized
         if (objectives.isEmpty()) return value
         if (!objectives[CLOSED_LOOP_OBJECTIVE].isStarted)
@@ -100,6 +104,7 @@ class ObjectivesPlugin @Inject constructor(
     }
 
     override fun isAutosensModeEnabled(value: Constraint<Boolean>): Constraint<Boolean> {
+        if (config.TRIO) return value
         // Check if initialized
         if (objectives.isEmpty()) return value
         if (!objectives[AUTOSENS_OBJECTIVE].isStarted)
@@ -108,6 +113,7 @@ class ObjectivesPlugin @Inject constructor(
     }
 
     override suspend fun isSMBModeEnabled(value: Constraint<Boolean>): Constraint<Boolean> {
+        if (config.TRIO) return value
         // Check if initialized
         if (objectives.isEmpty()) return value
         if (!objectives[SMB_OBJECTIVE].isStarted)
@@ -116,6 +122,7 @@ class ObjectivesPlugin @Inject constructor(
     }
 
     override fun isAutomationEnabled(value: Constraint<Boolean>): Constraint<Boolean> {
+        if (config.TRIO) return value
         // Check if initialized
         if (objectives.isEmpty()) return value
         if (!objectives[AUTO_OBJECTIVE].isStarted)
@@ -124,6 +131,7 @@ class ObjectivesPlugin @Inject constructor(
     }
 
     override fun isConcentrationEnabled(value: Constraint<Boolean>): Constraint<Boolean> {
+        if (config.TRIO) return value
         if (objectives.isEmpty()) return value
         if (!objectives[EXAM_OBJECTIVE].isAccomplished) {
             value.set(false, rh.gs(R.string.objectivenotfinished, EXAM_OBJECTIVE + 1), this)
@@ -131,9 +139,9 @@ class ObjectivesPlugin @Inject constructor(
         return value
     }
 
-    override val size: Int get() = objectives.size
-    override val accomplishedCount: Int get() = objectives.count { it.isAccomplished }
+    override val size: Int get() = if (config.TRIO) 0 else objectives.size
+    override val accomplishedCount: Int get() = if (config.TRIO) 0 else objectives.count { it.isAccomplished }
 
-    override fun isAccomplished(index: Int) = objectives[index].isAccomplished
-    override fun isStarted(index: Int): Boolean = objectives[index].isStarted
+    override fun isAccomplished(index: Int) = !config.TRIO && objectives[index].isAccomplished
+    override fun isStarted(index: Int): Boolean = !config.TRIO && objectives[index].isStarted
 }
