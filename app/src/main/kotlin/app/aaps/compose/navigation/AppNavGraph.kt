@@ -32,7 +32,6 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import app.aaps.core.data.model.TE
-import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.configuration.ConfigBuilder
 import app.aaps.core.interfaces.constraints.Objectives
@@ -126,13 +125,6 @@ fun NavHostController.safePopBackStack() {
         popBackStack()
     }
 }
-
-private val TRIO_SETTINGS_VISIBLE_TYPES = setOf(
-    PluginType.GENERAL,
-    PluginType.PUMP,
-    PluginType.BGSOURCE,
-    PluginType.SYNC
-)
 
 /**
  * All navigation routes except the Main route.
@@ -680,7 +672,7 @@ fun NavGraphBuilder.appNavGraph(
         val configState by configurationViewModel.uiState.collectAsStateWithLifecycle()
         ConfigurationScreen(
             categories = configState.categories,
-            visibleTypes = if (isTrio) TRIO_SETTINGS_VISIBLE_TYPES else null,
+            visibleTypes = null,
             hardwarePumpConfirmation = configState.hardwarePumpConfirmation,
             onNavigateBack = { navController.safePopBackStack() },
             onNavigateToCategory = { type ->
@@ -717,7 +709,7 @@ fun NavGraphBuilder.appNavGraph(
                 ) {
                     ConfigurationScreen(
                         categories = configState.categories,
-                        visibleTypes = TRIO_SETTINGS_VISIBLE_TYPES,
+                        visibleTypes = null,
                         hardwarePumpConfirmation = configState.hardwarePumpConfirmation,
                         onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
                         onNavigateToCategory = { type ->
