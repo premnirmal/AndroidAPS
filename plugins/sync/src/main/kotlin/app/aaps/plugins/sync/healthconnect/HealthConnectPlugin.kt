@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.BloodGlucoseRecord
-import androidx.health.connect.client.records.Metadata
+import androidx.health.connect.client.records.metadata.Device
+import androidx.health.connect.client.records.metadata.Device.Companion.TYPE_PHONE
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.units.BloodGlucose
 import app.aaps.core.data.model.GV
 import app.aaps.core.data.plugin.PluginType
@@ -36,8 +38,8 @@ class HealthConnectPlugin @Inject constructor(
 ) : PluginBase(
     PluginDescription()
         .mainType(PluginType.SYNC)
-        .alwaysEnabled()
-        .neverVisible()
+        .alwaysEnabled(true)
+        .neverVisible(true)
         .pluginName(R.string.health_connect),
     aapsLogger,
     rh
@@ -73,7 +75,7 @@ class HealthConnectPlugin @Inject constructor(
         if (permission !in healthConnectClient.permissionController.getGrantedPermissions()) return
 
         val end = System.currentTimeMillis()
-        val readings = persistenceLayer.getBgReadingsDataFromTime(end - SYNC_WINDOW, end, true)
+        val readings = persistenceLayer.getBgReadingsDataFromTime(end - SYNC_WINDOW, true)
             .filter { it.isValid && it.value > 0.0 }
         if (readings.isEmpty()) return
 
@@ -84,11 +86,9 @@ class HealthConnectPlugin @Inject constructor(
         BloodGlucoseRecord(
             time = Instant.ofEpochMilli(timestamp),
             zoneOffset = ZoneOffset.ofTotalSeconds((utcOffset / 1000).toInt()),
-            metadata = Metadata(clientRecordId = "androidaps-glucose-$id"),
+            metadata = Metadata.activelyRecorded(device = Device(type = TYPE_PHONE)),
             level = BloodGlucose.milligramsPerDeciliter(value),
             specimenSource = BloodGlucoseRecord.SPECIMEN_SOURCE_INTERSTITIAL_FLUID,
-            mealType = BloodGlucoseRecord.MEAL_TYPE_UNKNOWN,
-            relationToMeal = BloodGlucoseRecord.RELATION_TO_MEAL_UNKNOWN
         )
 
     private companion object {
