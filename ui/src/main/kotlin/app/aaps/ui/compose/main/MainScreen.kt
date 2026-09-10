@@ -367,42 +367,33 @@ fun MainScreen(
 
                     // Top bar overlay
                     AnimatedVisibility(
-                        visible = showChrome,
+                        visible = showChrome && !isTrio,
                         enter = slideInVertically { -it },
                         exit = slideOutVertically { -it },
                         modifier = Modifier
                             .align(Alignment.TopCenter)
                             .padding(top = topScaffoldPadding)
                     ) {
-                        if (isTrio) {
-                            trioTopBar(
-                                mainViewModel.appTitle,
-                                Modifier.onSizeChanged {
-                                    if (it.height > 0 && it.height != topBarHeightPx) topBarHeightPx = it.height
+                        MainTopBar(
+                            searchUiState = searchUiState,
+                            onMenuClick = {
+                                scope.launch {
+                                    drawerState.open()
+                                    onMenuClick()
                                 }
-                            )
-                        } else {
-                            MainTopBar(
-                                searchUiState = searchUiState,
-                                onMenuClick = {
-                                    scope.launch {
-                                        drawerState.open()
-                                        onMenuClick()
-                                    }
-                                },
-                                onPreferencesClick = { onNavigate(NavigationRequest.Element(ElementType.SETTINGS)) },
-                                onSearchQueryChange = onSearchQueryChange,
-                                onSearchClear = onSearchClear,
-                                onSearchActiveChange = onSearchActiveChange,
-                                isSimpleMode = uiState.isSimpleMode,
-                                // Guard against transient 0 heights during AnimatedVisibility exit:
-                                // the resulting contentPadding invalidation can schedule a remeasure
-                                // on a node that's losing its owner — crashes in dispatchDraw.
-                                modifier = Modifier.onSizeChanged {
-                                    if (it.height > 0 && it.height != topBarHeightPx) topBarHeightPx = it.height
-                                }
-                            )
-                        }
+                            },
+                            onPreferencesClick = { onNavigate(NavigationRequest.Element(ElementType.SETTINGS)) },
+                            onSearchQueryChange = onSearchQueryChange,
+                            onSearchClear = onSearchClear,
+                            onSearchActiveChange = onSearchActiveChange,
+                            isSimpleMode = uiState.isSimpleMode,
+                            // Guard against transient 0 heights during AnimatedVisibility exit:
+                            // the resulting contentPadding invalidation can schedule a remeasure
+                            // on a node that's losing its owner — crashes in dispatchDraw.
+                            modifier = Modifier.onSizeChanged {
+                                if (it.height > 0 && it.height != topBarHeightPx) topBarHeightPx = it.height
+                            }
+                        )
                     }
 
                     // Bottom bar overlay

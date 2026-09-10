@@ -16,7 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -47,7 +46,6 @@ import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.icons.Pump
 import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.compose.navigation.color
-import app.aaps.core.ui.compose.navigation.icon
 import app.aaps.ui.compose.notificationsSheet.toColor
 import app.aaps.ui.R
 import app.aaps.ui.compose.main.TempTargetChipState
@@ -155,9 +153,17 @@ fun TrioOverviewScreen(
                     onClick = onBgSourceClick,
                     modifier = Modifier.weight(1f)
                 )
-                PredictionText(
+                LoopStatusAndPrediction(
+                    runningMode = runningMode,
+                    runningModeText = runningModeText,
+                    runningModeRemaining = runningModeRemaining,
+                    runningModeProgress = runningModeProgress,
+                    runningModeSceneManaged = runningModeSceneManaged,
+                    smbEnabled = smbEnabled,
+                    commandsAllowed = commandsAllowed,
                     predictedText = predictedText,
-                    onClick = { showPredictionInfo = true },
+                    onRunningModeClick = { onNavigate(NavigationRequest.Element(ElementType.RUNNING_MODE)) },
+                    onPredictionClick = { showPredictionInfo = true },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -244,6 +250,42 @@ fun TrioOverviewScreen(
             sensitivityUiState = sensitivityUiState,
             predictedText = predictedText,
             onDismiss = { showPredictionInfo = false }
+        )
+    }
+}
+
+@Composable
+private fun LoopStatusAndPrediction(
+    runningMode: RM.Mode,
+    runningModeText: String,
+    runningModeRemaining: String,
+    runningModeProgress: Float,
+    runningModeSceneManaged: Boolean,
+    smbEnabled: Boolean,
+    commandsAllowed: Boolean,
+    predictedText: String,
+    onRunningModeClick: () -> Unit,
+    onPredictionClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
+    ) {
+        RunningModeChip(
+            mode = runningMode,
+            text = runningModeText,
+            progress = runningModeProgress,
+            remaining = runningModeRemaining,
+            sceneManaged = runningModeSceneManaged,
+            smbEnabled = smbEnabled,
+            enabled = commandsAllowed,
+            onClick = onRunningModeClick
+        )
+        PredictionText(
+            predictedText = predictedText,
+            onClick = onPredictionClick
         )
     }
 }
@@ -338,7 +380,7 @@ private fun PumpEntryPoint(
             verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
         ) {
             Icon(
-                imageVector = if (needsSetup) Icons.Default.Warning else Icons.Default.Shield,
+                imageVector = if (needsSetup) Icons.Default.Warning else Pump,
                 contentDescription = null,
                 tint = if (needsSetup) MaterialTheme.colorScheme.error else ElementType.PUMP.color()
             )
