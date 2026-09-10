@@ -22,6 +22,9 @@ dependencies {
 
     implementation(libs.kotlinx.coroutines.rx3)
 
+    // O5 certificate download talks to the OSAID key-manager over HTTPS.
+    implementation(libs.com.squareup.okhttp3.okhttp)
+
     implementation(libs.com.google.dagger.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.compose.ui.tooling.preview)
