@@ -94,6 +94,8 @@ fun OverviewScreen(
     isPumpCommunicating: Boolean = false,
     onStopBolus: () -> Unit = {},
     isTrio: Boolean = false,
+    pumpNeedsSetup: Boolean = false,
+    onBgSourceClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showNotificationSheet by remember { mutableStateOf(false) }
@@ -157,6 +159,8 @@ fun OverviewScreen(
                 onDismissScene = onDismissScene,
                 endSceneEnabled = endSceneEnabled,
                 commandsAllowed = commandsAllowed,
+                pumpNeedsSetup = pumpNeedsSetup,
+                onBgSourceClick = onBgSourceClick,
                 notificationCount = notifications.size,
                 highestNotificationLevel = notifications.minByOrNull { it.level.ordinal }?.level,
                 onNotificationClick = { showNotificationSheet = true },

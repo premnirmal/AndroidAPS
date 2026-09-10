@@ -57,7 +57,6 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.ui.compose.AapsFab
-import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.AapsTopAppBar
 import app.aaps.core.ui.compose.MasterOfflineBanner
 import app.aaps.core.ui.compose.ScreenMode
@@ -215,8 +214,7 @@ fun TempTargetManagementScreen(
         onDispose { viewModel.cancelReorder() }
     }
 
-    AapsTheme {
-        Scaffold(
+    Scaffold(
             topBar = {
                 if (isReorderMode) {
                     AapsTopAppBar(

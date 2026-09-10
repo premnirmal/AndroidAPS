@@ -134,6 +134,7 @@ fun MainScreen(
     // Pump setup
     pumpSetupPlugin: PluginBase? = null,
     // BG source shortcut
+    bgSourcePlugin: PluginBase? = null,
     bgSetupPlugin: PluginBase? = null,
     bgQualityBadgeIcon: ImageVector? = null,
     bgQualityBadgeTint: Color = Color.Unspecified,
@@ -288,7 +289,13 @@ fun MainScreen(
                         queueStatusText = queueStatusText,
                         isPumpCommunicating = isPumpCommunicating,
                         onStopBolus = onStopBolus,
-                        isTrio = isTrio
+                        isTrio = isTrio,
+                        pumpNeedsSetup = pumpSetupPlugin != null,
+                        onBgSourceClick = {
+                            bgSourcePlugin?.let { plugin ->
+                                onNavigate(NavigationRequest.Plugin(plugin.javaClass.simpleName))
+                            }
+                        }
                     )
 
                     // Search results overlay

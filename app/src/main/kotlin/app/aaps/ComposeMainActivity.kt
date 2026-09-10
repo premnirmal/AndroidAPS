@@ -83,7 +83,6 @@ import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.maintenance.FileListProvider
 import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.interfaces.notifications.NotificationId
-import app.aaps.core.interfaces.notifications.NotificationLevel
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.plugin.ActivePlugin
@@ -765,6 +764,7 @@ class ComposeMainActivity : AppCompatActivity() {
                     autoShowNotificationSheet = _autoShowNotifications.value,
                     onAutoShowConsumed = { _autoShowNotifications.value = false },
                     pumpSetupPlugin = pumpSetupPlugin,
+                    bgSourcePlugin = bgSourcePlugin,
                     bgSetupPlugin = bgSetupPlugin,
                     bgQualityBadgeIcon = bgQualityBadgeIcon,
                     bgQualityBadgeTint = bgQualityBadgeTint,
@@ -925,9 +925,6 @@ class ComposeMainActivity : AppCompatActivity() {
     private fun refreshOnResume() {
         manageViewModel.refreshState()
         permissionsViewModel.refresh()
-        if (notificationManager.notifications.value.any { it.level.priority <= NotificationLevel.IMPORTANT.priority }) {
-            _autoShowNotifications.value = true
-        }
         if (!isProtectionCheckActive) {
             isProtectionCheckActive = true
             protectionCheck.requestProtection(ProtectionCheck.Protection.APPLICATION) { result ->
@@ -1052,7 +1049,7 @@ class ComposeMainActivity : AppCompatActivity() {
         if (!config.TRIO) return
         val route = when (tab) {
             TrioNavTab.Overview   -> AppRoute.Main.route
-            TrioNavTab.Adjustments -> AppRoute.TempTargetManagement.createRoute(mode = ScreenMode.EDIT)
+            TrioNavTab.Adjustments -> AppRoute.TrioTreatments.route
             TrioNavTab.Statistics -> AppRoute.TrioStats.route
             TrioNavTab.Settings   -> AppRoute.TrioSettings.route
         }

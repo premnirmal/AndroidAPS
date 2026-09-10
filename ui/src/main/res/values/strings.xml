@@ -8,6 +8,9 @@
     <string name="trio_metric_sensitivity">Sens</string>
     <string name="trio_metric_isf">ISF</string>
     <string name="trio_metric_remaining">Remaining</string>
+    <string name="trio_metric_range" comment="%1$s=start value, %2$s=end value. Example: 10 → 12">%1$s → %2$s</string>
+    <string name="trio_no_pump">No Pump</string>
+    <string name="trio_no_glucose_source">No CGM</string>
     <string name="health_connect">Health Connect</string>
     <string name="health_connect_settings_subtitle">Manage health data sharing</string>
     <string name="health_connect_not_available">Health Connect is not available on this device</string>

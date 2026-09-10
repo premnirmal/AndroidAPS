@@ -6,7 +6,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -54,19 +58,41 @@ fun BgInfoSection(
     timeAgoText: String,
     modifier: Modifier = Modifier,
     size: Dp = AapsSpacing.bgCircleSize * LocalAapsScale.current,
-    showTimeAgo: Boolean = true
+    showTimeAgo: Boolean = true,
+    noDataLabel: String? = null,
+    onClick: (() -> Unit)? = null
 ) {
     if (bgInfo == null) {
-        // Show placeholder when no data
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = modifier.size(size)
+        Surface(
+            onClick = onClick ?: {},
+            enabled = onClick != null,
+            color = Color.Transparent,
+            modifier = modifier
         ) {
-            Text(
-                text = "---",
-                style = MaterialTheme.typography.displayMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(AapsSpacing.small, Alignment.CenterVertically),
+                modifier = Modifier.size(size)
+            ) {
+                if (noDataLabel != null) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                    Text(
+                        text = noDataLabel,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                } else {
+                    Text(
+                        text = "---",
+                        style = MaterialTheme.typography.displayMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
         return
     }
@@ -84,109 +110,115 @@ fun BgInfoSection(
         if (bgInfo.isOutdated) append(", outdated")
     }
 
-    Box(
-        contentAlignment = Alignment.Center,
+    Surface(
+        onClick = onClick ?: {},
+        enabled = onClick != null,
+        color = Color.Transparent,
         modifier = modifier
-            .padding(AapsSpacing.small)
             .semantics { contentDescription = a11yDescription }
     ) {
-        // Background ring + trend arc indicator
-        Canvas(modifier = Modifier.size(size)) {
-            val strokeWidth = ringStrokeWidth.toPx()
-            val arcSize = Size(size.toPx() - strokeWidth, size.toPx() - strokeWidth)
-            val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.padding(AapsSpacing.small)
+        ) {
+            // Background ring + trend arc indicator
+            Canvas(modifier = Modifier.size(size)) {
+                val strokeWidth = ringStrokeWidth.toPx()
+                val arcSize = Size(size.toPx() - strokeWidth, size.toPx() - strokeWidth)
+                val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
 
-            // Background ring (full circle, semi-transparent)
-            drawArc(
-                color = ringColor,
-                startAngle = 0f,
-                sweepAngle = 360f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-            )
+                // Background ring (full circle, semi-transparent)
+                drawArc(
+                    color = ringColor,
+                    startAngle = 0f,
+                    sweepAngle = 360f,
+                    useCenter = false,
+                    topLeft = topLeft,
+                    size = arcSize,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                )
 
-            // Trend arc indicator (bright segment + outward triangles)
-            bgInfo.trendArrow?.let { trend ->
-                trend.toArcIndicator()?.let { indicator ->
-                    // Single bright arc segment
-                    val arcStart = indicator.centerAngle - indicator.sweepAngle / 2
-                    drawArc(
-                        color = bgColor,
-                        startAngle = arcStart,
-                        sweepAngle = indicator.sweepAngle,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = arcSize,
-                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                    )
-
-                    // Triangles pointing outward, each placed on the circle at its own angle
-                    val ringCenterX = topLeft.x + arcSize.width / 2
-                    val ringCenterY = topLeft.y + arcSize.height / 2
-                    val ringRadius = arcSize.width / 2
-                    val triHeight = strokeWidth * 1.2f
-                    val triHalfBase = strokeWidth * 1.6f
-                    val n = indicator.triangleCount
-                    val baseDist = ringRadius + strokeWidth * 0.2f
-                    val angularSpacing = Math.toDegrees((triHalfBase * 1.6 / ringRadius)).toFloat()
-
-                    for (i in 0 until n) {
-                        val triAngle = indicator.centerAngle + (i - (n - 1) / 2f) * angularSpacing
-                        val triRad = Math.toRadians(triAngle.toDouble())
-                        val dirX = cos(triRad).toFloat()
-                        val dirY = sin(triRad).toFloat()
-                        val perpX = -dirY
-                        val perpY = dirX
-                        val baseX = ringCenterX + baseDist * dirX
-                        val baseY = ringCenterY + baseDist * dirY
-                        val tipX = baseX + triHeight * dirX
-                        val tipY = baseY + triHeight * dirY
-                        drawPath(
-                            path = Path().apply {
-                                moveTo(tipX, tipY)
-                                lineTo(baseX + triHalfBase * perpX, baseY + triHalfBase * perpY)
-                                lineTo(baseX - triHalfBase * perpX, baseY - triHalfBase * perpY)
-                                close()
-                            },
-                            color = bgColor
+                // Trend arc indicator (bright segment + outward triangles)
+                bgInfo.trendArrow?.let { trend ->
+                    trend.toArcIndicator()?.let { indicator ->
+                        // Single bright arc segment
+                        val arcStart = indicator.centerAngle - indicator.sweepAngle / 2
+                        drawArc(
+                            color = bgColor,
+                            startAngle = arcStart,
+                            sweepAngle = indicator.sweepAngle,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = arcSize,
+                            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
                         )
+
+                        // Triangles pointing outward, each placed on the circle at its own angle
+                        val ringCenterX = topLeft.x + arcSize.width / 2
+                        val ringCenterY = topLeft.y + arcSize.height / 2
+                        val ringRadius = arcSize.width / 2
+                        val triHeight = strokeWidth * 1.2f
+                        val triHalfBase = strokeWidth * 1.6f
+                        val n = indicator.triangleCount
+                        val baseDist = ringRadius + strokeWidth * 0.2f
+                        val angularSpacing = Math.toDegrees((triHalfBase * 1.6 / ringRadius)).toFloat()
+
+                        for (i in 0 until n) {
+                            val triAngle = indicator.centerAngle + (i - (n - 1) / 2f) * angularSpacing
+                            val triRad = Math.toRadians(triAngle.toDouble())
+                            val dirX = cos(triRad).toFloat()
+                            val dirY = sin(triRad).toFloat()
+                            val perpX = -dirY
+                            val perpY = dirX
+                            val baseX = ringCenterX + baseDist * dirX
+                            val baseY = ringCenterY + baseDist * dirY
+                            val tipX = baseX + triHeight * dirX
+                            val tipY = baseY + triHeight * dirY
+                            drawPath(
+                                path = Path().apply {
+                                    moveTo(tipX, tipY)
+                                    lineTo(baseX + triHalfBase * perpX, baseY + triHalfBase * perpY)
+                                    lineTo(baseX - triHalfBase * perpX, baseY - triHalfBase * perpY)
+                                    close()
+                                },
+                                color = bgColor
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        // Center content: delta on top, BG value, time ago below
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(bottom = AapsSpacing.small),
-            verticalArrangement = Arrangement.spacedBy((-2).dp, Alignment.CenterVertically)
-        ) {
-            // Delta on top
-            bgInfo.deltaText?.let { delta ->
+            // Center content: delta on top, BG value, time ago below
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(bottom = AapsSpacing.small),
+                verticalArrangement = Arrangement.spacedBy((-2).dp, Alignment.CenterVertically)
+            ) {
+                // Delta on top
+                bgInfo.deltaText?.let { delta ->
+                    Text(
+                        text = delta,
+                        style = AapsTheme.typography.bgSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // BG value - large bold text with strikethrough if outdated
                 Text(
-                    text = delta,
-                    style = AapsTheme.typography.bgSecondary,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = bgInfo.bgText,
+                    style = AapsTheme.typography.bgValue,
+                    color = bgColor,
+                    textDecoration = if (bgInfo.isOutdated) TextDecoration.LineThrough else TextDecoration.None
                 )
-            }
 
-            // BG value - large bold text with strikethrough if outdated
-            Text(
-                text = bgInfo.bgText,
-                style = AapsTheme.typography.bgValue,
-                color = bgColor,
-                textDecoration = if (bgInfo.isOutdated) TextDecoration.LineThrough else TextDecoration.None
-            )
-
-            // Time ago below
-            if (showTimeAgo) {
-                Text(
-                    text = timeAgoText,
-                    style = AapsTheme.typography.bgTimeAgo,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Time ago below
+                if (showTimeAgo) {
+                    Text(
+                        text = timeAgoText,
+                        style = AapsTheme.typography.bgTimeAgo,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

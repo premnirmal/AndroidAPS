@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,6 +54,7 @@ import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.chips.CobUiState
 import app.aaps.ui.compose.overview.chips.IobUiState
 import app.aaps.ui.compose.overview.chips.ProfileChip
+import app.aaps.ui.compose.overview.chips.RunningModeChip
 import app.aaps.ui.compose.overview.chips.SensitivityUiState
 import app.aaps.ui.compose.overview.chips.TbrChip
 import app.aaps.ui.compose.overview.chips.TempTargetChip
@@ -93,6 +95,8 @@ fun TrioOverviewScreen(
     onDismissScene: () -> Unit = {},
     endSceneEnabled: Boolean = true,
     commandsAllowed: Boolean = true,
+    pumpNeedsSetup: Boolean = false,
+    onBgSourceClick: () -> Unit = {},
     notificationCount: Int = 0,
     highestNotificationLevel: NotificationLevel? = null,
     onNotificationClick: () -> Unit = {},
@@ -140,11 +144,14 @@ fun TrioOverviewScreen(
             ) {
                 PumpEntryPoint(
                     onClick = { onNavigate(NavigationRequest.Element(ElementType.PUMP)) },
+                    needsSetup = pumpNeedsSetup,
                     modifier = Modifier.weight(1f)
                 )
                 BgInfoSection(
                     bgInfo = bgInfoState.bgInfo,
                     timeAgoText = bgInfoState.timeAgoText,
+                    noDataLabel = if (bgInfoState.bgInfo == null) stringResource(R.string.trio_no_glucose_source) else null,
+                    onClick = onBgSourceClick,
                     modifier = Modifier.weight(1f)
                 )
                 PredictionText(
@@ -170,29 +177,28 @@ fun TrioOverviewScreen(
                     value = cobUiState.text,
                     modifier = Modifier.weight(1f)
                 )
+                Box(
+                    contentAlignment = Alignment.CenterEnd,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    TrioNotificationButton(
+                        notificationCount = notificationCount,
+                        highestLevel = highestNotificationLevel,
+                        onClick = onNotificationClick
+                    )
+                }
             }
 
-            Box(modifier = Modifier.fillMaxWidth()) {
-                GraphsSection(
-                    graphViewModel = graphViewModel,
-                    isSimpleMode = isSimpleMode,
-                    mainChartOnly = true,
-                    mainChartHeight = chartHeight,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                TrioNotificationButton(
-                    notificationCount = notificationCount,
-                    highestLevel = highestNotificationLevel,
-                    onClick = onNotificationClick,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(AapsSpacing.medium)
-                )
-            }
+            GraphsSection(
+                graphViewModel = graphViewModel,
+                isSimpleMode = isSimpleMode,
+                mainChartOnly = true,
+                mainChartHeight = chartHeight,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ProfileChip(
@@ -202,25 +208,29 @@ fun TrioOverviewScreen(
                     onClick = { onNavigate(NavigationRequest.Element(ElementType.PROFILE_MANAGEMENT)) },
                     sceneManaged = profileSceneManaged,
                     isNoProfile = profileName.isEmpty(),
-                    modifier = Modifier.weight(1f)
-                )
-                if (tempTargetText.isNotEmpty()) {
-                    TempTargetChip(
-                        targetText = tempTargetText,
-                        state = tempTargetState,
-                        progress = tempTargetProgress,
-                        reason = tempTargetReason,
-                        onClick = { onNavigate(NavigationRequest.Element(ElementType.TEMP_TARGET_MANAGEMENT)) },
-                        sceneManaged = tempTargetSceneManaged,
-                        enabled = commandsAllowed,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                TbrChip(
-                    state = tbrState,
-                    onClick = onTbrChipClick
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
+
+            ActiveAdjustmentsRow(
+                profileName = profileName,
+                isProfileModified = isProfileModified,
+                tempTargetText = tempTargetText,
+                tempTargetState = tempTargetState,
+                tempTargetProgress = tempTargetProgress,
+                tempTargetReason = tempTargetReason,
+                tempTargetSceneManaged = tempTargetSceneManaged,
+                runningMode = runningMode,
+                runningModeText = runningModeText,
+                runningModeRemaining = runningModeRemaining,
+                runningModeProgress = runningModeProgress,
+                runningModeSceneManaged = runningModeSceneManaged,
+                smbEnabled = smbEnabled,
+                tbrState = tbrState,
+                commandsAllowed = commandsAllowed,
+                onNavigate = onNavigate,
+                onTbrChipClick = onTbrChipClick
+            )
         }
     }
 
@@ -238,8 +248,81 @@ fun TrioOverviewScreen(
 }
 
 @Composable
+private fun ActiveAdjustmentsRow(
+    profileName: String,
+    isProfileModified: Boolean,
+    tempTargetText: String,
+    tempTargetState: TempTargetChipState,
+    tempTargetProgress: Float,
+    tempTargetReason: TT.Reason?,
+    tempTargetSceneManaged: Boolean,
+    runningMode: RM.Mode,
+    runningModeText: String,
+    runningModeRemaining: String,
+    runningModeProgress: Float,
+    runningModeSceneManaged: Boolean,
+    smbEnabled: Boolean,
+    tbrState: TbrState,
+    commandsAllowed: Boolean,
+    onNavigate: (NavigationRequest) -> Unit,
+    onTbrChipClick: () -> Unit
+) {
+    val showRunningMode = runningMode.mustBeTemporary() && runningModeText.isNotEmpty()
+    val showAdjustments = isProfileModified || tempTargetText.isNotEmpty() || tbrState != TbrState.NONE || showRunningMode
+
+    if (showAdjustments) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (isProfileModified) {
+                MetricRow(
+                    label = stringResource(app.aaps.core.ui.R.string.profile),
+                    value = profileName,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onNavigate(NavigationRequest.Element(ElementType.PROFILE_MANAGEMENT)) }
+                )
+            }
+            if (tempTargetText.isNotEmpty()) {
+                TempTargetChip(
+                    targetText = tempTargetText,
+                    state = tempTargetState,
+                    progress = tempTargetProgress,
+                    reason = tempTargetReason,
+                    onClick = { onNavigate(NavigationRequest.Element(ElementType.TEMP_TARGET_MANAGEMENT)) },
+                    sceneManaged = tempTargetSceneManaged,
+                    enabled = commandsAllowed,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            if (showRunningMode) {
+                RunningModeChip(
+                    mode = runningMode,
+                    text = runningModeText,
+                    progress = runningModeProgress,
+                    remaining = runningModeRemaining,
+                    sceneManaged = runningModeSceneManaged,
+                    smbEnabled = smbEnabled,
+                    enabled = commandsAllowed,
+                    onClick = { onNavigate(NavigationRequest.Element(ElementType.RUNNING_MODE)) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            if (tbrState != TbrState.NONE) {
+                TbrChip(
+                    state = tbrState,
+                    onClick = onTbrChipClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun PumpEntryPoint(
     onClick: () -> Unit,
+    needsSetup: Boolean,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -254,12 +337,12 @@ private fun PumpEntryPoint(
             verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
         ) {
             Icon(
-                imageVector = Pump,
+                imageVector = if (needsSetup) Icons.Default.Warning else Pump,
                 contentDescription = null,
-                tint = ElementType.PUMP.color()
+                tint = if (needsSetup) MaterialTheme.colorScheme.error else ElementType.PUMP.color()
             )
             Text(
-                text = stringResource(app.aaps.core.ui.R.string.pump),
+                text = stringResource(if (needsSetup) R.string.trio_no_pump else app.aaps.core.ui.R.string.pump),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -337,7 +420,7 @@ private fun PredictionInfoBottomSheet(
             if (sensitivityUiState.isfFrom.isNotEmpty()) {
                 MetricRow(
                     label = stringResource(R.string.trio_metric_isf),
-                    value = "${sensitivityUiState.isfFrom} → ${sensitivityUiState.isfTo}"
+                    value = stringResource(R.string.trio_metric_range, sensitivityUiState.isfFrom, sensitivityUiState.isfTo)
                 )
             }
         }

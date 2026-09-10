@@ -508,17 +508,21 @@ fun NavGraphBuilder.appNavGraph(
                 onTabSelected = onNavigateToTrioTab,
                 onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
                 onCarbsClick = { onNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
-                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) }
+                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) },
+                showTopBar = false
             ) { paddingValues ->
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
-                    TreatmentsScreen(
-                        viewModel = treatmentsViewModel,
+                    TempTargetManagementScreen(
+                        viewModel = tempTargetManagementViewModel,
+                        initialMode = ScreenMode.EDIT,
                         onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
-                        showTopBar = false
+                        onRequestEditMode = {
+                            requestEditModeAuthorization { tempTargetManagementViewModel.setScreenMode(ScreenMode.EDIT) }
+                        }
                     )
                 }
             }

@@ -25,6 +25,7 @@ fun TrioTabScaffold(
     onCarbsClick: () -> Unit,
     onWizardClick: () -> Unit,
     modifier: Modifier = Modifier,
+    showTopBar: Boolean = true,
     topBarActions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
@@ -34,10 +35,12 @@ fun TrioTabScaffold(
         modifier = modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            TrioTopBar(
-                title = title,
-                actions = topBarActions
-            )
+            if (showTopBar) {
+                TrioTopBar(
+                    title = title,
+                    actions = topBarActions
+                )
+            }
         },
         bottomBar = {
             TrioBottomBar(

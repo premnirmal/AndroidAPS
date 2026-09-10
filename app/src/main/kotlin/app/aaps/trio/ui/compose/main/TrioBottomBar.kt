@@ -3,7 +3,6 @@ package app.aaps.trio.ui.compose.main
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -57,8 +56,7 @@ fun TrioBottomBar(
     Box(modifier = modifier) {
         NavigationBar(
             containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            windowInsets = WindowInsets(0)
+            contentColor = MaterialTheme.colorScheme.onSurface
         ) {
             TrioTabItem(
                 selected = selectedTab == TrioNavTab.Overview,
