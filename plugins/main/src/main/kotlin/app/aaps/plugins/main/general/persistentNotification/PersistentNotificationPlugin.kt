@@ -4,8 +4,12 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.RemoteInput
+import androidx.core.app.NotificationCompat.Metric
+import androidx.core.app.NotificationCompat.Metric.FixedFloat
+import androidx.core.app.NotificationCompat.MetricStyle
 import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.model.TrendArrow
 import app.aaps.core.data.plugin.PluginType
@@ -144,14 +148,24 @@ class PersistentNotificationPlugin @Inject constructor(
         var line1: String?
         var line2: String? = null
         var line3: String? = null
+        var bgStatusChipText: String? = null
+        var bgMetric: Metric? = null
         var unreadConversationBuilder: NotificationCompat.CarExtender.UnreadConversation.Builder? = null
         if (profileFunction.isProfileValid("Notification")) {
             val lastBG = iobCobCalculator.ads.lastBg()
             val glucoseStatus = glucoseStatusProvider.glucoseStatusData
             if (lastBG != null) {
+                bgStatusChipText = profileUtil.fromMgdlToStringInUnits(lastBG.recalculated)
+                bgMetric = Metric(
+                    FixedFloat(
+                        profileUtil.fromMgdlToUnits(lastBG.recalculated).toFloat(),
+                        profileFunction.getUnits().displayLabel
+                    ),
+                    "BG"
+                )
                 val trendSymbol = (trendCalculator.getTrendArrow(iobCobCalculator.ads)
                     ?.takeIf { it != TrendArrow.NONE } ?: TrendArrow.FLAT).symbol
-                line1 = profileUtil.fromMgdlToStringInUnits(lastBG.recalculated) + " " + trendSymbol
+                line1 = "$bgStatusChipText $trendSymbol"
                 if (glucoseStatus != null) {
                     line1 += " " + profileUtil.fromMgdlToSignedStringInUnits(glucoseStatus.delta)
                 } else {
@@ -237,6 +251,11 @@ class PersistentNotificationPlugin @Inject constructor(
         if (includeAuto) lastAutoNotificationContent = content
         val builder = NotificationCompat.Builder(context, notificationHolder.channelID)
         builder.setOngoing(true)
+        applyTrioLiveNotificationStyle(
+            builder = builder,
+            bgStatusChipText = bgStatusChipText,
+            bgMetric = bgMetric
+        )
         builder.setOnlyAlertOnce(true)
         builder.setCategory(NotificationCompat.CATEGORY_STATUS)
         builder.setSmallIcon(iconsProvider.getNotificationIcon())
@@ -257,5 +276,30 @@ class PersistentNotificationPlugin @Inject constructor(
         val notification = builder.build()
         mNotificationManager.notify(notificationHolder.notificationID, notification)
         notificationHolder.notification = notification
+    }
+
+    private fun applyTrioLiveNotificationStyle(
+        builder: NotificationCompat.Builder,
+        bgStatusChipText: String?,
+        bgMetric: Metric?
+    ) {
+        if (!config.TRIO || Build.VERSION.SDK_INT < ANDROID_16_SDK) return
+        builder.setRequestPromotedOngoing(true)
+        if (!bgStatusChipText.isNullOrBlank()) {
+            builder.setShortCriticalText(bgStatusChipText)
+        }
+        if (Build.VERSION.SDK_INT >= ANDROID_17_SDK && bgMetric != null) {
+            builder.setStyle(
+                MetricStyle()
+                    .addMetric(bgMetric)
+                    .setCriticalMetric(0)
+            )
+        }
+    }
+
+    private companion object {
+
+        const val ANDROID_16_SDK = 36
+        const val ANDROID_17_SDK = 37
     }
 }
