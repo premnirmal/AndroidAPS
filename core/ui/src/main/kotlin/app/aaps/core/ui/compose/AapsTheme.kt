@@ -1,6 +1,7 @@
 package app.aaps.core.ui.compose
 
 import android.app.Activity
+import android.view.View
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -66,6 +67,8 @@ val LocalDateUtil = compositionLocalOf<DateUtil> { error("No DateUtil provided")
  */
 val LocalConfig = compositionLocalOf<Config> { error("No Config provided") }
 
+val LocalAapsIsDark = compositionLocalOf { false }
+
 /**
  * CompositionLocal exposing whether the master phone is currently reachable (see
  * `NsClient.masterReachable`). Defaults to `true` so master, previews, and any non-client context
@@ -95,6 +98,11 @@ val LocalMasterControlAllowed = compositionLocalOf { true }
 @Composable
 fun masterEditingEnabled(): Boolean =
     LocalInspectionMode.current || !(LocalConfig.current.AAPSCLIENT && !LocalMasterReachable.current)
+
+@Composable
+fun AapsSystemBarStyleEffect() {
+    AapsSystemBarStyleEffect(isDark = LocalAapsIsDark.current)
+}
 
 /**
  * CompositionLocal providing access to ProfileUtil for glucose unit conversions.
@@ -266,18 +274,7 @@ fun AapsTheme(
         UiMode.SYSTEM -> isSystemInDarkTheme()
     }
 
-    // Keep system bar icon color in sync with the AAPS-effective theme so
-    // status/nav bar icons stay legible against the bar scrims (which use
-    // colorScheme.surface). Reactive — no activity recreate needed.
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            val controller = WindowInsetsControllerCompat(window, view)
-            controller.isAppearanceLightStatusBars = !isDark
-            controller.isAppearanceLightNavigationBars = !isDark
-        }
-    }
+    AapsSystemBarStyleEffect(isDark = isDark)
 
     val scheme = if (isDark) darkColors else lightColors
     val profileViewerColors = if (isDark) DarkProfileHelperColors else LightProfileHelperColors
@@ -296,6 +293,7 @@ fun AapsTheme(
         LocalGeneralColors provides generalColors,
         LocalSnackbarColors provides snackbarColors,
         LocalAapsScale provides typographyScale,
+        LocalAapsIsDark provides isDark,
     ) {
         MaterialTheme(
             colorScheme = scheme,
@@ -316,4 +314,21 @@ fun AapsTheme(
             )
         }
     }
+}
+
+@Composable
+private fun AapsSystemBarStyleEffect(isDark: Boolean) {
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            applyAapsSystemBarStyle(view, isDark)
+        }
+    }
+}
+
+private fun applyAapsSystemBarStyle(view: View, isDark: Boolean) {
+    val window = (view.context as? Activity)?.window ?: return
+    val controller = WindowInsetsControllerCompat(window, view)
+    controller.isAppearanceLightStatusBars = !isDark
+    controller.isAppearanceLightNavigationBars = !isDark
 }

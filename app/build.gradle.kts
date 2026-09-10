@@ -115,7 +115,7 @@ android {
             applicationId = "info.nightscout.androidaps"
             dimension = "standard"
             matchingFallbacks += listOf("full")
-            resValue("string", "app_name", "Trio")
+            resValue("string", "app_name", "AAPS")
             versionName = Versions.appVersion + "-trio"
             targetSdk = Versions.trioTargetSdk
             manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher"

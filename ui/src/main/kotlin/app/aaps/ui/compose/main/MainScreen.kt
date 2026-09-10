@@ -46,6 +46,7 @@ import app.aaps.core.interfaces.notifications.AapsNotification
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.pump.BolusProgressState
 import app.aaps.core.ui.R
+import app.aaps.core.ui.compose.AapsSystemBarStyleEffect
 import app.aaps.core.ui.compose.LocalDateUtil
 import app.aaps.core.ui.compose.LocalSnackbarHostState
 import app.aaps.core.ui.compose.dialogs.OkCancelDialog
@@ -171,6 +172,7 @@ fun MainScreen(
     val automationState by scenesViewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = LocalSnackbarHostState.current
     val isTrio = mainViewModel.isTrio
+    AapsSystemBarStyleEffect()
 
     // Sync drawer state with ui state
     LaunchedEffect(uiState.isDrawerOpen) {
