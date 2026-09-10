@@ -117,7 +117,7 @@ private fun RowScope.TrioTabItem(
     NavigationBarItem(
         selected = selected,
         onClick = onClick,
-        label = { Text(label, textAlign = TextAlign.Center) },
+        label = null,
         icon = icon,
         colors = colors
     )
