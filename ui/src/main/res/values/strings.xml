@@ -3,7 +3,7 @@
     <string name="cancel_action_with_details" comment="%1$s=the word Cancel, %2$s=the active item being cancelled (e.g. a running temp basal or extended bolus description). Example: 'Cancel 150% 30min'">%1$s %2$s</string>
     <string name="app_title_version" comment="%1$s=app title, %2$s=version name. Example: Trio 3.4.0">%1$s %2$s</string>
     <string name="trio_tab_home">Home</string>
-    <string name="trio_tab_adjustments">Adjustments</string>
+    <string name="trio_tab_temp_targets">Temp Targets</string>
     <string name="trio_add_action">Add</string>
     <string name="trio_metric_sensitivity">Sens</string>
     <string name="trio_metric_isf">ISF</string>

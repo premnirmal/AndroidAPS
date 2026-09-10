@@ -11,7 +11,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoGraph
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.LibraryBooks
+import androidx.compose.material.icons.filled.PublishedWithChanges
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -66,15 +69,15 @@ fun TrioBottomBar(
                 selected = selectedTab == TrioNavTab.Statistics,
                 onClick = { onTabSelected(TrioNavTab.Statistics) },
                 label = stringResource(CoreUiR.string.statistics),
-                icon = { Icon(imageVector = Icons.Default.AutoGraph, contentDescription = null) },
+                icon = { Icon(imageVector = Icons.Default.LibraryBooks, contentDescription = null) },
                 colors = colors
             )
             Spacer(modifier = Modifier.width(FAB_CUTOUT_WIDTH))
             TrioTabItem(
                 selected = selectedTab == TrioNavTab.Adjustments,
                 onClick = { onTabSelected(TrioNavTab.Adjustments) },
-                label = stringResource(R.string.trio_tab_adjustments),
-                icon = { Icon(imageVector = Icons.Default.Build, contentDescription = null) },
+                label = stringResource(R.string.trio_tab_temp_targets),
+                icon = { Icon(imageVector = Icons.Default.Tune, contentDescription = null) },
                 colors = colors
             )
             TrioTabItem(

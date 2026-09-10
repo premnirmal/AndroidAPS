@@ -1052,7 +1052,7 @@ class ComposeMainActivity : AppCompatActivity() {
         if (!config.TRIO) return
         val route = when (tab) {
             TrioNavTab.Overview   -> AppRoute.Main.route
-            TrioNavTab.Adjustments -> AppRoute.TrioTreatments.route
+            TrioNavTab.Adjustments -> AppRoute.TempTargetManagement.createRoute(mode = ScreenMode.EDIT)
             TrioNavTab.Statistics -> AppRoute.TrioStats.route
             TrioNavTab.Settings   -> AppRoute.TrioSettings.route
         }
