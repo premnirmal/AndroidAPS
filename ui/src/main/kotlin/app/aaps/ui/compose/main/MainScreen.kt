@@ -218,6 +218,8 @@ fun MainScreen(
             // (returning zero height) if those Scaffold slots were populated.
             Scaffold { scaffoldPadding ->
                 val hasToolbar = quickLaunchItems.isNotEmpty()
+                val topScaffoldPadding = if (isTrio) 0.dp else scaffoldPadding.calculateTopPadding()
+                val bottomScaffoldPadding = if (isTrio) 0.dp else scaffoldPadding.calculateBottomPadding()
 
                 // Content padding: in preview mode use only system bars;
                 // in normal mode add measured bar heights
@@ -226,8 +228,8 @@ fun MainScreen(
                     val topBarHeight = with(density) { topBarHeightPx.toDp() }
                     val bottomBarHeight = with(density) { bottomBarHeightPx.toDp() }
                     PaddingValues(
-                        top = scaffoldPadding.calculateTopPadding() + topBarHeight,
-                        bottom = scaffoldPadding.calculateBottomPadding() + bottomBarHeight
+                        top = topScaffoldPadding + topBarHeight,
+                        bottom = bottomScaffoldPadding + bottomBarHeight
                     )
                 }
 
@@ -361,7 +363,7 @@ fun MainScreen(
                         exit = slideOutVertically { -it },
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .padding(top = scaffoldPadding.calculateTopPadding())
+                            .padding(top = topScaffoldPadding)
                     ) {
                         if (isTrio) {
                             trioTopBar(
@@ -401,7 +403,7 @@ fun MainScreen(
                         exit = slideOutVertically { it },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = scaffoldPadding.calculateBottomPadding())
+                            .padding(bottom = bottomScaffoldPadding)
                     ) {
                         if (isTrio) {
                             trioBottomBar(
@@ -461,7 +463,7 @@ fun MainScreen(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(
-                                bottom = scaffoldPadding.calculateBottomPadding() +
+                                bottom = bottomScaffoldPadding +
                                     with(density) { bottomBarHeightPx.toDp() } + 8.dp
                             )
                     ) {
