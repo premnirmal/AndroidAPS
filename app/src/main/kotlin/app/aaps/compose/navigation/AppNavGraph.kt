@@ -501,6 +501,29 @@ fun NavGraphBuilder.appNavGraph(
     }
 
     if (isTrio) {
+        composable(AppRoute.TrioTreatmentList.route) {
+            TrioTabScaffold(
+                selectedTab = TrioNavTab.Treatments,
+                title = stringResource(app.aaps.core.ui.R.string.treatments),
+                onTabSelected = onNavigateToTrioTab,
+                onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
+                onCarbsClick = { onNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
+                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) }
+            ) { paddingValues ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                ) {
+                    TreatmentsScreen(
+                        viewModel = treatmentsViewModel,
+                        onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
+                        showTopBar = false
+                    )
+                }
+            }
+        }
+
         composable(AppRoute.TrioTreatments.route) {
             TrioTabScaffold(
                 selectedTab = TrioNavTab.Adjustments,
@@ -534,31 +557,6 @@ fun NavGraphBuilder.appNavGraph(
             viewModel = statsViewModel,
             onNavigateBack = { navController.safePopBackStack() }
         )
-    }
-
-    if (isTrio) {
-        composable(AppRoute.TrioStats.route) {
-            TrioTabScaffold(
-                selectedTab = TrioNavTab.Statistics,
-                title = stringResource(app.aaps.core.ui.R.string.statistics),
-                onTabSelected = onNavigateToTrioTab,
-                onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
-                onCarbsClick = { onNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
-                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) }
-            ) { paddingValues ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
-                    StatsScreen(
-                        viewModel = statsViewModel,
-                        onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
-                        showTopBar = false
-                    )
-                }
-            }
-        }
     }
 
     composable(AppRoute.ProfileHelper.route) {

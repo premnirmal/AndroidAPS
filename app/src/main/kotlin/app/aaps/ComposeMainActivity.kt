@@ -1050,7 +1050,7 @@ class ComposeMainActivity : AppCompatActivity() {
         val route = when (tab) {
             TrioNavTab.Overview   -> AppRoute.Main.route
             TrioNavTab.Adjustments -> AppRoute.TrioTreatments.route
-            TrioNavTab.Statistics -> AppRoute.TrioStats.route
+            TrioNavTab.Treatments -> AppRoute.TrioTreatmentList.route
             TrioNavTab.Settings   -> AppRoute.TrioSettings.route
         }
         navController.navigate(route) {
@@ -1063,9 +1063,9 @@ class ComposeMainActivity : AppCompatActivity() {
     }
 
     private fun trioTabForRoute(route: String?): TrioNavTab = when (route) {
+        AppRoute.TrioTreatmentList.route -> TrioNavTab.Treatments
         AppRoute.TrioTreatments.route -> TrioNavTab.Adjustments
         AppRoute.TrioHistory.route -> TrioNavTab.Adjustments
-        AppRoute.TrioStats.route -> TrioNavTab.Statistics
         AppRoute.TrioSettings.route -> TrioNavTab.Settings
         else -> TrioNavTab.Overview
     }
@@ -1073,14 +1073,14 @@ class ComposeMainActivity : AppCompatActivity() {
     private fun TrioNavTab.toUiTrioTab(): UiTrioNavTab = when (this) {
         TrioNavTab.Overview -> UiTrioNavTab.Overview
         TrioNavTab.Adjustments -> UiTrioNavTab.Adjustments
-        TrioNavTab.Statistics -> UiTrioNavTab.Statistics
+        TrioNavTab.Treatments -> UiTrioNavTab.Treatments
         TrioNavTab.Settings -> UiTrioNavTab.Settings
     }
 
     private fun UiTrioNavTab.toAppTrioTab(): TrioNavTab = when (this) {
         UiTrioNavTab.Overview -> TrioNavTab.Overview
         UiTrioNavTab.Adjustments -> TrioNavTab.Adjustments
-        UiTrioNavTab.Statistics -> TrioNavTab.Statistics
+        UiTrioNavTab.Treatments -> TrioNavTab.Treatments
         UiTrioNavTab.Settings -> TrioNavTab.Settings
     }
 

@@ -9,11 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AreaChart
-import androidx.compose.material.icons.filled.AutoGraph
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LibraryBooks
-import androidx.compose.material.icons.filled.PublishedWithChanges
+import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.FloatingActionButton
@@ -23,12 +19,10 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemColors
 import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
@@ -66,10 +60,10 @@ fun TrioBottomBar(
                 colors = colors
             )
             TrioTabItem(
-                selected = selectedTab == TrioNavTab.Statistics,
-                onClick = { onTabSelected(TrioNavTab.Statistics) },
-                label = stringResource(CoreUiR.string.statistics),
-                icon = { Icon(imageVector = Icons.Default.LibraryBooks, contentDescription = null) },
+                selected = selectedTab == TrioNavTab.Treatments,
+                onClick = { onTabSelected(TrioNavTab.Treatments) },
+                label = stringResource(CoreUiR.string.treatments),
+                icon = { Icon(imageVector = Icons.Default.Medication, contentDescription = null) },
                 colors = colors
             )
             Spacer(modifier = Modifier.width(FAB_CUTOUT_WIDTH))
