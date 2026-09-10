@@ -215,371 +215,370 @@ fun TempTargetManagementScreen(
     }
 
     Scaffold(
-            topBar = {
-                if (isReorderMode) {
-                    AapsTopAppBar(
-                        title = { Text(stringResource(app.aaps.core.ui.R.string.reorder)) },
-                        navigationIcon = {
-                            IconButton(onClick = { viewModel.cancelReorder() }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Close,
-                                    contentDescription = stringResource(app.aaps.core.ui.R.string.cancel)
-                                )
-                            }
-                        },
-                        actions = {
-                            IconButton(onClick = { scope.launch { viewModel.commitReorder() } }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Check,
-                                    contentDescription = stringResource(app.aaps.core.ui.R.string.ok)
-                                )
-                            }
-                        }
-                    )
-                } else {
-                    AapsTopAppBar(
-                        title = { Text(stringResource(ElementType.TEMP_TARGET_MANAGEMENT.labelResId())) },
-                        navigationIcon = {
-                            IconButton(onClick = onNavigateBack) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = stringResource(app.aaps.core.ui.R.string.back)
-                                )
-                            }
-                        },
-                        actions = {
-                            if (isPlayMode) {
-                                // Edit mode button (shown in PLAY mode)
-                                IconButton(onClick = onRequestEditMode, enabled = editingEnabled) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Edit,
-                                        contentDescription = stringResource(app.aaps.core.ui.R.string.switch_to_edit)
-                                    )
-                                }
-                            } else {
-                                // Save button (shown when editor has unsaved changes in EDIT mode)
-                                if (uiState.selectedPreset != null && viewModel.hasUnsavedChanges()) {
-                                    IconButton(onClick = {
-                                        focusManager.clearFocus()
-                                        viewModel.saveCurrentPreset()
-                                    }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Save,
-                                            contentDescription = stringResource(app.aaps.core.ui.R.string.save),
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                }
-                                // Menu entry as well as the long-press: the long-press is
-                                // undiscoverable on its own, and this is the only route a screen
-                                // reader can take.
-                                Box {
-                                    IconButton(onClick = { showOverflowMenu = true }) {
-                                        Icon(
-                                            imageVector = Icons.Filled.MoreVert,
-                                            contentDescription = stringResource(app.aaps.core.ui.R.string.more_options)
-                                        )
-                                    }
-                                    DropdownMenu(
-                                        expanded = showOverflowMenu,
-                                        onDismissRequest = { showOverflowMenu = false }
-                                    ) {
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(app.aaps.core.ui.R.string.reorder)) },
-                                            enabled = canEnterReorder,
-                                            onClick = {
-                                                showOverflowMenu = false
-                                                focusManager.clearFocus()
-                                                viewModel.enterReorderMode()
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    )
-                }
-            }
-        ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            ) {
-                MasterOfflineBanner(editingEnabled = editingEnabled)
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .clearFocusOnTap(focusManager)
-                ) {
-                    ContentContainer(
-                        isLoading = uiState.isLoading,
-                        isEmpty = uiState.presets.isEmpty()
-                    ) {
-                        // Standalone active card only when active TT doesn't match any preset
-                        val hasStandaloneActiveTT = uiState.activeTT != null && uiState.activePresetIndex == null
-                        val cardCount = if (hasStandaloneActiveTT) {
-                            uiState.presets.size + 1
-                        } else {
-                            uiState.presets.size
-                        }
-
-                        // Use saved card index from ViewModel (survives rotation via @Singleton)
-                        val pagerState = rememberPagerState(
-                            initialPage = uiState.currentCardIndex.coerceIn(0, (cardCount - 1).coerceAtLeast(0)),
-                            pageCount = { cardCount }
-                        )
-
-                        // Handle scroll to page request (e.g., after adding new preset)
-                        // Depends on cardCount so it retries when pager updates with new page count
-                        LaunchedEffect(scrollToPage, cardCount) {
-                            scrollToPage?.let { page ->
-                                if (page < cardCount && !isReorderMode) {
-                                    pagerState.animateScrollToPage(page)
-                                    scrollToPage = null
-                                }
-                            }
-                        }
-
-                        // Settle on the card that was moved once sorting is over. Keyed on the stored
-                        // index rather than the mode, so toggling the mode never starts or cancels a
-                        // scroll of its own.
-                        LaunchedEffect(uiState.currentCardIndex) {
-                            if (!isReorderMode && pagerState.currentPage != uiState.currentCardIndex) {
-                                pagerState.animateScrollToPage(uiState.currentCardIndex.coerceIn(0, (cardCount - 1).coerceAtLeast(0)))
-                            }
-                        }
-
-                        // Update selected preset when pager changes
-                        LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
-                            currentPage = pagerState.currentPage
-                            // A reorder step moves the carousel too; treating that as a selection
-                            // would reload the editor from whichever preset slid past.
-                            if (isReorderMode) return@LaunchedEffect
-                            if (!pagerState.isScrollInProgress) {
-                                viewModel.updateCurrentCardIndex(pagerState.currentPage)
-                                val presetIndex = if (hasStandaloneActiveTT && pagerState.currentPage > 0) {
-                                    pagerState.currentPage - 1
-                                } else if (!hasStandaloneActiveTT) {
-                                    pagerState.currentPage
-                                } else {
-                                    null // Standalone active TT card selected
-                                }
-
-                                if (presetIndex != null) viewModel.selectPreset(presetIndex)
-                                else viewModel.selectActiveTT()
-                            }
-                        }
-
-                        Column(
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            // TT Preset Carousel
-                            //
-                            // Carousel pages are not preset indices: page 0 is the standalone
-                            // active-TT card when there is one, and that card is not a preset, so it
-                            // can never be moved or displaced.
-                            val presetOffset = if (hasStandaloneActiveTT) 1 else 0
-                            val workingOrder = reorderOrder
-                            val moveEarlierLabel = stringResource(app.aaps.core.ui.R.string.carousel_move_earlier)
-                            val moveLaterLabel = stringResource(app.aaps.core.ui.R.string.carousel_move_later)
-                            val reorderLabel = stringResource(app.aaps.core.ui.R.string.reorder)
-                            val selectLabel = stringResource(app.aaps.core.ui.R.string.carousel_show_card)
-
-                            ManagementCarousel(
-                                state = pagerState,
-                                reorder = workingOrder?.let { order ->
-                                    CarouselReorderConfig(
-                                        isActive = true,
-                                        itemCount = order.size + presetOffset,
-                                        canMove = { page ->
-                                            viewModel.isReorderPositionMovable(page - presetOffset)
-                                        },
-                                        onMove = { fromPage, toPage ->
-                                            viewModel.moveReorderItem(fromPage - presetOffset, toPage - presetOffset)
-                                        },
-                                        moveEarlierLabel = moveEarlierLabel,
-                                        moveLaterLabel = moveLaterLabel,
-                                        positionLabel = { page ->
-                                            viewModel.rh.gs(
-                                                app.aaps.core.ui.R.string.carousel_position,
-                                                page + 1,
-                                                order.size + presetOffset
-                                            )
-                                        },
-                                        positionDescription = { page ->
-                                            viewModel.rh.gs(
-                                                app.aaps.core.ui.R.string.carousel_position_description,
-                                                page + 1,
-                                                order.size + presetOffset
-                                            )
-                                        }
-                                    )
-                                }
-                            ) { itemState ->
-                                val page = itemState.page
-                                val isStandaloneActiveCard = hasStandaloneActiveTT && page == 0
-                                // While sorting, the card at a position shows the preset the working
-                                // order puts there — not the one at that index in the stored list.
-                                val presetIndex = when {
-                                    isStandaloneActiveCard -> null
-                                    else                   -> (page - presetOffset).let { position ->
-                                        workingOrder?.getOrNull(position) ?: position
-                                    }
-                                }
-                                val preset = presetIndex?.let { uiState.presets.getOrNull(it) }
-                                val isActivePreset = presetIndex != null && presetIndex == uiState.activePresetIndex
-
-                                TempTargetCarouselCard(
-                                    preset = preset,
-                                    activeTT = if (isStandaloneActiveCard || isActivePreset) uiState.activeTT else null,
-                                    remainingTimeMs = uiState.remainingTimeMs,
-                                    isSelected = itemState.isSelected,
-                                    units = viewModel.units,
-                                    onExpired = { viewModel.refreshData() },
-                                    // While sorting the card carries no gestures: the move buttons sit
-                                    // below the row and a tap or long-press here would only compete.
-                                    modifier = if (itemState.isReordering) Modifier else Modifier.combinedClickable(
-                                        onClickLabel = selectLabel,
-                                        onClick = { scope.launch { pagerState.animateScrollToPage(page) } },
-                                        onLongClickLabel = reorderLabel,
-                                        onLongClick = if (canEnterReorder) {
-                                            {
-                                                // A long press does not fire onClick, so without this
-                                                // a peeking card would open the mode centred on — and
-                                                // acting on — a different preset.
-                                                pagerState.requestScrollToPage(page)
-                                                viewModel.updateCurrentCardIndex(page)
-                                                presetIndex?.let { viewModel.selectPreset(it) }
-                                                viewModel.enterReorderMode()
-                                            }
-                                        } else null
-                                    )
-                                )
-                            }
-
-                            // TT Editor — hidden when offline on a client: tweaking is pointless when you can
-                            // neither Save (toolbar hidden) nor Activate (FAB hidden). Stays for the tweak-and-
-                            // activate one-off-TT workflow when the master is reachable (or on master).
-                            // Also hidden while sorting: Save has given up its slot to Done, so an edit made
-                            // there would have nowhere to go.
-                            if (editingEnabled && !isReorderMode) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .weight(1f)
-                                        .verticalScroll(rememberScrollState())
-                                ) {
-                                    TempTargetEditor(
-                                        selectedPreset = uiState.selectedPreset,
-                                        editorName = uiState.editorName,
-                                        editorTarget = uiState.editorTarget,
-                                        editorDuration = (uiState.editorDuration / 60000L).toInt(),
-                                        eventTime = uiState.eventTime,
-                                        eventTimeChanged = uiState.eventTimeChanged,
-                                        notes = uiState.notes,
-                                        showNotesField = uiState.showNotesField,
-                                        units = viewModel.units,
-                                        rh = viewModel.rh,
-                                        onNameChange = viewModel::updateEditorName,
-                                        onTargetChange = viewModel::updateEditorTarget,
-                                        onDurationChange = { duration -> viewModel.updateEditorDuration(duration) },
-                                        onDateClick = { showDatePicker = true },
-                                        onTimeClick = { showTimePicker = true },
-                                        onNotesChange = viewModel::updateNotes,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                    // Extra space for floating toolbar
-                                    Spacer(modifier = Modifier.height(80.dp))
-                                }
-                            }
-                        }
-                    }
-
-                    // Mini FAB for Cancel (only visible when TT is active). Hidden on a client whose master is
-                    // unreachable — canceling a TT is a master/NS action that couldn't be delivered.
-                    if (editingEnabled && uiState.activeTT != null && !isReorderMode) {
-                        SmallFloatingActionButton(
-                            onClick = { viewModel.cancelActive(onSuccess = onNavigateBack) },
-                            modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(end = 16.dp, bottom = 88.dp),
-                            containerColor = MaterialTheme.colorScheme.error
-                        ) {
+        topBar = {
+            if (isReorderMode) {
+                AapsTopAppBar(
+                    title = { Text(stringResource(app.aaps.core.ui.R.string.reorder)) },
+                    navigationIcon = {
+                        IconButton(onClick = { viewModel.cancelReorder() }) {
                             Icon(
                                 imageVector = Icons.Filled.Close,
                                 contentDescription = stringResource(app.aaps.core.ui.R.string.cancel)
                             )
                         }
+                    },
+                    actions = {
+                        IconButton(onClick = { scope.launch { viewModel.commitReorder() } }) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = stringResource(app.aaps.core.ui.R.string.ok)
+                            )
+                        }
                     }
-
-                    // Floating Toolbar with FAB (M3 style) — both are absolutely positioned over the
-                    // cards, so they are hidden while sorting rather than left floating over the sort controls.
-                    if (!isReorderMode) Row(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Floating Toolbar — hidden in PLAY mode
-                        if (!isPlayMode) {
-                            Surface(
-                                shape = RoundedCornerShape(percent = 50),
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                                shadowElevation = 6.dp,
-                                tonalElevation = 6.dp
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                )
+            } else {
+                AapsTopAppBar(
+                    title = { Text(stringResource(ElementType.TEMP_TARGET_MANAGEMENT.labelResId())) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(app.aaps.core.ui.R.string.back)
+                            )
+                        }
+                    },
+                    actions = {
+                        if (isPlayMode) {
+                            // Edit mode button (shown in PLAY mode)
+                            IconButton(onClick = onRequestEditMode, enabled = editingEnabled) {
+                                Icon(
+                                    imageVector = Icons.Filled.Edit,
+                                    contentDescription = stringResource(app.aaps.core.ui.R.string.switch_to_edit)
+                                )
+                            }
+                        } else {
+                            // Save button (shown when editor has unsaved changes in EDIT mode)
+                            if (uiState.selectedPreset != null && viewModel.hasUnsavedChanges()) {
+                                IconButton(onClick = {
+                                    focusManager.clearFocus()
+                                    viewModel.saveCurrentPreset()
+                                }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Save,
+                                        contentDescription = stringResource(app.aaps.core.ui.R.string.save),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                            // Menu entry as well as the long-press: the long-press is
+                            // undiscoverable on its own, and this is the only route a screen
+                            // reader can take.
+                            Box {
+                                IconButton(onClick = { showOverflowMenu = true }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.MoreVert,
+                                        contentDescription = stringResource(app.aaps.core.ui.R.string.more_options)
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = showOverflowMenu,
+                                    onDismissRequest = { showOverflowMenu = false }
                                 ) {
-                                    IconButton(onClick = { viewModel.addNewPreset() }) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Add,
-                                            contentDescription = "Add preset"
-                                        )
-                                    }
-                                    // Revert button (only for fixed presets when editor values differ from defaults)
-                                    val showRevert = uiState.selectedPreset?.isDeletable == false &&
-                                        viewModel.isEditorDifferentFromDefaults()
-                                    if (showRevert) {
-                                        IconButton(onClick = { viewModel.revertToDefaults() }) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Refresh,
-                                                contentDescription = stringResource(app.aaps.core.ui.R.string.revert_to_defaults)
-                                            )
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(app.aaps.core.ui.R.string.reorder)) },
+                                        enabled = canEnterReorder,
+                                        onClick = {
+                                            showOverflowMenu = false
+                                            focusManager.clearFocus()
+                                            viewModel.enterReorderMode()
                                         }
-                                    }
-                                    IconButton(
-                                        onClick = { showDeleteDialog = true },
-                                        enabled = uiState.selectedPreset?.isDeletable == true
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Delete,
-                                            contentDescription = stringResource(R.string.remove_label),
-                                            tint = if (uiState.selectedPreset?.isDeletable == true)
-                                                MaterialTheme.colorScheme.error
-                                            else
-                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                                        )
-                                    }
+                                    )
                                 }
                             }
                         }
+                    }
+                )
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            MasterOfflineBanner(editingEnabled = editingEnabled)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .clearFocusOnTap(focusManager)
+            ) {
+                ContentContainer(
+                    isLoading = uiState.isLoading,
+                    isEmpty = uiState.presets.isEmpty()
+                ) {
+                    // Standalone active card only when active TT doesn't match any preset
+                    val hasStandaloneActiveTT = uiState.activeTT != null && uiState.activePresetIndex == null
+                    val cardCount = if (hasStandaloneActiveTT) {
+                        uiState.presets.size + 1
+                    } else {
+                        uiState.presets.size
+                    }
 
-                        // FAB for primary action (Activate). Hidden on a client whose master is unreachable —
-                        // activating a TT is a master/remote action that couldn't be delivered.
-                        if (editingEnabled) {
-                            AapsFab(
-                                onClick = { viewModel.activateWithEditorValues(onSuccess = onNavigateBack) }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.PlayArrow,
-                                    contentDescription = stringResource(R.string.activate_label)
+                    // Use saved card index from ViewModel (survives rotation via @Singleton)
+                    val pagerState = rememberPagerState(
+                        initialPage = uiState.currentCardIndex.coerceIn(0, (cardCount - 1).coerceAtLeast(0)),
+                        pageCount = { cardCount }
+                    )
+
+                    // Handle scroll to page request (e.g., after adding new preset)
+                    // Depends on cardCount so it retries when pager updates with new page count
+                    LaunchedEffect(scrollToPage, cardCount) {
+                        scrollToPage?.let { page ->
+                            if (page < cardCount && !isReorderMode) {
+                                pagerState.animateScrollToPage(page)
+                                scrollToPage = null
+                            }
+                        }
+                    }
+
+                    // Settle on the card that was moved once sorting is over. Keyed on the stored
+                    // index rather than the mode, so toggling the mode never starts or cancels a
+                    // scroll of its own.
+                    LaunchedEffect(uiState.currentCardIndex) {
+                        if (!isReorderMode && pagerState.currentPage != uiState.currentCardIndex) {
+                            pagerState.animateScrollToPage(uiState.currentCardIndex.coerceIn(0, (cardCount - 1).coerceAtLeast(0)))
+                        }
+                    }
+
+                    // Update selected preset when pager changes
+                    LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
+                        currentPage = pagerState.currentPage
+                        // A reorder step moves the carousel too; treating that as a selection
+                        // would reload the editor from whichever preset slid past.
+                        if (isReorderMode) return@LaunchedEffect
+                        if (!pagerState.isScrollInProgress) {
+                            viewModel.updateCurrentCardIndex(pagerState.currentPage)
+                            val presetIndex = if (hasStandaloneActiveTT && pagerState.currentPage > 0) {
+                                pagerState.currentPage - 1
+                            } else if (!hasStandaloneActiveTT) {
+                                pagerState.currentPage
+                            } else {
+                                null // Standalone active TT card selected
+                            }
+
+                            if (presetIndex != null) viewModel.selectPreset(presetIndex)
+                            else viewModel.selectActiveTT()
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        // TT Preset Carousel
+                        //
+                        // Carousel pages are not preset indices: page 0 is the standalone
+                        // active-TT card when there is one, and that card is not a preset, so it
+                        // can never be moved or displaced.
+                        val presetOffset = if (hasStandaloneActiveTT) 1 else 0
+                        val workingOrder = reorderOrder
+                        val moveEarlierLabel = stringResource(app.aaps.core.ui.R.string.carousel_move_earlier)
+                        val moveLaterLabel = stringResource(app.aaps.core.ui.R.string.carousel_move_later)
+                        val reorderLabel = stringResource(app.aaps.core.ui.R.string.reorder)
+                        val selectLabel = stringResource(app.aaps.core.ui.R.string.carousel_show_card)
+
+                        ManagementCarousel(
+                            state = pagerState,
+                            reorder = workingOrder?.let { order ->
+                                CarouselReorderConfig(
+                                    isActive = true,
+                                    itemCount = order.size + presetOffset,
+                                    canMove = { page ->
+                                        viewModel.isReorderPositionMovable(page - presetOffset)
+                                    },
+                                    onMove = { fromPage, toPage ->
+                                        viewModel.moveReorderItem(fromPage - presetOffset, toPage - presetOffset)
+                                    },
+                                    moveEarlierLabel = moveEarlierLabel,
+                                    moveLaterLabel = moveLaterLabel,
+                                    positionLabel = { page ->
+                                        viewModel.rh.gs(
+                                            app.aaps.core.ui.R.string.carousel_position,
+                                            page + 1,
+                                            order.size + presetOffset
+                                        )
+                                    },
+                                    positionDescription = { page ->
+                                        viewModel.rh.gs(
+                                            app.aaps.core.ui.R.string.carousel_position_description,
+                                            page + 1,
+                                            order.size + presetOffset
+                                        )
+                                    }
                                 )
                             }
+                        ) { itemState ->
+                            val page = itemState.page
+                            val isStandaloneActiveCard = hasStandaloneActiveTT && page == 0
+                            // While sorting, the card at a position shows the preset the working
+                            // order puts there — not the one at that index in the stored list.
+                            val presetIndex = when {
+                                isStandaloneActiveCard -> null
+                                else                   -> (page - presetOffset).let { position ->
+                                    workingOrder?.getOrNull(position) ?: position
+                                }
+                            }
+                            val preset = presetIndex?.let { uiState.presets.getOrNull(it) }
+                            val isActivePreset = presetIndex != null && presetIndex == uiState.activePresetIndex
+
+                            TempTargetCarouselCard(
+                                preset = preset,
+                                activeTT = if (isStandaloneActiveCard || isActivePreset) uiState.activeTT else null,
+                                remainingTimeMs = uiState.remainingTimeMs,
+                                isSelected = itemState.isSelected,
+                                units = viewModel.units,
+                                onExpired = { viewModel.refreshData() },
+                                // While sorting the card carries no gestures: the move buttons sit
+                                // below the row and a tap or long-press here would only compete.
+                                modifier = if (itemState.isReordering) Modifier else Modifier.combinedClickable(
+                                    onClickLabel = selectLabel,
+                                    onClick = { scope.launch { pagerState.animateScrollToPage(page) } },
+                                    onLongClickLabel = reorderLabel,
+                                    onLongClick = if (canEnterReorder) {
+                                        {
+                                            // A long press does not fire onClick, so without this
+                                            // a peeking card would open the mode centred on — and
+                                            // acting on — a different preset.
+                                            pagerState.requestScrollToPage(page)
+                                            viewModel.updateCurrentCardIndex(page)
+                                            presetIndex?.let { viewModel.selectPreset(it) }
+                                            viewModel.enterReorderMode()
+                                        }
+                                    } else null
+                                )
+                            )
+                        }
+
+                        // TT Editor — hidden when offline on a client: tweaking is pointless when you can
+                        // neither Save (toolbar hidden) nor Activate (FAB hidden). Stays for the tweak-and-
+                        // activate one-off-TT workflow when the master is reachable (or on master).
+                        // Also hidden while sorting: Save has given up its slot to Done, so an edit made
+                        // there would have nowhere to go.
+                        if (editingEnabled && !isReorderMode) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .verticalScroll(rememberScrollState())
+                            ) {
+                                TempTargetEditor(
+                                    selectedPreset = uiState.selectedPreset,
+                                    editorName = uiState.editorName,
+                                    editorTarget = uiState.editorTarget,
+                                    editorDuration = (uiState.editorDuration / 60000L).toInt(),
+                                    eventTime = uiState.eventTime,
+                                    eventTimeChanged = uiState.eventTimeChanged,
+                                    notes = uiState.notes,
+                                    showNotesField = uiState.showNotesField,
+                                    units = viewModel.units,
+                                    rh = viewModel.rh,
+                                    onNameChange = viewModel::updateEditorName,
+                                    onTargetChange = viewModel::updateEditorTarget,
+                                    onDurationChange = { duration -> viewModel.updateEditorDuration(duration) },
+                                    onDateClick = { showDatePicker = true },
+                                    onTimeClick = { showTimePicker = true },
+                                    onNotesChange = viewModel::updateNotes,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                // Extra space for floating toolbar
+                                Spacer(modifier = Modifier.height(80.dp))
+                            }
+                        }
+                    }
+                }
+
+                // Mini FAB for Cancel (only visible when TT is active). Hidden on a client whose master is
+                // unreachable — canceling a TT is a master/NS action that couldn't be delivered.
+                if (editingEnabled && uiState.activeTT != null && !isReorderMode) {
+                    SmallFloatingActionButton(
+                        onClick = { viewModel.cancelActive(onSuccess = onNavigateBack) },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 16.dp, bottom = 88.dp),
+                        containerColor = MaterialTheme.colorScheme.error
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = stringResource(app.aaps.core.ui.R.string.cancel)
+                        )
+                    }
+                }
+
+                // Floating Toolbar with FAB (M3 style) — both are absolutely positioned over the
+                // cards, so they are hidden while sorting rather than left floating over the sort controls.
+                if (!isReorderMode) Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Floating Toolbar — hidden in PLAY mode
+                    if (!isPlayMode) {
+                        Surface(
+                            shape = RoundedCornerShape(percent = 50),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            shadowElevation = 6.dp,
+                            tonalElevation = 6.dp
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(onClick = { viewModel.addNewPreset() }) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Add,
+                                        contentDescription = "Add preset"
+                                    )
+                                }
+                                // Revert button (only for fixed presets when editor values differ from defaults)
+                                val showRevert = uiState.selectedPreset?.isDeletable == false &&
+                                    viewModel.isEditorDifferentFromDefaults()
+                                if (showRevert) {
+                                    IconButton(onClick = { viewModel.revertToDefaults() }) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Refresh,
+                                            contentDescription = stringResource(app.aaps.core.ui.R.string.revert_to_defaults)
+                                        )
+                                    }
+                                }
+                                IconButton(
+                                    onClick = { showDeleteDialog = true },
+                                    enabled = uiState.selectedPreset?.isDeletable == true
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Delete,
+                                        contentDescription = stringResource(R.string.remove_label),
+                                        tint = if (uiState.selectedPreset?.isDeletable == true)
+                                            MaterialTheme.colorScheme.error
+                                        else
+                                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // FAB for primary action (Activate). Hidden on a client whose master is unreachable —
+                    // activating a TT is a master/remote action that couldn't be delivered.
+                    if (editingEnabled) {
+                        AapsFab(
+                            onClick = { viewModel.activateWithEditorValues(onSuccess = onNavigateBack) }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.PlayArrow,
+                                contentDescription = stringResource(R.string.activate_label)
+                            )
                         }
                     }
                 }
