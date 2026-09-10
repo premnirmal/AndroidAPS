@@ -110,6 +110,17 @@ android {
             manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher"
             manifestPlaceholders["appIconRound"] = "@mipmap/ic_launcher_round"
         }
+        // Full remains the default app; Trio is an opt-in variant.
+        create("trio") {
+            applicationId = "info.nightscout.androidaps"
+            dimension = "standard"
+            matchingFallbacks += listOf("full")
+            resValue("string", "app_name", "Trio")
+            versionName = Versions.appVersion + "-trio"
+            targetSdk = Versions.trioTargetSdk
+            manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher"
+            manifestPlaceholders["appIconRound"] = "@mipmap/ic_launcher_round"
+        }
         create("pumpcontrol") {
             applicationId = "info.nightscout.aapspumpcontrol"
             dimension = "standard"
@@ -195,10 +206,16 @@ android {
     }
 
     sourceSets {
-        getByName("full") { kotlin.directories.add("src/withPumps/kotlin") }
-        getByName("pumpcontrol") { kotlin.directories.add("src/withPumps/kotlin") }
-        getByName("aapsclient2") { kotlin.directories.add("src/aapsclient/kotlin") }
-        getByName("aapsclient3") { kotlin.directories.add("src/aapsclient/kotlin") }
+        getByName("full") { kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/withPumps/kotlin")) }
+        getByName("trio") {
+            kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/trio/kotlin"))
+            kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/withPumps/kotlin"))
+            res.directories.add("src/trio/res")
+        }
+        getByName("pumpcontrol") { kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/withPumps/kotlin")) }
+        getByName("aapsclient") { kotlin.directories.add("src/aaps/kotlin") }
+        getByName("aapsclient2") { kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/aapsclient/kotlin")) }
+        getByName("aapsclient3") { kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/aapsclient/kotlin")) }
     }
 }
 
@@ -240,8 +257,8 @@ dependencies {
         .forEach {
             "fullImplementation"(project(it.path))
             "pumpcontrolImplementation"(project(it.path))
+            "trioImplementation"(project(it.path))
         }
-
     implementation(libs.androidx.lifecycle.process)
 
     testImplementation(project(":shared:tests"))
@@ -301,4 +318,3 @@ if (!gitAvailable()) {
 if (isMaster() && !allCommitted()) {
     throw GradleException("There are uncommitted changes. Clone sources again as described in wiki and do not allow gradle update")
 }
-

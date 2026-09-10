@@ -65,6 +65,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.aaps.compose.navigation.AppRoute
 import app.aaps.compose.navigation.appNavGraph
@@ -138,6 +139,10 @@ import app.aaps.plugins.automation.AutomationRuntime
 import app.aaps.plugins.configuration.setupwizard.SWDefinition
 import app.aaps.plugins.source.DexcomPlugin
 import app.aaps.plugins.source.activities.RequestDexcomPermissionActivity
+import app.aaps.trio.ui.compose.main.TrioAddActionsSheet
+import app.aaps.trio.ui.compose.main.TrioBottomBar
+import app.aaps.trio.ui.compose.main.TrioNavTab
+import app.aaps.trio.ui.compose.main.TrioTopBar
 import app.aaps.ui.compose.careDialog.CareportalEventType
 import app.aaps.ui.compose.clientcontrol.ClientControlPendingDialog
 import app.aaps.ui.compose.configuration.ConfigurationViewModel
@@ -146,6 +151,7 @@ import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
 import app.aaps.ui.compose.loopSheet.LoopActionViewModel
 import app.aaps.ui.compose.main.MainScreen
 import app.aaps.ui.compose.main.MainViewModel
+import app.aaps.ui.compose.main.TrioNavTab as UiTrioNavTab
 import app.aaps.ui.compose.maintenance.ImportViewModel
 import app.aaps.ui.compose.maintenance.MaintenanceViewModel
 import app.aaps.ui.compose.manageSheet.ManageSheetHost
@@ -600,6 +606,8 @@ class ComposeMainActivity : AppCompatActivity() {
         ) {
             composable(AppRoute.Main.route) {
                 val searchState by searchViewModel.uiState.collectAsStateWithLifecycle()
+                val currentBackStackEntry by navController.currentBackStackEntryAsState()
+                val currentRoute = currentBackStackEntry?.destination?.route
                 val calcProgress by mainViewModel.calcProgressFlow.collectAsStateWithLifecycle()
                 val notifications by notificationManager.notifications.collectAsStateWithLifecycle()
                 val quickLaunchItems by mainViewModel.quickLaunchItems.collectAsStateWithLifecycle()
@@ -691,6 +699,27 @@ class ComposeMainActivity : AppCompatActivity() {
                     onDismissSearchHardwarePump = { searchViewModel.dismissHardwarePump() },
                     onMenuClick = { mainViewModel.openDrawer() },
                     onNavigate = { request -> handleNavigationRequest(request, navController) },
+                    onTrioTabSelected = { tab -> navigateToTrioTab(tab.toAppTrioTab(), navController) },
+                    trioSelectedTab = trioTabForRoute(currentRoute).toUiTrioTab(),
+                    trioTopBar = { title, modifier ->
+                        TrioTopBar(title = title, modifier = modifier)
+                    },
+                    trioBottomBar = { selectedTab, onTabSelected, onAddClick, modifier ->
+                        TrioBottomBar(
+                            selectedTab = selectedTab.toAppTrioTab(),
+                            onTabSelected = { onTabSelected(it.toUiTrioTab()) },
+                            onAddClick = onAddClick,
+                            modifier = modifier
+                        )
+                    },
+                    trioAddActionsSheet = { onDismiss, onBolusClick, onCarbsClick, onWizardClick ->
+                        TrioAddActionsSheet(
+                            onDismiss = onDismiss,
+                            onBolusClick = onBolusClick,
+                            onCarbsClick = onCarbsClick,
+                            onWizardClick = onWizardClick
+                        )
+                    },
                     onDrawerClosed = { mainViewModel.closeDrawer() },
                     onAboutDialogDismiss = { mainViewModel.setShowAboutDialog(false) },
                     onMaintenanceSheetDismiss = { mainViewModel.setShowMaintenanceSheet(false) },
@@ -816,6 +845,15 @@ class ComposeMainActivity : AppCompatActivity() {
                     }
                 },
                 onRequestPermission = { group -> permissionsViewModel.requestPermission(group) },
+                onOpenHealthConnect = {
+                    try {
+                        startActivity(Intent("androidx.health.ACTION_HEALTH_CONNECT_SETTINGS"))
+                    } catch (_: ActivityNotFoundException) {
+                        maintenanceViewModel.emitError(rh.gs(app.aaps.ui.R.string.health_connect_not_available))
+                    }
+                },
+                isTrio = config.TRIO,
+                onNavigateToTrioTab = { tab -> navigateToTrioTab(tab, navController) },
                 findScreenDef = { key -> findScreenDef(key) },
             )
         }
@@ -1010,6 +1048,48 @@ class ComposeMainActivity : AppCompatActivity() {
         }
     }
 
+    private fun navigateToTrioTab(tab: TrioNavTab, navController: NavController) {
+        if (!config.TRIO) return
+        val route = when (tab) {
+            TrioNavTab.Overview   -> AppRoute.Main.route
+            TrioNavTab.Treatments -> AppRoute.TrioTreatments.route
+            TrioNavTab.History    -> AppRoute.TrioHistory.route
+            TrioNavTab.Statistics -> AppRoute.TrioStats.route
+            TrioNavTab.Settings   -> AppRoute.TrioSettings.route
+        }
+        navController.navigate(route) {
+            launchSingleTop = true
+            restoreState = true
+            popUpTo(AppRoute.Main.route) {
+                saveState = true
+            }
+        }
+    }
+
+    private fun trioTabForRoute(route: String?): TrioNavTab = when (route) {
+        AppRoute.TrioTreatments.route -> TrioNavTab.Treatments
+        AppRoute.TrioHistory.route -> TrioNavTab.History
+        AppRoute.TrioStats.route -> TrioNavTab.Statistics
+        AppRoute.TrioSettings.route -> TrioNavTab.Settings
+        else -> TrioNavTab.Overview
+    }
+
+    private fun TrioNavTab.toUiTrioTab(): UiTrioNavTab = when (this) {
+        TrioNavTab.Overview -> UiTrioNavTab.Overview
+        TrioNavTab.Treatments -> UiTrioNavTab.Treatments
+        TrioNavTab.History -> UiTrioNavTab.History
+        TrioNavTab.Statistics -> UiTrioNavTab.Statistics
+        TrioNavTab.Settings -> UiTrioNavTab.Settings
+    }
+
+    private fun UiTrioNavTab.toAppTrioTab(): TrioNavTab = when (this) {
+        UiTrioNavTab.Overview -> TrioNavTab.Overview
+        UiTrioNavTab.Treatments -> TrioNavTab.Treatments
+        UiTrioNavTab.History -> TrioNavTab.History
+        UiTrioNavTab.Statistics -> TrioNavTab.Statistics
+        UiTrioNavTab.Settings -> TrioNavTab.Settings
+    }
+
     private fun openCgmApp(packageName: String) {
         try {
             val intent = packageManager.getLaunchIntentForPackage(packageName) ?: throw ActivityNotFoundException()
@@ -1174,4 +1254,3 @@ class ComposeMainActivity : AppCompatActivity() {
         }
     }
 }
-

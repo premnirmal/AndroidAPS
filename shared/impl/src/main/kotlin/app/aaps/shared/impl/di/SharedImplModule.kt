@@ -3,6 +3,7 @@ package app.aaps.shared.impl.di
 import android.content.Context
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.L
+import app.aaps.core.interfaces.maintenance.BackupDatabaseConstants
 import app.aaps.core.interfaces.rx.AapsSchedulers
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.sharedPreferences.SP
@@ -30,7 +31,13 @@ open class SharedImplModule {
     @Provides
     @Singleton
     fun provideSP(context: Context): SP =
-        SPImpl(context.getSharedPreferences("${context.packageName}_preferences", Context.MODE_PRIVATE), context)
+        SPImpl(
+            context.getSharedPreferences(
+                "${context.packageName}${BackupDatabaseConstants.SHARED_PREFERENCES_SUFFIX}",
+                Context.MODE_PRIVATE
+            ),
+            context
+        )
 
     @Provides
     @Singleton

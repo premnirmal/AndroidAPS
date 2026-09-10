@@ -32,6 +32,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import app.aaps.core.data.model.TE
+import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.configuration.ConfigBuilder
 import app.aaps.core.interfaces.constraints.Objectives
@@ -65,6 +66,8 @@ import app.aaps.plugins.configuration.setupwizard.SWDefinition
 import app.aaps.plugins.configuration.setupwizard.SetupWizardScreen
 import app.aaps.plugins.sync.nsclientV3.clientcontrol.compose.AuthorizedClientsScreen
 import app.aaps.plugins.sync.nsclientV3.clientcontrol.compose.PairWithMasterScreen
+import app.aaps.trio.ui.compose.main.TrioNavTab
+import app.aaps.trio.ui.compose.main.TrioTabScaffold
 import app.aaps.ui.compose.calibrationDialog.CalibrationDialogScreen
 import app.aaps.ui.compose.carbsDialog.CarbsDialogScreen
 import app.aaps.ui.compose.careDialog.CareDialogScreen
@@ -122,6 +125,13 @@ fun NavHostController.safePopBackStack() {
     }
 }
 
+private val TRIO_SETTINGS_VISIBLE_TYPES = setOf(
+    PluginType.GENERAL,
+    PluginType.PUMP,
+    PluginType.BGSOURCE,
+    PluginType.SYNC
+)
+
 /**
  * All navigation routes except the Main route.
  * The Main route stays in the Activity because it has many Activity-context-dependent callbacks.
@@ -165,6 +175,9 @@ fun NavGraphBuilder.appNavGraph(
     onExecuteQuickWizard: (guid: String) -> Unit,
     onRequestDirectoryAccess: () -> Unit,
     onRequestPermission: (PermissionGroup) -> Unit,
+    onOpenHealthConnect: () -> Unit,
+    isTrio: Boolean,
+    onNavigateToTrioTab: (TrioNavTab) -> Unit,
     findScreenDef: (key: String) -> PreferenceSubScreenDef?,
 ) {
     composable(
@@ -485,11 +498,61 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
+    if (isTrio) {
+        composable(AppRoute.TrioTreatments.route) {
+            TrioTabScaffold(
+                selectedTab = TrioNavTab.Treatments,
+                title = stringResource(app.aaps.core.ui.R.string.treatments_history),
+                onTabSelected = onNavigateToTrioTab,
+                onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
+                onCarbsClick = { onNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
+                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) }
+            ) { paddingValues ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                ) {
+                    TreatmentsScreen(
+                        viewModel = treatmentsViewModel,
+                        onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
+                        showTopBar = false
+                    )
+                }
+            }
+        }
+    }
+
     composable(AppRoute.Stats.route) {
         StatsScreen(
             viewModel = statsViewModel,
             onNavigateBack = { navController.safePopBackStack() }
         )
+    }
+
+    if (isTrio) {
+        composable(AppRoute.TrioStats.route) {
+            TrioTabScaffold(
+                selectedTab = TrioNavTab.Statistics,
+                title = stringResource(app.aaps.core.ui.R.string.statistics),
+                onTabSelected = onNavigateToTrioTab,
+                onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
+                onCarbsClick = { onNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
+                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) }
+            ) { paddingValues ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                ) {
+                    StatsScreen(
+                        viewModel = statsViewModel,
+                        onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
+                        showTopBar = false
+                    )
+                }
+            }
+        }
     }
 
     composable(AppRoute.ProfileHelper.route) {
@@ -504,6 +567,26 @@ fun NavGraphBuilder.appNavGraph(
             title = stringResource(PluginsMainR.string.nav_history_browser),
             onNavigateBack = { navController.safePopBackStack() }
         )
+    }
+
+    if (isTrio) {
+        composable(AppRoute.TrioHistory.route) {
+            TrioTabScaffold(
+                selectedTab = TrioNavTab.History,
+                title = stringResource(PluginsMainR.string.nav_history_browser),
+                onTabSelected = onNavigateToTrioTab,
+                onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
+                onCarbsClick = { onNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
+                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) }
+            ) { paddingValues ->
+                HistoryScreen(
+                    title = stringResource(PluginsMainR.string.nav_history_browser),
+                    onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
+                    modifier = Modifier.padding(paddingValues),
+                    showTopBar = false
+                )
+            }
+        }
     }
 
     composable(AppRoute.Preferences.route) {
@@ -593,17 +676,58 @@ fun NavGraphBuilder.appNavGraph(
         val configState by configurationViewModel.uiState.collectAsStateWithLifecycle()
         ConfigurationScreen(
             categories = configState.categories,
+            visibleTypes = if (isTrio) TRIO_SETTINGS_VISIBLE_TYPES else null,
             hardwarePumpConfirmation = configState.hardwarePumpConfirmation,
             onNavigateBack = { navController.safePopBackStack() },
             onNavigateToCategory = { type ->
                 navController.navigate(AppRoute.PluginCategory.createRoute(type.ordinal))
             },
+            onOpenHealthConnect = onOpenHealthConnect,
+            showHealthConnect = isTrio,
             onConfirmHardwarePump = {
                 configurationViewModel.confirmHardwarePumpSwitch()
                 onRefreshPermissions()
             },
             onDismissHardwarePump = { configurationViewModel.dismissHardwarePumpDialog() }
         )
+    }
+
+    if (isTrio) {
+        composable(AppRoute.TrioSettings.route) {
+            val configState by configurationViewModel.uiState.collectAsStateWithLifecycle()
+            TrioTabScaffold(
+                selectedTab = TrioNavTab.Settings,
+                title = stringResource(app.aaps.core.ui.R.string.settings),
+                onTabSelected = onNavigateToTrioTab,
+                onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
+                onCarbsClick = { onNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
+                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) }
+            ) { paddingValues ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                ) {
+                    ConfigurationScreen(
+                        categories = configState.categories,
+                        visibleTypes = TRIO_SETTINGS_VISIBLE_TYPES,
+                        hardwarePumpConfirmation = configState.hardwarePumpConfirmation,
+                        onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
+                        onNavigateToCategory = { type ->
+                            navController.navigate(AppRoute.PluginCategory.createRoute(type.ordinal))
+                        },
+                        onOpenHealthConnect = onOpenHealthConnect,
+                        showHealthConnect = true,
+                        showTopBar = false,
+                        onConfirmHardwarePump = {
+                            configurationViewModel.confirmHardwarePumpSwitch()
+                            onRefreshPermissions()
+                        },
+                        onDismissHardwarePump = { configurationViewModel.dismissHardwarePumpDialog() }
+                    )
+                }
+            }
+        }
     }
 
     composable(

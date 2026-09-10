@@ -179,6 +179,9 @@ class MainViewModel @Inject constructor(
 
     val versionName: String get() = config.VERSION_NAME
     val appIcon: Int get() = iconsProvider.getIcon()
+    val appTitle: String get() = rh.gs(config.appName)
+    val isTrio: Boolean get() = config.TRIO
+    val showAdvancedMenuItems: Boolean get() = !config.TRIO
     val calcProgressFlow: StateFlow<Int> = overviewDataCache.calcProgressFlow
 
     // Ticker for time-based progress updates (every 30 seconds). Cold flow — only runs while

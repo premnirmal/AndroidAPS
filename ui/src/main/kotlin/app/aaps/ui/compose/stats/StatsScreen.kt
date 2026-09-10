@@ -51,7 +51,8 @@ import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 @Composable
 fun StatsScreen(
     viewModel: StatsViewModel,
-    onNavigateBack: () -> Unit
+    onNavigateBack: () -> Unit,
+    showTopBar: Boolean = true
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -63,17 +64,19 @@ fun StatsScreen(
 
     Scaffold(
         topBar = {
-            AapsTopAppBar(
-                title = { Text(stringResource(app.aaps.core.ui.R.string.statistics)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(app.aaps.core.ui.R.string.back)
-                        )
+            if (showTopBar) {
+                AapsTopAppBar(
+                    title = { Text(stringResource(app.aaps.core.ui.R.string.statistics)) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(app.aaps.core.ui.R.string.back)
+                            )
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     ) { paddingValues ->
         Column(

@@ -148,6 +148,7 @@ private object PreviewConfig : Config {
     override val AAPSCLIENT2: Boolean = false
     override val AAPSCLIENT3: Boolean = false
     override val PUMPCONTROL: Boolean = false
+    override val TRIO: Boolean = false
     override val PUMPDRIVERS: Boolean = true
     override val FLAVOR: String = "full"
     override val VERSION_NAME: String = "preview"
@@ -173,4 +174,3 @@ private object PreviewConfig : Config {
     override fun isEngineeringMode(): Boolean = false
     override fun isEnabled(option: ExternalOptions): Boolean = false
 }
-

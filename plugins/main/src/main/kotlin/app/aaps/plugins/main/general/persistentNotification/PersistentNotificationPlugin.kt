@@ -4,6 +4,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.RemoteInput
 import app.aaps.core.data.model.GlucoseUnit
@@ -237,6 +238,10 @@ class PersistentNotificationPlugin @Inject constructor(
         if (includeAuto) lastAutoNotificationContent = content
         val builder = NotificationCompat.Builder(context, notificationHolder.channelID)
         builder.setOngoing(true)
+        // Live updates require Android 16, target SDK 36, and Trio's promoted-notification permission.
+        if (config.TRIO && Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+            builder.setRequestPromotedOngoing(true)
+        }
         builder.setOnlyAlertOnce(true)
         builder.setCategory(NotificationCompat.CATEGORY_STATUS)
         builder.setSmallIcon(iconsProvider.getNotificationIcon())

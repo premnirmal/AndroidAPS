@@ -24,6 +24,7 @@ import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.di.ApplicationScope
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.maintenance.BackupDatabaseConstants
 import app.aaps.core.interfaces.maintenance.ExportConfig
 import app.aaps.core.interfaces.maintenance.ExportDestination
 import app.aaps.core.interfaces.maintenance.ExportPreparation
@@ -89,6 +90,11 @@ import javax.inject.Inject
 private fun filenameTimestamp(): String =
     LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss"))
 
+private const val BACKUP_MAIN_SUFFIX = "_database.db"
+private const val BACKUP_WAL_SUFFIX = "_database.db-wal"
+private const val BACKUP_SHM_SUFFIX = "_database.db-shm"
+private val BACKUP_TIMESTAMP_REGEX = Regex("^\\d{4}-\\d{2}-\\d{2}_\\d{6}")
+
 @Reusable
 class ImportExportPrefsImpl @Inject constructor(
     private var aapsLogger: AAPSLogger,
@@ -115,6 +121,7 @@ class ImportExportPrefsImpl @Inject constructor(
 ) : ImportExportPrefs {
 
     private var pendingExportFile: DocumentFile? = null
+    private var importedPrefsFileName: String? = null
 
     // Compose export support — discrete steps
 
@@ -254,6 +261,9 @@ class ImportExportPrefsImpl @Inject constructor(
             if (file != null) {
                 pendingExportFile = null
                 localSuccess = savePreferences(file, password)
+                if (localSuccess) {
+                    backupCompanionDatabaseFiles(file)
+                }
                 val resultMessage = if (localSuccess) rh.gs(R.string.exported) else rh.gs(R.string.exported_failed)
                 persistenceLayer.insertPumpTherapyEventIfNewByTimestamp(
                     therapyEvent = TE.asSettingsExport(error = resultMessage),
@@ -477,6 +487,77 @@ class ImportExportPrefsImpl @Inject constructor(
         return resultOk
     }
 
+    private fun extractTimestampPrefix(fileName: String?): String? {
+        if (fileName.isNullOrEmpty()) return null
+        return BACKUP_TIMESTAMP_REGEX.find(fileName)?.value
+    }
+
+    private fun writeInternalDatabaseFileToBackupDirectory(prefDir: DocumentFile, backupName: String, sourceName: String) {
+        val sourceFile = context.getDatabasePath(sourceName)
+        if (!sourceFile.exists()) return
+        prefDir.listFiles().firstOrNull { it.name == backupName }?.delete()
+        val targetFile = prefDir.createFile("application/octet-stream", backupName) ?: return
+        context.contentResolver.openOutputStream(targetFile.uri, "w")?.use { outputStream ->
+            sourceFile.inputStream().use { inputStream ->
+                inputStream.copyTo(outputStream)
+            }
+        }
+    }
+
+    private fun backupCompanionDatabaseFiles(prefsFile: DocumentFile) {
+        val prefix = extractTimestampPrefix(prefsFile.name) ?: return
+        val prefDir = prefFileList.ensurePreferenceDirExists() ?: return
+        writeInternalDatabaseFileToBackupDirectory(prefDir, prefix + BACKUP_MAIN_SUFFIX, BackupDatabaseConstants.DATABASE_MAIN_FILE)
+        writeInternalDatabaseFileToBackupDirectory(prefDir, prefix + BACKUP_WAL_SUFFIX, BackupDatabaseConstants.DATABASE_WAL_FILE)
+        writeInternalDatabaseFileToBackupDirectory(prefDir, prefix + BACKUP_SHM_SUFFIX, BackupDatabaseConstants.DATABASE_SHM_FILE)
+    }
+
+    private fun stageDatabaseCompanionFileForRestore(
+        prefDir: DocumentFile,
+        backupFileName: String,
+        stagedFileName: String,
+        required: Boolean
+    ) {
+        val sourceFile = prefDir.listFiles().firstOrNull { it.name == backupFileName }
+        val pendingDir = context.getDir(BackupDatabaseConstants.PENDING_DB_RESTORE_DIR, Context.MODE_PRIVATE)
+        val stagedFile = java.io.File(pendingDir, stagedFileName)
+
+        if (sourceFile == null) {
+            if (!required && stagedFile.exists()) {
+                stagedFile.delete()
+            }
+            return
+        }
+
+        val bytes = storage.getBinaryFileContents(context.contentResolver, sourceFile)
+        if (bytes == null) {
+            aapsLogger.warn(LTag.CORE, "Failed to read backup file: $backupFileName")
+            return
+        }
+
+        try {
+            stagedFile.outputStream().use { outputStream ->
+                outputStream.write(bytes)
+                outputStream.flush()
+            }
+        } catch (e: Exception) {
+            aapsLogger.error(LTag.CORE, "Failed to stage database backup file: $backupFileName", e)
+        }
+    }
+
+    private fun stageDatabaseRestoreFromCompanionBackup() {
+        try {
+            val prefix = extractTimestampPrefix(importedPrefsFileName) ?: return
+            val prefDir = prefFileList.ensurePreferenceDirExists() ?: return
+            stageDatabaseCompanionFileForRestore(prefDir, prefix + BACKUP_MAIN_SUFFIX, BackupDatabaseConstants.DATABASE_MAIN_FILE, required = true)
+            stageDatabaseCompanionFileForRestore(prefDir, prefix + BACKUP_WAL_SUFFIX, BackupDatabaseConstants.DATABASE_WAL_FILE, required = false)
+            stageDatabaseCompanionFileForRestore(prefDir, prefix + BACKUP_SHM_SUFFIX, BackupDatabaseConstants.DATABASE_SHM_FILE, required = false)
+            sp.putBoolean(BackupDatabaseConstants.PENDING_DB_RESTORE_FLAG, true)
+        } finally {
+            importedPrefsFileName = null
+        }
+    }
+
     private fun exportSharedPreferencesLegacy(activity: FragmentActivity) {
         // Check export destination preference for user settings
         val localEnabled = preferences.get(BooleanNonKey.ExportSettingsLocalEnabled)
@@ -556,10 +637,11 @@ class ImportExportPrefsImpl @Inject constructor(
      * Perform local export without password prompt
      */
     private fun doExportToLocal(activity: FragmentActivity, newFile: DocumentFile, password: String) {
-        val exportResultMessage = if (savePreferences(newFile, password))
-            rh.gs(R.string.exported)
-        else
-            rh.gs(R.string.exported_failed)
+        val exportSucceeded = savePreferences(newFile, password)
+        if (exportSucceeded) {
+            backupCompanionDatabaseFiles(newFile)
+        }
+        val exportResultMessage = if (exportSucceeded) rh.gs(R.string.exported) else rh.gs(R.string.exported_failed)
 
         rxBus.send(EventShowSnackbar(exportResultMessage, EventShowSnackbar.Type.Success))
 
@@ -722,6 +804,9 @@ class ImportExportPrefsImpl @Inject constructor(
             val newFile = prefFileList.newPreferenceFile()
             if (newFile != null) {
                 localResult = savePreferences(newFile, password)
+                if (localResult) {
+                    backupCompanionDatabaseFiles(newFile)
+                }
                 aapsLogger.info(LTag.CORE, "${CloudConstants.LOG_PREFIX} NONINTERACTIVE_EXPORT_LOCAL result=$localResult")
             } else {
                 aapsLogger.error(LTag.CORE, "${CloudConstants.LOG_PREFIX} NONINTERACTIVE_EXPORT_LOCAL_NO_FILE")
@@ -895,6 +980,7 @@ class ImportExportPrefsImpl @Inject constructor(
             }
 
             val importPossible = (importOk || config.isEngineeringMode()) && prefs.values.isNotEmpty()
+            importedPrefsFileName = file.name
             ImportDecryptResult.Success(prefs, importOk, importPossible)
         } catch (e: PrefFileNotFoundError) {
             aapsLogger.error(LTag.CORE, "Decrypt failed: file not found", e)
@@ -918,6 +1004,7 @@ class ImportExportPrefsImpl @Inject constructor(
                 sp.putString(key, value)
             }
         }
+        stageDatabaseRestoreFromCompanionBackup()
         activePlugin.afterImport()
     }
 

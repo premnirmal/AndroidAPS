@@ -67,6 +67,7 @@ fun HistoryScreen(
     title: String,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    showTopBar: Boolean = true,
     viewModel: HistoryViewModel = hiltViewModel()
 ) {
     val graphViewModel: GraphViewModel = viewModel(
@@ -95,17 +96,19 @@ fun HistoryScreen(
 
     Scaffold(
         topBar = {
-            AapsTopAppBar(
-                title = { Text(title) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(CoreUiR.string.back)
-                        )
+            if (showTopBar) {
+                AapsTopAppBar(
+                    title = { Text(title) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(CoreUiR.string.back)
+                            )
+                        }
                     }
-                }
-            )
+                )
+            }
         },
         modifier = modifier.fillMaxSize()
     ) { paddingValues ->

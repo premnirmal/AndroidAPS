@@ -37,6 +37,7 @@ import app.aaps.core.interfaces.insulin.InsulinManager
 import app.aaps.core.interfaces.insulin.InsulinType
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.maintenance.BackupDatabaseConstants
 import app.aaps.core.interfaces.maintenance.FileListProvider
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
@@ -75,6 +76,7 @@ import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.objects.crypto.CryptoUtil
 import app.aaps.core.objects.profile.ProfileSealed
+import app.aaps.core.ui.UiMode
 import app.aaps.core.ui.locale.LocaleHelper
 import app.aaps.core.utils.JsonHelper
 import app.aaps.database.AppRepository
@@ -110,8 +112,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import org.json.JSONObject
-import rxdogtag2.RxDogTag
+import java.io.File
 import java.io.IOException
 import java.util.Locale
 import javax.inject.Inject
@@ -119,6 +120,8 @@ import javax.inject.Provider
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.time.Duration.Companion.milliseconds
+import org.json.JSONObject
+import rxdogtag2.RxDogTag
 
 @HiltAndroidApp
 class MainApp : Application(), HasAndroidInjector, Configuration.Provider {
@@ -183,6 +186,7 @@ class MainApp : Application(), HasAndroidInjector, Configuration.Provider {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun onCreate() {
+        applyPendingDatabaseRestorePreInitIfNeeded()
         super.onCreate()
 
         // Here should be everything injected
@@ -530,8 +534,19 @@ class MainApp : Application(), HasAndroidInjector, Configuration.Provider {
         // These three migrate bidirectionally-synced keys. Skip on a client: it adopts the value from
         // the master via sync, and a local put here would now trigger a client→master round-trip (modal)
         // at startup. The master migrates and publishes; the client follows.
-        if (!config.AAPSCLIENT && preferences.getIfExists(BooleanKey.GeneralSimpleMode) == null)
+        if (config.TRIO) {
+            if (preferences.getIfExists(BooleanNonKey.GeneralSetupWizardProcessed) == null) {
+                preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
+            }
+            if (preferences.getIfExists(BooleanKey.GeneralSimpleMode) == null) {
+                preferences.put(BooleanKey.GeneralSimpleMode, true)
+            }
+            if (preferences.getIfExists(StringKey.GeneralDarkMode) == null) {
+                preferences.put(StringKey.GeneralDarkMode, UiMode.DARK.stringValue)
+            }
+        } else if (!config.AAPSCLIENT && preferences.getIfExists(BooleanKey.GeneralSimpleMode) == null) {
             preferences.put(BooleanKey.GeneralSimpleMode, !preferences.get(BooleanNonKey.GeneralSetupWizardProcessed))
+        }
         // Migrate from OpenAPSSMBDynamicISFPlugin
         if (sp.getBoolean("ConfigBuilder_APS_OpenAPSSMBDynamicISFPlugin_Enabled", false)) {
             sp.remove("ConfigBuilder_APS_OpenAPSSMBDynamicISFPlugin_Enabled")
@@ -919,6 +934,71 @@ class MainApp : Application(), HasAndroidInjector, Configuration.Provider {
                 level = NotificationLevel.IMPORTANT
             )
         }
+
+    private fun copyPendingDatabaseFilePreInit(
+        pendingDir: File,
+        databaseDir: File,
+        fileName: String,
+        required: Boolean
+    ): Boolean {
+        val pendingFile = File(pendingDir, fileName)
+        val targetFile = File(databaseDir, fileName)
+
+        if (!pendingFile.exists()) {
+            if (!required && targetFile.exists()) {
+                targetFile.delete()
+            }
+            return !required
+        }
+
+        return try {
+            pendingFile.inputStream().use { input ->
+                targetFile.outputStream().use { output ->
+                    input.copyTo(output)
+                    output.flush()
+                }
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun applyPendingDatabaseRestorePreInitIfNeeded() {
+        val sharedPreferences = getSharedPreferences("${packageName}${BackupDatabaseConstants.SHARED_PREFERENCES_SUFFIX}", MODE_PRIVATE)
+        if (!sharedPreferences.getBoolean(BackupDatabaseConstants.PENDING_DB_RESTORE_FLAG, false)) return
+
+        val pendingDir = getDir(BackupDatabaseConstants.PENDING_DB_RESTORE_DIR, MODE_PRIVATE)
+        val databaseDir = getDatabasePath(BackupDatabaseConstants.DATABASE_MAIN_FILE).parentFile ?: return
+        databaseDir.mkdirs()
+
+        val mainCopied = copyPendingDatabaseFilePreInit(
+            pendingDir = pendingDir,
+            databaseDir = databaseDir,
+            fileName = BackupDatabaseConstants.DATABASE_MAIN_FILE,
+            required = true
+        )
+        if (!mainCopied) {
+            sharedPreferences.edit().putBoolean(BackupDatabaseConstants.PENDING_DB_RESTORE_FLAG, false).apply()
+            return
+        }
+
+        copyPendingDatabaseFilePreInit(
+            pendingDir = pendingDir,
+            databaseDir = databaseDir,
+            fileName = BackupDatabaseConstants.DATABASE_WAL_FILE,
+            required = false
+        )
+        copyPendingDatabaseFilePreInit(
+            pendingDir = pendingDir,
+            databaseDir = databaseDir,
+            fileName = BackupDatabaseConstants.DATABASE_SHM_FILE,
+            required = false
+        )
+
+        pendingDir.listFiles()?.forEach { it.delete() }
+        sharedPreferences.edit().putBoolean(BackupDatabaseConstants.PENDING_DB_RESTORE_FLAG, false).apply()
+    }
 
     private val timeDateReceiver = TimeDateOrTZChangeReceiver()
     private val networkReceiver = NetworkChangeReceiver()

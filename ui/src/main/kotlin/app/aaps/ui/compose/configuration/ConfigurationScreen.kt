@@ -25,23 +25,36 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.tooling.preview.Preview
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.ui.R
+import app.aaps.core.ui.compose.AapsSpacing
+import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.AapsTopAppBar
 import app.aaps.core.ui.compose.dialogs.OkCancelDialog
 import app.aaps.core.ui.compose.preference.SyncBadge
+import app.aaps.ui.R as UiR
 import app.aaps.ui.plugin.HardwarePumpConfirmation
 
 @Composable
 fun ConfigurationScreen(
     categories: List<ConfigCategoryUiModel>,
+    visibleTypes: Set<PluginType>? = null,
     hardwarePumpConfirmation: HardwarePumpConfirmation?,
     onNavigateBack: () -> Unit,
     onNavigateToCategory: (PluginType) -> Unit,
+    onOpenHealthConnect: () -> Unit,
+    showHealthConnect: Boolean = false,
+    showTopBar: Boolean = true,
     onConfirmHardwarePump: () -> Unit,
     onDismissHardwarePump: () -> Unit,
 ) {
+    val visibleCategories = if (visibleTypes == null) {
+        categories
+    } else {
+        categories.filter { it.type in visibleTypes }
+    }
+
     if (hardwarePumpConfirmation != null) {
         OkCancelDialog(
             title = stringResource(R.string.confirmation),
@@ -53,17 +66,19 @@ fun ConfigurationScreen(
 
     Scaffold(
         topBar = {
-            AapsTopAppBar(
-                title = { Text(stringResource(R.string.nav_configuration)) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.back)
-                        )
+            if (showTopBar) {
+                AapsTopAppBar(
+                    title = { Text(stringResource(R.string.nav_configuration)) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(R.string.back)
+                            )
+                        }
                     }
-                }
-            )
+                )
+            }
         }
     ) { paddingValues ->
         LazyColumn(
@@ -71,11 +86,20 @@ fun ConfigurationScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            categories.forEach { category ->
+            visibleCategories.forEach { category ->
                 item(key = "cat_${category.type}") {
                     CategoryRow(
                         category = category,
                         onClick = { onNavigateToCategory(category.type) }
+                    )
+                }
+            }
+            if (showHealthConnect) {
+                item(key = "health_connect") {
+                    ActionRow(
+                        title = stringResource(UiR.string.health_connect),
+                        subtitle = stringResource(UiR.string.health_connect_settings_subtitle),
+                        onClick = onOpenHealthConnect
                     )
                 }
             }
@@ -97,15 +121,20 @@ private fun CategoryRow(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(start = 24.dp, top = 12.dp, bottom = 12.dp, end = 4.dp)
+            .padding(
+                start = AapsSpacing.xxLarge,
+                top = AapsSpacing.large,
+                bottom = AapsSpacing.large,
+                end = AapsSpacing.small
+            )
     ) {
         Icon(
             painter = iconPainter,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(AapsSpacing.xxLarge)
         )
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(AapsSpacing.extraLarge))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = categoryName,
@@ -122,13 +151,91 @@ private fun CategoryRow(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        // Synced (master-linked) category: the same PhonelinkRing badge used on synced preference rows.
-        SyncBadge(visible = category.synced, modifier = Modifier.padding(end = 8.dp))
+        SyncBadge(visible = category.synced, modifier = Modifier.padding(end = AapsSpacing.medium))
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(end = 12.dp)
+            modifier = Modifier.padding(end = AapsSpacing.large)
+        )
+    }
+}
+
+@Composable
+private fun ActionRow(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(
+                start = AapsSpacing.xxLarge,
+                top = AapsSpacing.large,
+                bottom = AapsSpacing.large,
+                end = AapsSpacing.small
+            )
+    ) {
+        Icon(
+            imageVector = Icons.Default.Settings,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(AapsSpacing.xxLarge)
+        )
+        Spacer(modifier = Modifier.width(AapsSpacing.extraLarge))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(end = AapsSpacing.large)
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ConfigurationScreenPreview() {
+    AapsTheme {
+        ConfigurationScreen(
+            categories = listOf(
+                ConfigCategoryUiModel(
+                    type = PluginType.GENERAL,
+                    titleRes = R.string.configbuilder_general,
+                    plugins = emptyList(),
+                    isMultiSelect = true,
+                    subtitle = "General plugins",
+                    categoryIcon = Icons.Default.Settings
+                )
+            ),
+            visibleTypes = setOf(PluginType.GENERAL, PluginType.PUMP, PluginType.BGSOURCE, PluginType.SYNC),
+            hardwarePumpConfirmation = null,
+            onNavigateBack = {},
+            onNavigateToCategory = {},
+            onOpenHealthConnect = {},
+            showHealthConnect = true,
+            showTopBar = true,
+            onConfirmHardwarePump = {},
+            onDismissHardwarePump = {}
         )
     }
 }

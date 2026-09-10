@@ -2,12 +2,14 @@ package app.aaps.di
 
 import android.content.Context
 import android.content.SharedPreferences
+import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.di.APS
 import app.aaps.core.interfaces.di.AllConfigs
 import app.aaps.core.interfaces.di.ApplicationScope
 import app.aaps.core.interfaces.di.NotNSClient
 import app.aaps.core.interfaces.di.PumpDriver
+import app.aaps.core.interfaces.maintenance.BackupDatabaseConstants
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.history.HistoryBrowserData
@@ -59,7 +61,8 @@ abstract class AppModule {
             if (config.APS) plugins += aps.get()
             if (!config.AAPSCLIENT) plugins += notNsClient.get()
             //if (config.isEnabled(ExternalOptions.UNFINISHED_MODE)) plugins += unfinished.get()
-            return plugins.toList().sortedBy { it.first }.map { it.second }
+            val pluginList = plugins.toList().sortedBy { it.first }.map { it.second }
+            return pluginList
         }
 
         @Provides
@@ -71,7 +74,7 @@ abstract class AppModule {
         @Reusable
         @Provides
         fun providesDefaultSharedPreferences(context: Context): SharedPreferences =
-            context.getSharedPreferences("${context.packageName}_preferences", Context.MODE_PRIVATE)
+            context.getSharedPreferences("${context.packageName}${BackupDatabaseConstants.SHARED_PREFERENCES_SUFFIX}", Context.MODE_PRIVATE)
 
         @Provides
         fun provideContext(@ApplicationContext context: Context): Context = context
@@ -92,4 +95,3 @@ abstract class AppModule {
         @Binds @Singleton fun bindHistoryScope(impl: HistoryBrowserData): HistoryScope
     }
 }
-
