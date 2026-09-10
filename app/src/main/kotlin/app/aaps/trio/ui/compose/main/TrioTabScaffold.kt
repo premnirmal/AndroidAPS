@@ -1,6 +1,7 @@
 package app.aaps.trio.ui.compose.main
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -24,6 +25,7 @@ fun TrioTabScaffold(
     onCarbsClick: () -> Unit,
     onWizardClick: () -> Unit,
     modifier: Modifier = Modifier,
+    topBarActions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
     var showAddSheet by rememberSaveable { mutableStateOf(false) }
@@ -32,7 +34,10 @@ fun TrioTabScaffold(
         modifier = modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets(0),
         topBar = {
-            TrioTopBar(title = title)
+            TrioTopBar(
+                title = title,
+                actions = topBarActions
+            )
         },
         bottomBar = {
             TrioBottomBar(

@@ -79,6 +79,7 @@ import app.aaps.ui.compose.history.HistoryScreen
 import app.aaps.ui.compose.insulinDialog.InsulinDialogScreen
 import app.aaps.ui.compose.insulinManagement.InsulinManagementScreen
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
+import app.aaps.ui.compose.main.VersionOverlay
 import app.aaps.ui.compose.maintenance.ImportSettingsScreen
 import app.aaps.ui.compose.maintenance.ImportSource
 import app.aaps.ui.compose.maintenance.ImportViewModel
@@ -702,7 +703,10 @@ fun NavGraphBuilder.appNavGraph(
                 onTabSelected = onNavigateToTrioTab,
                 onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
                 onCarbsClick = { onNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
-                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) }
+                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) },
+                topBarActions = {
+                    VersionOverlay()
+                }
             ) { paddingValues ->
                 Box(
                     modifier = Modifier

@@ -1,6 +1,7 @@
 package app.aaps.ui.compose.overview
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,16 +9,26 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -26,19 +37,21 @@ import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.RM
 import app.aaps.core.data.model.TT
 import app.aaps.core.interfaces.navigation.ElementType
+import app.aaps.core.interfaces.notifications.NotificationLevel
 import app.aaps.core.interfaces.overview.graph.TbrState
 import app.aaps.core.ui.compose.AapsSpacing
+import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.icons.Pump
 import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.compose.navigation.color
 import app.aaps.core.ui.compose.navigation.icon
+import app.aaps.ui.compose.notificationsSheet.toColor
 import app.aaps.ui.R
 import app.aaps.ui.compose.main.TempTargetChipState
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.chips.CobUiState
 import app.aaps.ui.compose.overview.chips.IobUiState
 import app.aaps.ui.compose.overview.chips.ProfileChip
-import app.aaps.ui.compose.overview.chips.RunningModeChip
 import app.aaps.ui.compose.overview.chips.SensitivityUiState
 import app.aaps.ui.compose.overview.chips.TbrChip
 import app.aaps.ui.compose.overview.chips.TempTargetChip
@@ -79,6 +92,9 @@ fun TrioOverviewScreen(
     onDismissScene: () -> Unit = {},
     endSceneEnabled: Boolean = true,
     commandsAllowed: Boolean = true,
+    notificationCount: Int = 0,
+    highestNotificationLevel: NotificationLevel? = null,
+    onNotificationClick: () -> Unit = {},
     formatDuration: (Long) -> String = { ms -> "${(ms / 60000L).toInt()}m" },
     modifier: Modifier = Modifier
 ) {
@@ -91,6 +107,7 @@ fun TrioOverviewScreen(
         if (value >= 40.0) value.roundToInt().toString()
         else String.format(Locale.getDefault(), "%.1f", value)
     } ?: stringResource(app.aaps.core.ui.R.string.value_unavailable_short)
+    var showPredictionInfo by remember { mutableStateOf(false) }
 
     BoxWithConstraints(
         modifier = modifier
@@ -129,31 +146,48 @@ fun TrioOverviewScreen(
                     timeAgoText = bgInfoState.timeAgoText,
                     modifier = Modifier.weight(1f)
                 )
-                LoopMetricPanel(
-                    runningMode = runningMode,
-                    runningModeText = runningModeText,
-                    runningModeRemaining = runningModeRemaining,
-                    runningModeProgress = runningModeProgress,
-                    runningModeSceneManaged = runningModeSceneManaged,
-                    smbEnabled = smbEnabled,
-                    iobUiState = iobUiState,
-                    cobUiState = cobUiState,
-                    sensitivityUiState = sensitivityUiState,
+                PredictionText(
                     predictedText = predictedText,
-                    commandsAllowed = commandsAllowed,
-                    onNavigate = onNavigate,
-                    onIobChipClick = onIobChipClick,
+                    onClick = { showPredictionInfo = true },
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            GraphsSection(
-                graphViewModel = graphViewModel,
-                isSimpleMode = isSimpleMode,
-                mainChartOnly = true,
-                mainChartHeight = chartHeight,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MetricRow(
+                    label = stringResource(app.aaps.core.ui.R.string.iob),
+                    value = iobUiState.text,
+                    onClick = onIobChipClick,
+                    modifier = Modifier.weight(1f)
+                )
+                MetricRow(
+                    label = stringResource(app.aaps.core.ui.R.string.cob),
+                    value = cobUiState.text,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                GraphsSection(
+                    graphViewModel = graphViewModel,
+                    isSimpleMode = isSimpleMode,
+                    mainChartOnly = true,
+                    mainChartHeight = chartHeight,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                TrioNotificationButton(
+                    notificationCount = notificationCount,
+                    highestLevel = highestNotificationLevel,
+                    onClick = onNotificationClick,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(AapsSpacing.medium)
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -188,6 +222,18 @@ fun TrioOverviewScreen(
             }
         }
     }
+
+    if (showPredictionInfo) {
+        PredictionInfoBottomSheet(
+            runningModeText = runningModeText,
+            runningModeRemaining = runningModeRemaining,
+            iobUiState = iobUiState,
+            cobUiState = cobUiState,
+            sensitivityUiState = sensitivityUiState,
+            predictedText = predictedText,
+            onDismiss = { showPredictionInfo = false }
+        )
+    }
 }
 
 @Composable
@@ -221,63 +267,114 @@ private fun PumpEntryPoint(
 }
 
 @Composable
-private fun LoopMetricPanel(
-    runningMode: RM.Mode,
+private fun PredictionText(
+    predictedText: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    MetricRow(
+        label = stringResource(app.aaps.core.ui.R.string.predictions_shortname),
+        value = predictedText,
+        onClick = onClick,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun PredictionInfoBottomSheet(
     runningModeText: String,
     runningModeRemaining: String,
-    runningModeProgress: Float,
-    runningModeSceneManaged: Boolean,
-    smbEnabled: Boolean,
     iobUiState: IobUiState,
     cobUiState: CobUiState,
     sensitivityUiState: SensitivityUiState,
     predictedText: String,
-    commandsAllowed: Boolean,
-    onNavigate: (NavigationRequest) -> Unit,
-    onIobChipClick: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AapsSpacing.extraLarge),
+            verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
+        ) {
+            Text(
+                text = stringResource(app.aaps.core.ui.R.string.predictions_shortname),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (runningModeText.isNotEmpty()) {
+                MetricRow(
+                    label = stringResource(app.aaps.core.ui.R.string.running_mode),
+                    value = runningModeText
+                )
+            }
+            if (runningModeRemaining.isNotEmpty()) {
+                MetricRow(
+                    label = stringResource(R.string.trio_metric_remaining),
+                    value = runningModeRemaining
+                )
+            }
+            MetricRow(
+                label = stringResource(app.aaps.core.ui.R.string.iob),
+                value = iobUiState.text
+            )
+            MetricRow(
+                label = stringResource(app.aaps.core.ui.R.string.cob),
+                value = cobUiState.text
+            )
+            MetricRow(
+                label = stringResource(app.aaps.core.ui.R.string.predictions_shortname),
+                value = predictedText
+            )
+            if (sensitivityUiState.asText.isNotEmpty()) {
+                MetricRow(
+                    label = stringResource(R.string.trio_metric_sensitivity),
+                    value = sensitivityUiState.asText
+                )
+            }
+            if (sensitivityUiState.isfFrom.isNotEmpty()) {
+                MetricRow(
+                    label = stringResource(R.string.trio_metric_isf),
+                    value = "${sensitivityUiState.isfFrom} → ${sensitivityUiState.isfTo}"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrioNotificationButton(
+    notificationCount: Int,
+    highestLevel: NotificationLevel?,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
-    ) {
-        if (runningModeText.isNotEmpty()) {
-            RunningModeChip(
-                mode = runningMode,
-                text = runningModeText,
-                progress = runningModeProgress,
-                remaining = runningModeRemaining,
-                sceneManaged = runningModeSceneManaged,
-                smbEnabled = smbEnabled,
-                enabled = commandsAllowed,
-                onClick = { onNavigate(NavigationRequest.Element(ElementType.RUNNING_MODE)) }
-            )
-        }
-        MetricRow(
-            label = stringResource(app.aaps.core.ui.R.string.iob),
-            value = iobUiState.text,
-            onClick = onIobChipClick
-        )
-        MetricRow(
-            label = stringResource(app.aaps.core.ui.R.string.cob),
-            value = cobUiState.text
-        )
-        MetricRow(
-            label = stringResource(app.aaps.core.ui.R.string.predictions_shortname),
-            value = predictedText
-        )
-        if (sensitivityUiState.asText.isNotEmpty()) {
-            MetricRow(
-                label = stringResource(R.string.trio_metric_sensitivity),
-                value = sensitivityUiState.asText
-            )
-        }
-        if (sensitivityUiState.isfFrom.isNotEmpty()) {
-            MetricRow(
-                label = stringResource(R.string.trio_metric_isf),
-                value = "${sensitivityUiState.isfFrom} → ${sensitivityUiState.isfTo}"
-            )
+    if (notificationCount > 0) {
+        Surface(
+            onClick = onClick,
+            shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
+            color = highestLevel?.toColor() ?: MaterialTheme.colorScheme.primary,
+            modifier = modifier
+        ) {
+            BadgedBox(
+                badge = {
+                    Badge {
+                        Text(text = notificationCount.toString())
+                    }
+                },
+                modifier = Modifier.padding(AapsSpacing.small)
+            ) {
+                IconButton(
+                    onClick = onClick,
+                    modifier = Modifier.size(AapsSpacing.xxLarge)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = null,
+                        tint = AapsTheme.generalColors.onNotification
+                    )
+                }
+            }
         }
     }
 }

@@ -331,11 +331,13 @@ fun MainScreen(
                     }
 
                     // Version overlay
-                    VersionOverlay(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(contentPadding)
-                    )
+                    if (!isTrio) {
+                        VersionOverlay(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(contentPadding)
+                        )
+                    }
 
                     // Status bar protection scrim — keeps system icons legible
                     // against the floating search bar / graph content

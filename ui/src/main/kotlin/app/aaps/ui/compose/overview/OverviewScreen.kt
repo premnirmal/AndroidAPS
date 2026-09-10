@@ -157,6 +157,9 @@ fun OverviewScreen(
                 onDismissScene = onDismissScene,
                 endSceneEnabled = endSceneEnabled,
                 commandsAllowed = commandsAllowed,
+                notificationCount = notifications.size,
+                highestNotificationLevel = notifications.minByOrNull { it.level.ordinal }?.level,
+                onNotificationClick = { showNotificationSheet = true },
                 formatDuration = formatDuration
             )
         } else if (isTablet) {
@@ -300,15 +303,17 @@ fun OverviewScreen(
                 .padding(end = 16.dp, bottom = 128.dp + fabBottomOffset)
         )
 
-        NotificationFab(
-            notificationCount = notifications.size,
-            highestLevel = notifications.minByOrNull { it.level.ordinal }?.level,
-            onClick = { showNotificationSheet = true },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(paddingValues)
-                .padding(end = 16.dp, bottom = 72.dp + fabBottomOffset)
-        )
+        if (!isTrio) {
+            NotificationFab(
+                notificationCount = notifications.size,
+                highestLevel = notifications.minByOrNull { it.level.ordinal }?.level,
+                onClick = { showNotificationSheet = true },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(paddingValues)
+                    .padding(end = 16.dp, bottom = 72.dp + fabBottomOffset)
+            )
+        }
     }
 
     if (showPumpActivityDialog) {

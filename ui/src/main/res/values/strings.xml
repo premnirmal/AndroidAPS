@@ -7,6 +7,7 @@
     <string name="trio_add_action">Add</string>
     <string name="trio_metric_sensitivity">Sens</string>
     <string name="trio_metric_isf">ISF</string>
+    <string name="trio_metric_remaining">Remaining</string>
     <string name="health_connect">Health Connect</string>
     <string name="health_connect_settings_subtitle">Manage health data sharing</string>
     <string name="health_connect_not_available">Health Connect is not available on this device</string>
