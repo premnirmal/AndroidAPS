@@ -541,9 +541,6 @@ class MainApp : Application(), HasAndroidInjector, Configuration.Provider {
             if (preferences.getIfExists(BooleanKey.GeneralSimpleMode) == null) {
                 preferences.put(BooleanKey.GeneralSimpleMode, true)
             }
-            if (preferences.getIfExists(StringKey.GeneralDarkMode) == null) {
-                preferences.put(StringKey.GeneralDarkMode, UiMode.DARK.stringValue)
-            }
         } else if (!config.AAPSCLIENT && preferences.getIfExists(BooleanKey.GeneralSimpleMode) == null) {
             preferences.put(BooleanKey.GeneralSimpleMode, !preferences.get(BooleanNonKey.GeneralSetupWizardProcessed))
         }
