@@ -690,7 +690,6 @@ fun NavGraphBuilder.appNavGraph(
 
     if (isTrio) {
         composable(AppRoute.TrioSettings.route) {
-            val configState by configurationViewModel.uiState.collectAsStateWithLifecycle()
             TrioTabScaffold(
                 selectedTab = TrioNavTab.Settings,
                 title = stringResource(app.aaps.core.ui.R.string.settings),
@@ -707,22 +706,14 @@ fun NavGraphBuilder.appNavGraph(
                         .fillMaxSize()
                         .padding(paddingValues)
                 ) {
-                    ConfigurationScreen(
-                        categories = configState.categories,
-                        visibleTypes = null,
-                        hardwarePumpConfirmation = configState.hardwarePumpConfirmation,
-                        onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
-                        onNavigateToCategory = { type ->
-                            navController.navigate(AppRoute.PluginCategory.createRoute(type.ordinal))
-                        },
-                        onOpenHealthConnect = onOpenHealthConnect,
-                        showHealthConnect = true,
+                    AllPreferencesScreen(
+                        activePlugin = activePlugin,
+                        rh = rh,
+                        builtInSearchables = builtInSearchables,
+                        configBuilder = configBuilder,
+                        onBackClick = { onNavigateToTrioTab(TrioNavTab.Overview) },
                         showTopBar = false,
-                        onConfirmHardwarePump = {
-                            configurationViewModel.confirmHardwarePumpSwitch()
-                            onRefreshPermissions()
-                        },
-                        onDismissHardwarePump = { configurationViewModel.dismissHardwarePumpDialog() }
+                        showSimpleModeHiddenPreferences = true
                     )
                 }
             }
