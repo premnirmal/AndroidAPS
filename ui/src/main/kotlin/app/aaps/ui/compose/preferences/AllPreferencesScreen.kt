@@ -1,6 +1,7 @@
 package app.aaps.ui.compose.preferences
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -63,7 +65,9 @@ fun AllPreferencesScreen(
     rh: ResourceHelper,
     builtInSearchables: BuiltInSearchables,
     configBuilder: ConfigBuilder,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    showTopBar: Boolean = true,
+    showSimpleModeHiddenPreferences: Boolean = false
 ) {
     val preferences = LocalPreferences.current
     val config = LocalConfig.current
@@ -82,7 +86,7 @@ fun AllPreferencesScreen(
     fun getPreferenceContentIfEnabled(plugin: PluginBase?, enabledCondition: Boolean = true): Any? {
         if (plugin == null) return null
         // Check simple mode visibility
-        if (preferences.simpleMode && !plugin.pluginDescription.preferencesVisibleInSimpleMode && !config.isDev()) {
+        if (!showSimpleModeHiddenPreferences && preferences.simpleMode && !plugin.pluginDescription.preferencesVisibleInSimpleMode && !config.isDev()) {
             return null
         }
         // Check if plugin is enabled
@@ -159,23 +163,26 @@ fun AllPreferencesScreen(
     ) {
         ProvidePreferenceTheme {
             Scaffold(
+                contentWindowInsets = if (showTopBar) ScaffoldDefaults.contentWindowInsets else WindowInsets(0),
                 topBar = {
-                    AapsTopAppBar(
-                        title = {
-                            Text(
-                                text = stringResource(app.aaps.core.ui.R.string.settings),
-                                style = MaterialTheme.typography.titleLarge
-                            )
-                        },
-                        navigationIcon = {
-                            IconButton(onClick = onBackClick) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = stringResource(app.aaps.core.ui.R.string.back)
+                    if (showTopBar) {
+                        AapsTopAppBar(
+                            title = {
+                                Text(
+                                    text = stringResource(app.aaps.core.ui.R.string.settings),
+                                    style = MaterialTheme.typography.titleLarge
                                 )
+                            },
+                            navigationIcon = {
+                                IconButton(onClick = onBackClick) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = stringResource(app.aaps.core.ui.R.string.back)
+                                    )
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             ) { paddingValues ->
                 val listState = rememberLazyListState()
