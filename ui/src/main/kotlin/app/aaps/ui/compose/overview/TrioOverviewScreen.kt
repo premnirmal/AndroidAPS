@@ -221,7 +221,10 @@ fun TrioOverviewScreen(
                 )
             }
 
-            TimeInRangeTodayCard(timeInRangeTodayPercent = timeInRangeTodayPercent)
+            TimeInRangeTodayCard(
+                timeInRangeTodayPercent = timeInRangeTodayPercent,
+                onClick = { onNavigate(NavigationRequest.Element(ElementType.STATISTICS)) }
+            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -340,9 +343,11 @@ private fun TrioBolusingCard(
 @Composable
 private fun TimeInRangeTodayCard(
     timeInRangeTodayPercent: Int?,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
+        onClick = onClick,
         shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
         color = MaterialTheme.colorScheme.surfaceVariant,
         tonalElevation = AapsSpacing.extraSmall,
