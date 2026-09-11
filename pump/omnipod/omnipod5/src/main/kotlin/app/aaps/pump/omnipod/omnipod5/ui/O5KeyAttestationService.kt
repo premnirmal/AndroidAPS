@@ -1,6 +1,9 @@
 package app.aaps.pump.omnipod.omnipod5.ui
 
 import android.content.Context
+import android.content.pm.PackageManager
+import android.content.pm.Signature
+import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.security.keystore.StrongBoxUnavailableException
@@ -39,6 +42,12 @@ import java.util.concurrent.TimeUnit
  * attestation key is only an identity proof for this download; it never touches pod
  * pairing, which continues to use the downloaded credential.
  *
+ * Each request also carries this app's signing-certificate fingerprint (see
+ * [signingCertSha256]). The server can pin it as a stable per-builder identity - it is fixed
+ * for the life of an install, because Android requires every update to keep the same signing
+ * key - but must confirm it against the attestation chain and never trust the sent value.
+ * See the server specification.
+ *
  * This deliberately mirrors the iOS flow step for step so the server changes stay small.
  * The one ordering difference: on Android the server challenge must be fetched *before*
  * the key is generated, because the challenge is written into the key's attestation at
@@ -76,12 +85,14 @@ open class O5KeyAttestationService(
         val packageName: String,
         val challenge: String,
         val securityLevel: String,
-        val certificateChainPem: List<String>
+        val certificateChainPem: List<String>,
+        val signingCertSha256: String?
     ) {
         /** Human-readable block the user can copy or share with the key-manager operator. */
         fun toShareableText(): String = buildString {
             appendLine("Omnipod 5 Android attestation sample")
             appendLine("package: $packageName")
+            appendLine("signing cert sha-256: ${signingCertSha256 ?: "unavailable"}")
             appendLine("challenge (base64url): $challenge")
             appendLine("key security level: $securityLevel")
             appendLine("certificate chain (leaf first), ${certificateChainPem.size} certs:")
@@ -145,7 +156,8 @@ open class O5KeyAttestationService(
                 packageName = context.packageName,
                 challenge = challenge,
                 securityLevel = chain.securityLevelName,
-                certificateChainPem = chain.pemList()
+                certificateChainPem = chain.pemList(),
+                signingCertSha256 = signingCertSha256()
             )
         } finally {
             deleteKey(alias)
@@ -258,6 +270,7 @@ open class O5KeyAttestationService(
             .put("challenge", challenge)
             .put("app_id", context.packageName)
             .put("security_level", attestation.securityLevelName)
+            .put("signing_cert_sha256", signingCertSha256())
             .put("attestation_chain", JSONArray(attestation.chainBase64()))
         val (json, response) = postJson("$baseUrl/api/o5/keypair/android", body, authToken)
             ?: throw AttestationException("Failed to download the certificate.")
@@ -307,6 +320,36 @@ open class O5KeyAttestationService(
 
     private fun base64UrlDecode(text: String): ByteArray =
         Base64.getUrlDecoder().decode(text)
+
+    /**
+     * SHA-256 of this app's signing certificate as lowercase hex, or null if it cannot be
+     * read. This is the same value the key-manager can derive from the attestation chain's
+     * `attestationApplicationId`, so it is only a convenience hint: the server must confirm
+     * it against the chain and never trust this field on its own (same rule as
+     * `security_level`).
+     *
+     * It is stable across app updates, because Android requires every update to be signed
+     * by the same certificate. That makes it usable as a stable per-builder identity for the
+     * credential pool - see the server specification.
+     */
+    private fun signingCertSha256(): String? =
+        try {
+            val pm = context.packageManager
+            val signatures: Array<Signature> =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
+                        .signingInfo?.apkContentsSigners ?: emptyArray()
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.getPackageInfo(context.packageName, PackageManager.GET_SIGNATURES).signatures ?: emptyArray()
+                }
+            signatures.firstOrNull()?.let { sig -> sha256(sig.toByteArray()).toHex() }
+        } catch (e: Exception) {
+            aapsLogger.debug(LTag.PUMPBTCOMM, "Could not read signing certificate: ${e.message}")
+            null
+        }
+
+    private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it.toInt() and 0xFF) }
 
     companion object {
 
