@@ -215,50 +215,6 @@ dependencies {
     "androidDeviceTestImplementation"(libs.com.garmin.connectiq) { artifact { type = "aar" } }
 }
 
-dependencies {
-    // Compose
-    add("api", platform(libs.androidx.compose.bom))
-    add("api", libs.androidx.compose.material3)
-    add("api", libs.androidx.compose.material.icons.extended)
-    add("api", libs.androidx.lifecycle.runtime.compose)
-    add("api", libs.androidx.ui.tooling.preview)
-    add("debugImplementation", libs.androidx.compose.ui.tooling)
-
-
-    add("implementation", libs.kotlinx.coroutines.rx3)
-    add("implementation", libs.kotlinx.datetime)
-    add("testImplementation", libs.kotlinx.coroutines.test)
-    add("testImplementation", libs.androidx.work.testing)
-
-    add("testImplementation", project(":shared:tests"))
-    add("testImplementation", project(":implementation"))
-    add("testImplementation", project(":plugins:aps"))
-    add("androidTestImplementation", project(":shared:tests"))
-
-    // OpenHuman
-    add("api", libs.com.squareup.okhttp3.okhttp)
-    add("api", libs.com.squareup.retrofit2.retrofit)
-    add("implementation", libs.androidx.browser)
-
-    // NSClient, Tidepool
-    add("api", libs.io.socket.client)
-    add("implementation", libs.com.squareup.okhttp3.logging.interceptor)
-    add("implementation", libs.com.squareup.retrofit2.converter.gson)
-    add("api", libs.com.google.code.gson)
-    add("api", libs.net.openid.appauth)
-
-    // DataLayerListenerService
-    add("api", libs.com.google.android.gms.playservices.wearable)
-
-    // SMS Communicator (OTP + QR code)
-    add("implementation", libs.com.eatthepath.java.otp)
-    add("implementation", libs.com.github.kenglxn.qrgen.android)
-    // ZXing is pulled transitively by qrgen but SmsCommunicatorOtpScreen imports ErrorCorrectionLevel
-    // directly — declare it explicitly so a future qrgen upgrade can't silently drop the symbol.
-    add("implementation", libs.com.google.zxing.core)
-
-    // Garmin
-}
 // :shared:tests carries JUnit 5 for the host tests, and it reaches the device test through
 // TestBase. Dexing those jars fails - JUnit 6 uses Java records, which D8 cannot desugar in this
 // configuration - and nothing on the device needs them, because the instrumented tests are JUnit 4.
