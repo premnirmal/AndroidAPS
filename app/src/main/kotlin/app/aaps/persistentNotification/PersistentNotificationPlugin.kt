@@ -9,6 +9,7 @@ import android.graphics.BitmapFactory
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.Metric
 import androidx.core.app.NotificationCompat.Metric.FixedFloat
+import androidx.core.app.NotificationCompat.Metric.FixedInt
 import androidx.core.app.NotificationCompat.MetricStyle
 import androidx.core.app.RemoteInput
 import app.aaps.core.data.model.GlucoseUnit
@@ -64,6 +65,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.runBlocking
 import dev.zacsweers.metro.Inject
+import kotlin.math.round
 
 @Suppress("PrivatePropertyName", "DEPRECATION")
 // Registers itself into the every-build plugin bucket at order 0, replacing the @Binds @IntKey(0) in
@@ -170,13 +172,23 @@ class PersistentNotificationPlugin @Inject constructor(
         if (profileFunction.isProfileValid("Notification")) {
             val lastBG = iobCobCalculator.ads.lastBg()
             val glucoseStatus = glucoseStatusProvider.glucoseStatusData
+            val units = profileFunction.getUnits()
             if (lastBG != null) {
                 bgStatusChipText = profileUtil.fromMgdlToStringInUnits(lastBG.recalculated)
-                bgMetric = Metric(
+                val fromMgdlToUnits = profileUtil.fromMgdlToUnits(lastBG.recalculated)
+                val metricValue: Metric.MetricValue = if (units == GlucoseUnit.MMOL) {
                     FixedFloat(
-                        profileUtil.fromMgdlToUnits(lastBG.recalculated).toFloat(),
-                        profileFunction.getUnits().displayLabel
-                    ),
+                        fromMgdlToUnits.round(1).toFloat(),
+                        units.displayLabel
+                    )
+                } else {
+                    FixedInt(
+                        fromMgdlToUnits.toInt(),
+                        units.displayLabel
+                    )
+                }
+                bgMetric = Metric(
+                    metricValue,
                     "BG"
                 )
                 val trendSymbol = (trendCalculator.getTrendArrow(iobCobCalculator.ads)
@@ -230,7 +242,6 @@ class PersistentNotificationPlugin @Inject constructor(
             // Build a RemoteInput for receiving voice input from devices
             val remoteInput = RemoteInput.Builder(EXTRA_VOICE_REPLY).build()
             // Build Android Auto message: IOB • COB • Target • Profile
-            val units = profileFunction.getUnits()
             var aaTarget = ""
             val tempTarget = persistenceLayer.getTemporaryTargetActiveAt(dateUtil.now())
             if (tempTarget != null) {
@@ -264,7 +275,7 @@ class PersistentNotificationPlugin @Inject constructor(
         if (includeAuto) lastAutoNotificationContent = content
         val builder = NotificationCompat.Builder(context, notificationHolder.channelID)
         builder.setOngoing(true)
-        applyTrioLiveNotificationStyle(
+        applyLiveUpdate(
             builder = builder,
             bgStatusChipText = bgStatusChipText,
             bgMetric = bgMetric
@@ -291,17 +302,17 @@ class PersistentNotificationPlugin @Inject constructor(
         notificationHolder.notification = notification
     }
 
-    private fun applyTrioLiveNotificationStyle(
+    private fun applyLiveUpdate(
         builder: NotificationCompat.Builder,
         bgStatusChipText: String?,
         bgMetric: Metric?
     ) {
-        if (!config.TRIO || Build.VERSION.SDK_INT < ANDROID_16_SDK) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.BAKLAVA) return
         builder.setRequestPromotedOngoing(true)
         if (!bgStatusChipText.isNullOrBlank()) {
             builder.setShortCriticalText(bgStatusChipText)
         }
-        if (Build.VERSION.SDK_INT >= ANDROID_17_SDK && bgMetric != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN && bgMetric != null) {
             builder.setStyle(
                 MetricStyle()
                     .addMetric(bgMetric)
@@ -310,9 +321,9 @@ class PersistentNotificationPlugin @Inject constructor(
         }
     }
 
-    private companion object {
-
-        const val ANDROID_16_SDK = 36
-        const val ANDROID_17_SDK = 37
+    private fun Double.round(decimals: Int): Double {
+        var multiplier = 1.0
+        repeat(decimals) { multiplier *= 10 }
+        return round(this * multiplier) / multiplier
     }
 }
