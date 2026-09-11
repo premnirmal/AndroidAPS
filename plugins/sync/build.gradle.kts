@@ -216,6 +216,7 @@ dependencies {
     "androidDeviceTestImplementation"(libs.com.garmin.connectiq) { artifact { type = "aar" } }
 }
 
+dependencies {
     // Compose
     api(platform(libs.androidx.compose.bom))
     api(libs.androidx.compose.material3)
