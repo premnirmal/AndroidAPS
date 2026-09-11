@@ -1,6 +1,8 @@
 package app.aaps.pump.omnipod.omnipod5
 import app.aaps.pump.omnipod.common.R
 
+import android.os.Handler
+import android.os.Looper
 import app.aaps.core.data.model.BS
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.data.pump.defs.ManufacturerType
@@ -11,8 +13,11 @@ import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.configuration.ExternalOptions
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
+import app.aaps.core.interfaces.di.PumpDriver
+import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.pump.BlePreCheck
 import app.aaps.core.interfaces.pump.BolusProgressData
@@ -31,6 +36,7 @@ import app.aaps.core.interfaces.queue.CustomCommand
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.collectResilient
 import app.aaps.core.keys.interfaces.Preferences
+import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.keys.interfaces.withCompose
 import app.aaps.core.ui.compose.ComposeScreenContent
 import app.aaps.core.ui.compose.icons.IcPluginOmnipod
@@ -95,18 +101,22 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.rx3.rxCompletable
-import org.json.JSONObject
 import java.util.Date
 import java.util.concurrent.CountDownLatch
-import javax.inject.Inject
-import javax.inject.Provider
-import javax.inject.Singleton
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.IntKey
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
 import kotlin.concurrent.thread
 import kotlin.math.ceil
 
+private fun (() -> PumpEnactResult).get(): PumpEnactResult = invoke()
+
 /**
- * `Pump`-interface implementation for Omnipod 5 - the missing piece [O5Module]'s doc
- * comment describes. Connects the already-built pairing/BLE/command/persistence layers
+ * `Pump`-interface implementation for Omnipod 5. Connects the already-built
+ * pairing/BLE/command/persistence layers
  * (see [O5BleManager], [O5PodStateManager]) to AAPS's dosing/control surface.
  *
  * Runs O5 as a manual pod under AAPS's control, identical capabilities to Omnipod Dash -
@@ -125,17 +135,20 @@ import kotlin.math.ceil
  * recoverable instead of silently lost; see [O5PodStateManager]'s class doc for why this
  * doesn't need a Dash-style persisted command ledger to do so.
  */
-@Singleton
+@ContributesIntoMap(AppScope::class, binding = binding<PluginBase>())
+@PumpDriver
+@IntKey(1085)
+@SingleIn(AppScope::class)
 class O5PumpPlugin @Inject constructor(
     aapsLogger: AAPSLogger,
-    rh: ResourceHelper,
+    override val rh: ResourceHelper,
     preferences: Preferences,
     commandQueue: CommandQueue,
     private val bleManager: O5BleManager,
     private val podStateManager: O5PodStateManager,
     private val pumpSync: PumpSync,
     private val notificationManager: NotificationManager,
-    private val pumpEnactResultProvider: Provider<PumpEnactResult>,
+    private val pumpEnactResultProvider: () -> PumpEnactResult,
     private val bolusProgressData: BolusProgressData,
     private val protectionCheck: ProtectionCheck,
     private val blePreCheck: BlePreCheck,
@@ -152,13 +165,11 @@ class O5PumpPlugin @Inject constructor(
             )
         }
         .icon(IcPluginOmnipod)
-        .pluginName(R.string.omnipod_5_name)
-        .shortName(R.string.omnipod_5_name_short)
-        .description(R.string.omnipod_5_pump_description),
-    ownPreferences = listOf(
-        OmnipodBooleanPreferenceKey::class.java, OmnipodIntPreferenceKey::class.java,
-        DashBooleanPreferenceKey::class.java, O5IntentKey::class.java
-    ),
+        .pluginName(TextRef.AndroidRes(R.string.omnipod_5_name))
+        .shortName(TextRef.AndroidRes(R.string.omnipod_5_name_short))
+        .description(TextRef.AndroidRes(R.string.omnipod_5_pump_description)),
+    ownPreferences = OmnipodBooleanPreferenceKey.entries + OmnipodIntPreferenceKey.entries +
+        DashBooleanPreferenceKey.entries + O5IntentKey.entries,
     aapsLogger, rh, preferences, commandQueue
 ), Pump {
 
@@ -168,6 +179,7 @@ class O5PumpPlugin @Inject constructor(
 
     private var statusChecker: Runnable
 
+    private var handler: Handler? = null
     private var scope: CoroutineScope? = null
 
     companion object {
@@ -226,6 +238,7 @@ class O5PumpPlugin @Inject constructor(
 
     override suspend fun onStart() {
         super.onStart()
+        handler = Handler(Looper.getMainLooper())
         if (podStateManager.pendingDoseCommand != null) {
             handler?.postDelayed(statusChecker, STATUS_CHECK_INTERVAL_MS)
         }
@@ -244,6 +257,7 @@ class O5PumpPlugin @Inject constructor(
     override suspend fun onStop() {
         super.onStop()
         handler?.removeCallbacks(statusChecker)
+        handler = null
         scope?.cancel()
         scope = null
     }
@@ -355,11 +369,11 @@ class O5PumpPlugin @Inject constructor(
             ?: podStateManager.podStatus?.toString()
             ?: return
 
-        if (!commandQueue.isCustomCommandInQueue(CommandDeactivatePod::class.java)) {
+        if (!commandQueue.isCustomCommandInQueue(CommandDeactivatePod::class)) {
             notificationManager.post(
                 NotificationId.OMNIPOD_POD_FAULT,
                 description,
-                soundRes = app.aaps.core.ui.R.raw.boluserror
+                sound = AlarmSound.BOLUS_ERROR
             )
         }
         pumpSync.insertAnnouncement(
@@ -614,7 +628,7 @@ class O5PumpPlugin @Inject constructor(
             podStateManager.basalProgram = basalProgram
             podStateManager.deliverySuspended = false
             podStateManager.pendingDoseCommand = null
-            notificationManager.post(NotificationId.PROFILE_SET_OK, app.aaps.core.ui.R.string.profile_set_ok)
+            notificationManager.post(NotificationId.PROFILE_SET_OK, TextRef.AndroidRes(app.aaps.core.ui.R.string.profile_set_ok))
             disableSuspendAlerts()
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
@@ -961,9 +975,6 @@ class O5PumpPlugin @Inject constructor(
         pumpEnactResultProvider.get().success(false).enacted(false)
             .comment(rh.gs(R.string.omnipod_5_error_extended_bolus_not_supported))
 
-
-    override fun updateExtendedJsonStatus(extendedStatus: JSONObject) {}
-
     override val pumpDescription: PumpDescription = Companion.pumpDescription
     override fun manufacturer(): ManufacturerType = ManufacturerType.Insulet
     override fun model(): PumpType = pumpDescription.pumpType
@@ -1084,7 +1095,7 @@ class O5PumpPlugin @Inject constructor(
 
     private fun notifyUncertain(id: NotificationId, message: String) {
         if (podStateManager.pendingDoseCommand != null) {
-            notificationManager.post(id, message, soundRes = app.aaps.core.ui.R.raw.boluserror)
+            notificationManager.post(id, message, sound = AlarmSound.BOLUS_ERROR)
         }
     }
 

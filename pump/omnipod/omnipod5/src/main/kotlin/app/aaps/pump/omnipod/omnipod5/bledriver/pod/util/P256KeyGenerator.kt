@@ -8,7 +8,7 @@ import java.security.spec.ECGenParameterSpec
 import java.security.spec.ECParameterSpec
 import java.security.spec.ECPoint
 import javax.crypto.KeyAgreement
-import javax.inject.Inject
+import dev.zacsweers.metro.Inject
 
 /**
  * NIST P-256 (secp256r1) key generation and ECDH key agreement for Omnipod 5 pairing.

@@ -3,12 +3,13 @@ package app.aaps.pump.omnipod.omnipod5.keys
 import app.aaps.core.keys.PreferenceType
 import app.aaps.core.keys.interfaces.BooleanPreferenceKey
 import app.aaps.core.keys.interfaces.IntentPreferenceKey
+import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.pump.omnipod.common.R
 
 enum class O5IntentKey(
     override val key: String,
-    override val titleResId: Int = 0,
-    override val summaryResId: Int? = null,
+    override val title: TextRef,
+    override val summary: TextRef? = null,
     override val preferenceType: PreferenceType = PreferenceType.ACTIVITY,
     override val defaultedBySM: Boolean = false,
     override val showInApsMode: Boolean = true,
@@ -22,7 +23,7 @@ enum class O5IntentKey(
 
     CertificateStore(
         key = "omnipod_5_certificate_store",
-        titleResId = R.string.omnipod_5_certificate_store,
-        summaryResId = R.string.omnipod_5_certificate_store_summary
+        title = TextRef.AndroidRes(R.string.omnipod_5_certificate_store),
+        summary = TextRef.AndroidRes(R.string.omnipod_5_certificate_store_summary)
     )
 }

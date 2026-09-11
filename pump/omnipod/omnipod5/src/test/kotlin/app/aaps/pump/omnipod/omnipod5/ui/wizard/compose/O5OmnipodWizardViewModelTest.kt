@@ -35,7 +35,6 @@ import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import javax.inject.Provider
 
 /**
  * Mirrors [app.aaps.pump.omnipod.dash.ui.wizard.compose.DashOmnipodWizardViewModelTest]'s
@@ -63,7 +62,7 @@ internal class O5OmnipodWizardViewModelTest {
     @Mock private lateinit var profileFunction: ProfileFunction
     @Mock private lateinit var profileRepository: ProfileRepository
     @Mock private lateinit var persistenceLayer: PersistenceLayer
-    @Mock private lateinit var pumpEnactResultProvider: Provider<PumpEnactResult>
+    private val pumpEnactResultProvider: () -> PumpEnactResult = { mock() }
     @Mock private lateinit var logger: AAPSLogger
     @Mock private lateinit var aapsSchedulers: AapsSchedulers
 

@@ -8,7 +8,10 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
-import javax.inject.Inject
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.binding
 
 /**
  * Encrypts/decrypts small byte payloads (here, serialized O5 registration data) using an
@@ -42,11 +45,14 @@ interface O5RegistrationCipher {
     fun decrypt(encoded: String): ByteArray
 }
 
+@ContributesBinding(AppScope::class, binding = binding<O5RegistrationCipher>())
 class AndroidKeystoreAesCipher @Inject constructor() : O5RegistrationCipher {
 
     private val keyAlias: String = DEFAULT_KEY_ALIAS
 
-    private val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEY_STORE).apply { load(null) }
+    private val keyStore: KeyStore by lazy {
+        KeyStore.getInstance(ANDROID_KEY_STORE).apply { load(null) }
+    }
 
     private fun getOrCreateKey(): SecretKey {
         (keyStore.getKey(keyAlias, null) as? SecretKey)?.let { return it }

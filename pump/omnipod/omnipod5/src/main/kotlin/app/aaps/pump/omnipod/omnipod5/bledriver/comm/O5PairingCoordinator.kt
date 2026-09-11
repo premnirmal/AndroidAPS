@@ -21,8 +21,9 @@ import app.aaps.pump.omnipod.common.bledriver.pod.definition.PodType
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.O5PodStateManager
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.util.P256KeyGenerator
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.util.PodTypeAwarePodScanner
-import javax.inject.Inject
-import javax.inject.Singleton
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 
 /**
  * The O5 pairing entry point: scans for a pairable Omnipod 5 pod, connects to it, runs
@@ -34,7 +35,7 @@ import javax.inject.Singleton
  * that class's doc comment) - without it, [pairNewPod] fails immediately with a
  * [PairingException] rather than attempting a pairing that could never succeed.
  */
-@Singleton
+@SingleIn(AppScope::class)
 class O5PairingCoordinator @Inject constructor(
     private val aapsLogger: AAPSLogger,
     private val config: Config,

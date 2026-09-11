@@ -54,8 +54,11 @@ import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.ObservableEmitter
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
-import javax.inject.Inject
-import javax.inject.Singleton
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
 import kotlin.reflect.KClass
 
 /**
@@ -73,7 +76,8 @@ import kotlin.reflect.KClass
  * Also restores previously-imported credentials (via [SecureO5RegistrationStorage]) into
  * [O5RegistrationData]'s in-memory registry on construction - see the `init` block below.
  */
-@Singleton
+@ContributesBinding(AppScope::class, binding = binding<O5BleManager>())
+@SingleIn(AppScope::class)
 class O5BleManagerImpl @Inject constructor(
     private val aapsLogger: AAPSLogger,
     private val podState: O5PodStateManager,

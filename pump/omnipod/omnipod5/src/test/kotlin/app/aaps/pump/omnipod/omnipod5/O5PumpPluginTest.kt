@@ -463,7 +463,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
         whenever(podStateManager.alarmType).thenReturn(null)
         whenever(podStateManager.podStatus).thenReturn(PodStatus.ALARM)
         whenever(podStateManager.podId).thenReturn(9999L)
-        whenever(commandQueue.isCustomCommandInQueue(CommandDeactivatePod::class.java)).thenReturn(false)
+        whenever(commandQueue.isCustomCommandInQueue(CommandDeactivatePod::class)).thenReturn(false)
         whenever(bleManager.sendCommand(any(), any())).thenReturn(Observable.error(RuntimeException("pod unreachable")))
 
         runBlocking {
@@ -471,7 +471,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
             verify(notificationManager).post(
                 eq(NotificationId.OMNIPOD_POD_FAULT), any<String>(), level = any(), validMinutes = any(),
-                soundRes = anyOrNull(), actions = any(), validityCheck = anyOrNull()
+                sound = anyOrNull(), actions = any(), validityCheck = anyOrNull()
             )
             verify(pumpSync).insertAnnouncement(any<String>(), any<Long>(), eq(PumpType.OMNIPOD_5), eq("9999"))
         }
@@ -488,7 +488,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
         verify(notificationManager, never()).post(
             any(), any<String>(), level = any(), validMinutes = any(),
-            soundRes = anyOrNull(), actions = any(), validityCheck = anyOrNull()
+            sound = anyOrNull(), actions = any(), validityCheck = anyOrNull()
         )
         verify(podStateManager, never()).alarmSynced = true
     }
@@ -497,7 +497,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
     fun `checkPodFault posts a notification and records an announcement on a new alarm`() {
         whenever(podStateManager.alarmSynced).thenReturn(false)
         whenever(podStateManager.alarmType).thenReturn(AlarmType.ALARM_OCCLUDED)
-        whenever(commandQueue.isCustomCommandInQueue(CommandDeactivatePod::class.java)).thenReturn(false)
+        whenever(commandQueue.isCustomCommandInQueue(CommandDeactivatePod::class)).thenReturn(false)
         whenever(podStateManager.podId).thenReturn(9999L)
 
         runBlocking {
@@ -505,7 +505,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
             verify(notificationManager).post(
                 eq(NotificationId.OMNIPOD_POD_FAULT), any<String>(), level = any(), validMinutes = any(),
-                soundRes = anyOrNull(), actions = any(), validityCheck = anyOrNull()
+                sound = anyOrNull(), actions = any(), validityCheck = anyOrNull()
             )
             verify(pumpSync).insertAnnouncement(any<String>(), any<Long>(), eq(PumpType.OMNIPOD_5), eq("9999"))
         }
@@ -520,7 +520,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
         verify(notificationManager, never()).post(
             any(), any<String>(), level = any(), validMinutes = any(),
-            soundRes = anyOrNull(), actions = any(), validityCheck = anyOrNull()
+            sound = anyOrNull(), actions = any(), validityCheck = anyOrNull()
         )
     }
 
@@ -533,7 +533,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
         verify(notificationManager, never()).post(
             any(), any<String>(), level = any(), validMinutes = any(),
-            soundRes = anyOrNull(), actions = any(), validityCheck = anyOrNull()
+            sound = anyOrNull(), actions = any(), validityCheck = anyOrNull()
         )
         verify(podStateManager, never()).alarmSynced = any()
     }
@@ -542,7 +542,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
     fun `checkPodFault skips the notification but still records the announcement when deactivation is already queued`() {
         whenever(podStateManager.alarmSynced).thenReturn(false)
         whenever(podStateManager.alarmType).thenReturn(AlarmType.ALARM_OCCLUDED)
-        whenever(commandQueue.isCustomCommandInQueue(CommandDeactivatePod::class.java)).thenReturn(true)
+        whenever(commandQueue.isCustomCommandInQueue(CommandDeactivatePod::class)).thenReturn(true)
         whenever(podStateManager.podId).thenReturn(9999L)
 
         runBlocking {
@@ -550,7 +550,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
             verify(notificationManager, never()).post(
                 any(), any<String>(), level = any(), validMinutes = any(),
-                soundRes = anyOrNull(), actions = any(), validityCheck = anyOrNull()
+                sound = anyOrNull(), actions = any(), validityCheck = anyOrNull()
             )
             verify(pumpSync).insertAnnouncement(any<String>(), any<Long>(), eq(PumpType.OMNIPOD_5), eq("9999"))
         }
