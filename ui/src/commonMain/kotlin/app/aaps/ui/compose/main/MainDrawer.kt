@@ -29,6 +29,7 @@ import app.aaps.core.ui.compose.navigation.description
 import app.aaps.core.ui.compose.navigation.icon
 import app.aaps.core.ui.compose.navigation.label
 import app.aaps.core.ui.compose.stringResourceOrNull
+import app.aaps.core.ui.compose.stringResource
 import app.aaps.ui.UiStrings
 
 @Composable

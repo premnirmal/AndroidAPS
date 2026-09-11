@@ -92,7 +92,7 @@ fun AllPreferencesScreen(
         // Check simple mode visibility
         if (!showSimpleModeHiddenPreferences && preferences.simpleMode && !plugin.pluginDescription.preferencesVisibleInSimpleMode && !config.isDev()) {
             return null
-        }
+        )
         // Check if plugin is enabled
         if (!enabledCondition || !plugin.isEnabled()) {
             return null
@@ -177,15 +177,15 @@ fun AllPreferencesScreen(
                                 Text(
                                     text = stringResource(CoreUiStrings.settings),
                                     style = MaterialTheme.typography.titleLarge
-                            )
-                        },
-                        navigationIcon = {
+                                )
+                            },
+                            navigationIcon = {
                             IconButton(onClick = onBackClick) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = stringResource(CoreUiStrings.back)
-                                )
-                            },
+                                }
+                            }
                         )
                     }
                 }

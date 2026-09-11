@@ -159,8 +159,6 @@ fun TrioOverviewScreen(
                 BgInfoSection(
                     bgInfo = bgInfoState.bgInfo,
                     timeAgoText = bgInfoState.timeAgoText,
-                    noDataLabel = if (bgInfoState.bgInfo == null) stringResource(R.string.trio_no_glucose_source) else null,
-                    onClick = onBgSourceClick,
                     modifier = Modifier.weight(1f)
                 )
                 LoopStatusAndPrediction(

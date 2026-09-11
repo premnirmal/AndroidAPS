@@ -223,7 +223,7 @@ private fun ConfigurationScreenPreview() {
             categories = listOf(
                 ConfigCategoryUiModel(
                     type = PluginType.GENERAL,
-                    titleRes = UiStrings.configbuilder_general,
+                    titleRes = CoreUiStrings.configbuilder_general,
                     plugins = emptyList(),
                     isMultiSelect = true,
                     subtitle = "General plugins",

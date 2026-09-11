@@ -104,21 +104,21 @@ fun MainScreen(
     // Menu/navigation
     onMenuClick: () -> Unit,
     onNavigate: (NavigationRequest) -> Unit,
-    onTrioTabSelected: (TrioNavTab) -> Unit,
-    trioSelectedTab: TrioNavTab,
-    trioTopBar: @Composable (title: String, modifier: Modifier) -> Unit,
+    onTrioTabSelected: (TrioNavTab) -> Unit = {},
+    trioSelectedTab: TrioNavTab = TrioNavTab.Overview,
+    trioTopBar: @Composable (title: String, modifier: Modifier) -> Unit = { _, _ -> },
     trioBottomBar: @Composable (
         selectedTab: TrioNavTab,
         onTabSelected: (TrioNavTab) -> Unit,
         onAddClick: () -> Unit,
         modifier: Modifier
-    ) -> Unit,
+    ) -> Unit = { _, _, _, _ -> },
     trioAddActionsSheet: @Composable (
         onDismiss: () -> Unit,
         onBolusClick: () -> Unit,
         onCarbsClick: () -> Unit,
         onWizardClick: () -> Unit
-    ) -> Unit,
+    ) -> Unit = { _, _, _, _ -> },
     onDrawerClosed: () -> Unit,
     onAboutDialogDismiss: () -> Unit,
     /** Null hides the button - only Android has the problem it links to. */
@@ -504,7 +504,6 @@ fun MainScreen(
                 MainDrawer(
                     appTitle = mainViewModel.appTitle,
                     versionName = mainViewModel.versionName,
-                    appIcon = mainViewModel.appIcon,
                     onNavigate = { request ->
                         scope.launch { drawerState.close() }
                         onDrawerClosed()

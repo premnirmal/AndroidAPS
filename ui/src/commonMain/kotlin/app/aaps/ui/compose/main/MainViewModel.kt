@@ -190,7 +190,6 @@ class MainViewModel @Inject constructor(
     val actionConfirmation: StateFlow<ActionConfirmation?> = _actionConfirmation.asStateFlow()
 
     val versionName: String get() = config.VERSION_NAME
-    val appIcon: Int get() = iconsProvider.getIcon()
     val appTitle: String get() = rh.gs(config.appName)
     val isTrio: Boolean get() = config.TRIO
     val showAdvancedMenuItems: Boolean get() = !config.TRIO

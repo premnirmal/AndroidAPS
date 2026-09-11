@@ -54,6 +54,7 @@ import app.aaps.core.objects.crypto.CryptoUtil
 import app.aaps.core.objects.extensions.asSettingsExport
 import app.aaps.core.objects.workflow.LoggingWorker
 import app.aaps.core.objects.workflow.MetroWorkerCreator
+import app.aaps.core.ui.R as CoreUiR
 import app.aaps.core.utils.receivers.DataInbox
 import app.aaps.core.utils.receivers.Inbox
 import app.aaps.implementation.R
@@ -567,7 +568,7 @@ class ImportExportPrefsImpl @Inject constructor(
         if (password.isNotEmpty() && !isExpired && !isAboutToExpire) {
             then(password)
         } else {
-            rxBus.send(EventShowSnackbar(rh.gs(R.string.preferences_export_canceled), EventShowSnackbar.Type.Warning))
+            rxBus.send(EventShowSnackbar(rh.gs(CoreUiR.string.preferences_export_canceled), EventShowSnackbar.Type.Warning))
         }
     }
 
