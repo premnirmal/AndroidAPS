@@ -604,21 +604,6 @@ class ComposeMainActivity : AppCompatActivity() {
         val bolusState by bolusProgressData.state.collectAsStateWithLifecycle()
         val pumpStatusBanner by pumpCommunicationStatus.statusBannerFlow.collectAsStateWithLifecycle()
         val pumpQueueStatus by pumpCommunicationStatus.queueStatusFlow.collectAsStateWithLifecycle()
-        val timeInRangeTodayPercent by produceState<Int?>(initialValue = null, calcProgress) {
-            value = withContext(Dispatchers.IO) {
-                val start = MidnightTime.calc(dateUtil.now())
-                val end = dateUtil.now()
-                val lowMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewLowMark))
-                val highMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewHighMark))
-                val readings = persistenceLayer.getBgReadingsDataFromTimeToTime(start, end, true)
-                    .filter { it.value >= 39.0 }
-                if (readings.isEmpty()) null
-                else {
-                    val inRange = readings.count { it.value in lowMgdl..highMgdl }
-                    (inRange * 100.0 / readings.size).roundToInt()
-                }
-            }
-        }
 
         NavHost(
             navController = navController,
@@ -631,6 +616,21 @@ class ComposeMainActivity : AppCompatActivity() {
                 val calcProgress by mainViewModel.calcProgressFlow.collectAsStateWithLifecycle()
                 val notifications by notificationManager.notifications.collectAsStateWithLifecycle()
                 val quickLaunchItems by mainViewModel.quickLaunchItems.collectAsStateWithLifecycle()
+                val timeInRangeTodayPercent by produceState<Int?>(initialValue = null, calcProgress) {
+                    value = withContext(Dispatchers.IO) {
+                        val start = MidnightTime.calc(dateUtil.now())
+                        val end = dateUtil.now()
+                        val lowMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewLowMark))
+                        val highMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewHighMark))
+                        val readings = persistenceLayer.getBgReadingsDataFromTimeToTime(start, end, true)
+                            .filter { it.value >= 39.0 }
+                        if (readings.isEmpty()) null
+                        else {
+                            val inRange = readings.count { it.value in lowMgdl..highMgdl }
+                            (inRange * 100.0 / readings.size).roundToInt()
+                        }
+                    }
+                }
 
                 // Pump setup button in bottom bar
                 val pumpPlugin = activePlugin.activePumpInternal as PluginBase
