@@ -36,4 +36,4 @@ jobs:
           } >> ~/.gradle/gradle.properties
 
       - name: Warm Gradle
-        run: ./gradlew :plugins:main:compileFullDebugKotlin --no-daemon --quiet
+        run: ./gradlew :app:compileFullDebugKotlin --no-daemon --quiet
