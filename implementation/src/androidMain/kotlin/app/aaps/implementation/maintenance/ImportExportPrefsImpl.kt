@@ -3,6 +3,8 @@ package app.aaps.implementation.maintenance
 import android.content.Context
 import android.provider.Settings
 import androidx.documentfile.provider.DocumentFile
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
@@ -553,6 +555,19 @@ class ImportExportPrefsImpl @Inject constructor(
             doExportToLocal(activity, newFile, password)
             // Then export to cloud
             doExportToCloud(activity, password)
+        }
+    }
+
+    private fun askToConfirmExport(
+        activity: FragmentActivity,
+        fileToExport: DocumentFile,
+        then: (password: String) -> Unit
+    ) {
+        val (password, isExpired, isAboutToExpire) = exportPasswordDataStore.getPasswordFromDataStore()
+        if (password.isNotEmpty() && !isExpired && !isAboutToExpire) {
+            then(password)
+        } else {
+            rxBus.send(EventShowSnackbar(rh.gs(R.string.preferences_export_canceled), EventShowSnackbar.Type.Warning))
         }
     }
 
