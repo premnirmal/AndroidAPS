@@ -151,6 +151,7 @@ class PersistentNotificationPlugin @Inject constructor(
         var line2: String? = null
         var line3: String? = null
         var bgStatusChipText: String? = null
+        var metricValue: Metric.MetricValue? = null
         var bgMetric: Metric? = null
         var unreadConversationBuilder: NotificationCompat.CarExtender.UnreadConversation.Builder? = null
         if (profileFunction.isProfileValid("Notification")) {
@@ -160,7 +161,7 @@ class PersistentNotificationPlugin @Inject constructor(
             if (lastBG != null) {
                 bgStatusChipText = profileUtil.fromMgdlToStringInUnits(lastBG.recalculated)
                 val fromMgdlToUnits = profileUtil.fromMgdlToUnits(lastBG.recalculated)
-                val metricValue: Metric.MetricValue = if (units == GlucoseUnit.MMOL) {
+                metricValue = if (units == GlucoseUnit.MMOL) {
                     FixedFloat(
                         fromMgdlToUnits.round(1).toFloat(),
                         units.displayLabel
@@ -171,10 +172,6 @@ class PersistentNotificationPlugin @Inject constructor(
                         units.displayLabel
                     )
                 }
-                bgMetric = Metric(
-                    metricValue,
-                    "BG"
-                )
                 val trendSymbol = (trendCalculator.getTrendArrow(iobCobCalculator.ads)
                     ?.takeIf { it != TrendArrow.NONE } ?: TrendArrow.FLAT).symbol
                 line1 = "$bgStatusChipText $trendSymbol"
@@ -202,6 +199,12 @@ class PersistentNotificationPlugin @Inject constructor(
                     app.aaps.core.ui.R
                         .string.cob
                 ) + ": " + cobInfo.generateCOBString(decimalFormatter)
+            metricValue?.let {
+                bgMetric = Metric(
+                    it,
+                    line2,
+                )
+            }
             line3 = profileName
             /// For Android Auto
             val msgReadIntent = Intent()
