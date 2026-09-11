@@ -21,7 +21,6 @@ dependencies {
 
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
-    implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.kotlinx.coroutines.rx3)
 
     testImplementation(project(":shared:tests"))
