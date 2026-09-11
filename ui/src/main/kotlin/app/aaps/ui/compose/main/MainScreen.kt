@@ -160,6 +160,7 @@ fun MainScreen(
     queueStatusText: String? = null,
     isPumpCommunicating: Boolean = false,
     onStopBolus: () -> Unit = {},
+    timeInRangeTodayPercent: Int? = null,
     modifier: Modifier = Modifier
 ) {
     LocalDateUtil.current
@@ -291,6 +292,7 @@ fun MainScreen(
                         queueStatusText = queueStatusText,
                         isPumpCommunicating = isPumpCommunicating,
                         onStopBolus = onStopBolus,
+                        timeInRangeTodayPercent = timeInRangeTodayPercent,
                         isTrio = isTrio,
                         pumpNeedsSetup = pumpSetupPlugin != null,
                         onBgSourceClick = {

@@ -9,6 +9,10 @@
     <string name="trio_metric_isf">ISF</string>
     <string name="trio_metric_remaining">Remaining</string>
     <string name="trio_metric_range" comment="%1$s=start value, %2$s=end value. Example: 10 → 12">%1$s → %2$s</string>
+    <string name="trio_bolusing_title">Bolusing</string>
+    <string name="trio_bolusing_progress" comment="%1$.2f=delivered insulin amount, %2$.2f=total insulin amount. Example: 0.05 of 0.10 U">%1$.2f of %2$.2f U</string>
+    <string name="trio_time_in_range_percent" comment="%1$d=time in range percent. Example: 100%">%1$d%%</string>
+    <string name="trio_time_in_range_today">Time in Range today</string>
     <string name="trio_no_pump">No Pump</string>
     <string name="trio_no_glucose_source">No CGM</string>
     <string name="health_connect">Health Connect</string>

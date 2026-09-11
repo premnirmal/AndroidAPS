@@ -46,6 +46,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,10 +102,12 @@ import app.aaps.core.interfaces.source.DexcomBoyda
 import app.aaps.core.interfaces.sync.NsClient
 import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.interfaces.utils.MidnightTime
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.StringKey
+import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.VisibilityContext
 import app.aaps.core.objects.crypto.CryptoUtil
@@ -179,8 +182,11 @@ import app.aaps.ui.search.SearchViewModel
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.hilt.android.AndroidEntryPoint
 import io.reactivex.rxjava3.disposables.CompositeDisposable
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -598,6 +604,21 @@ class ComposeMainActivity : AppCompatActivity() {
         val bolusState by bolusProgressData.state.collectAsStateWithLifecycle()
         val pumpStatusBanner by pumpCommunicationStatus.statusBannerFlow.collectAsStateWithLifecycle()
         val pumpQueueStatus by pumpCommunicationStatus.queueStatusFlow.collectAsStateWithLifecycle()
+        val timeInRangeTodayPercent by produceState<Int?>(initialValue = null, calcProgress) {
+            value = withContext(Dispatchers.IO) {
+                val start = MidnightTime.calc(dateUtil.now())
+                val end = dateUtil.now()
+                val lowMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewLowMark))
+                val highMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewHighMark))
+                val readings = persistenceLayer.getBgReadingsDataFromTimeToTime(start, end, true)
+                    .filter { it.value >= 39.0 }
+                if (readings.isEmpty()) null
+                else {
+                    val inRange = readings.count { it.value in lowMgdl..highMgdl }
+                    (inRange * 100.0 / readings.size).roundToInt()
+                }
+            }
+        }
 
         NavHost(
             navController = navController,
@@ -788,6 +809,7 @@ class ComposeMainActivity : AppCompatActivity() {
                     pumpStatusText = pumpStatusBanner?.text ?: "",
                     queueStatusText = pumpQueueStatus,
                     isPumpCommunicating = pumpStatusBanner != null,
+                    timeInRangeTodayPercent = timeInRangeTodayPercent,
                     onStopBolus = {
                         if (config.AAPSCLIENT) {
                             clientControlActionDispatcher.stopBolus()
@@ -860,7 +882,7 @@ class ComposeMainActivity : AppCompatActivity() {
 
         // Modal bolus progress overlay — shown above everything for standard bolus
         bolusState?.let { state ->
-            if (!state.isSMB) {
+            if (!state.isSMB && !config.TRIO) {
                 val pumpStatus = pumpStatusBanner?.text ?: ""
                 val queueStatus = pumpQueueStatus
                 PumpActivityDialog(

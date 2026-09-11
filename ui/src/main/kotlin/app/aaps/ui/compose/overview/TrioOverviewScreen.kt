@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -16,13 +17,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
@@ -42,6 +46,7 @@ import app.aaps.core.data.model.TT
 import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.interfaces.notifications.NotificationLevel
 import app.aaps.core.interfaces.overview.graph.TbrState
+import app.aaps.core.interfaces.pump.BolusProgressState
 import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.icons.Pump
@@ -100,6 +105,9 @@ fun TrioOverviewScreen(
     notificationCount: Int = 0,
     highestNotificationLevel: NotificationLevel? = null,
     onNotificationClick: () -> Unit = {},
+    bolusState: BolusProgressState? = null,
+    onStopBolus: () -> Unit = {},
+    timeInRangeTodayPercent: Int? = null,
     formatDuration: (Long) -> String = { ms -> "${(ms / 60000L).toInt()}m" },
     modifier: Modifier = Modifier
 ) {
@@ -206,6 +214,15 @@ fun TrioOverviewScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            bolusState?.let { state ->
+                TrioBolusingCard(
+                    state = state,
+                    onStopBolus = onStopBolus
+                )
+            }
+
+            TimeInRangeTodayCard(timeInRangeTodayPercent = timeInRangeTodayPercent)
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -253,6 +270,115 @@ fun TrioOverviewScreen(
             predictedText = predictedText,
             onDismiss = { showPredictionInfo = false }
         )
+    }
+}
+
+@Composable
+private fun TrioBolusingCard(
+    state: BolusProgressState,
+    onStopBolus: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        tonalElevation = AapsSpacing.extraSmall,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(AapsSpacing.medium),
+            verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Vaccines,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(AapsSpacing.xxLarge)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.trio_bolusing_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.trio_bolusing_progress,
+                            state.delivered.cU,
+                            state.insulin
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                if (state.stopDeliveryEnabled && !state.stopPressed && state.percent < 100) {
+                    IconButton(onClick = onStopBolus) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(app.aaps.core.ui.R.string.cancel),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
+            LinearProgressIndicator(
+                progress = { state.percent.coerceIn(0, 100) / 100f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(AapsSpacing.small),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TimeInRangeTodayCard(
+    timeInRangeTodayPercent: Int?,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        tonalElevation = AapsSpacing.extraSmall,
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(AapsSpacing.medium),
+            verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = timeInRangeTodayPercent?.let {
+                        stringResource(R.string.trio_time_in_range_percent, it)
+                    } ?: stringResource(app.aaps.core.ui.R.string.value_unavailable_short),
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = stringResource(R.string.trio_time_in_range_today),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            LinearProgressIndicator(
+                progress = { (timeInRangeTodayPercent ?: 0).coerceIn(0, 100) / 100f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(AapsSpacing.small),
+                trackColor = MaterialTheme.colorScheme.surface,
+            )
+        }
     }
 }
 

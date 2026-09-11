@@ -96,6 +96,7 @@ fun OverviewScreen(
     isTrio: Boolean = false,
     pumpNeedsSetup: Boolean = false,
     onBgSourceClick: () -> Unit = {},
+    timeInRangeTodayPercent: Int? = null,
     modifier: Modifier = Modifier
 ) {
     var showNotificationSheet by remember { mutableStateOf(false) }
@@ -164,6 +165,9 @@ fun OverviewScreen(
                 notificationCount = notifications.size,
                 highestNotificationLevel = notifications.minByOrNull { it.level.ordinal }?.level,
                 onNotificationClick = { showNotificationSheet = true },
+                bolusState = bolusState,
+                onStopBolus = onStopBolus,
+                timeInRangeTodayPercent = timeInRangeTodayPercent,
                 formatDuration = formatDuration
             )
         } else if (isTablet) {
@@ -298,7 +302,7 @@ fun OverviewScreen(
         }
 
         PumpActivityFab(
-            visible = showPumpFab,
+            visible = showPumpFab && !isTrio,
             bolusState = bolusState,
             onClick = { showPumpActivityDialog = true },
             modifier = Modifier
@@ -320,7 +324,7 @@ fun OverviewScreen(
         }
     }
 
-    if (showPumpActivityDialog) {
+    if (showPumpActivityDialog && !isTrio) {
         PumpActivityDialog(
             bolusState = bolusState,
             pumpStatus = pumpStatusText,
