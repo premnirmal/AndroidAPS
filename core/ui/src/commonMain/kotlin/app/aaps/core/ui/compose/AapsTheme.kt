@@ -117,7 +117,7 @@ fun masterEditingEnabled(): Boolean =
 
 @Composable
 fun AapsSystemBarStyleEffect() {
-    AapsSystemBarStyleEffect(isDark = LocalAapsIsDark.current)
+    SystemBarAppearance(isDark = LocalAapsIsDark.current)
 }
 
 /**
@@ -333,21 +333,4 @@ fun AapsTheme(
             )
         }
     }
-}
-
-@Composable
-private fun AapsSystemBarStyleEffect(isDark: Boolean) {
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            applyAapsSystemBarStyle(view, isDark)
-        }
-    }
-}
-
-private fun applyAapsSystemBarStyle(view: View, isDark: Boolean) {
-    val window = (view.context as? Activity)?.window ?: return
-    val controller = WindowInsetsControllerCompat(window, view)
-    controller.isAppearanceLightStatusBars = !isDark
-    controller.isAppearanceLightNavigationBars = !isDark
 }
