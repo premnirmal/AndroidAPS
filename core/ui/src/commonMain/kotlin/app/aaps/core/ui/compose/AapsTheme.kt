@@ -268,21 +268,40 @@ object AapsTheme {
  * ```
  *
  * @param useSystemTheme When true, ignore the stored theme preference and follow the system theme.
+ * @param trioMode When true, use the Trio color palette.
  * @param content The composable content to wrap with the theme
  */
 @Composable
 fun AapsTheme(
     useSystemTheme: Boolean = false,
+    trioMode: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val preferences = LocalPreferences.current
     val darkModeValue by preferences.observe(StringKey.GeneralDarkMode).collectAsState()
     val uiMode = if (useSystemTheme) UiMode.SYSTEM else UiMode.fromString(darkModeValue)
 
-    val lightColors = lightColorScheme()
-    val darkColors = darkColorScheme(
-        secondaryContainer = Color(0xFF635F6A)
-    )
+    val lightColors = if (trioMode) {
+        lightColorScheme(
+            primary = Color(0xFF0F766E),
+            secondary = Color(0xFF0D9488),
+            background = Color(0xFFF8FAFC),
+            surface = Color(0xFFF8FAFC)
+        )
+    } else {
+        lightColorScheme()
+    }
+    val darkColors = if (trioMode) {
+        darkColorScheme(
+            secondary = Color(0xFF2DD4BF),
+            secondaryContainer = Color(0xFF635F6A),
+            surface = Color(0xFF0B1220)
+        )
+    } else {
+        darkColorScheme(
+            secondaryContainer = Color(0xFF635F6A)
+        )
+    }
 
     val isDark = when (uiMode) {
         UiMode.LIGHT  -> false

@@ -21,6 +21,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.ui.R
+import app.aaps.core.interfaces.R as CoreInterfacesR
 import app.aaps.core.ui.R as CoreUiR
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -51,7 +52,7 @@ fun TrioAddActionsSheet(
             ) {
                 Icon(imageVector = Icons.Default.Bloodtype, contentDescription = null)
                 Text(
-                    text = stringResource(CoreUiR.string.bolus),
+                    text = stringResource(CoreInterfacesR.string.bolus),
                     modifier = Modifier.padding(start = AapsSpacing.medium)
                 )
             }
@@ -61,7 +62,7 @@ fun TrioAddActionsSheet(
             ) {
                 Icon(imageVector = Icons.Default.Restaurant, contentDescription = null)
                 Text(
-                    text = stringResource(CoreUiR.string.carbs),
+                    text = stringResource(CoreInterfacesR.string.carbs),
                     modifier = Modifier.padding(start = AapsSpacing.medium)
                 )
             }

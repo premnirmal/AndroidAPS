@@ -24,15 +24,19 @@ import com.google.gson.Gson
 import java.io.Serializable
 import java.util.Calendar
 import java.util.EnumSet
-import javax.inject.Inject
-import javax.inject.Singleton
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
+import dev.zacsweers.metro.binding
 
 /**
  * [O5PodStateManager] persisted across app restarts, mirroring
  * [OmnipodDashPodStateManagerImpl]'s Gson + [Preferences] store/load pattern exactly -
  * just for O5's smaller state surface (see [O5PodStateManager]'s class doc for why).
  */
-@Singleton
+@ContributesBinding(AppScope::class, binding = binding<O5PodStateManager>())
+@SingleIn(AppScope::class)
 class PersistedO5PodStateManager @Inject constructor(
     private val logger: AAPSLogger,
     private val preferences: Preferences

@@ -62,6 +62,7 @@ import app.aaps.ui.compose.maintenance.MaintenanceViewModel
 import app.aaps.ui.compose.manageSheet.ManageSheetState
 import app.aaps.ui.compose.manageSheet.ManageViewModel
 import app.aaps.ui.compose.overview.OverviewScreen
+import app.aaps.ui.compose.overview.TrioOverviewModel
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import app.aaps.ui.compose.overview.statusLights.StatusViewModel
@@ -119,6 +120,7 @@ fun MainScreen(
         onCarbsClick: () -> Unit,
         onWizardClick: () -> Unit
     ) -> Unit = { _, _, _, _ -> },
+    trioOverview: @Composable (TrioOverviewModel) -> Unit = {},
     onDrawerClosed: () -> Unit,
     onAboutDialogDismiss: () -> Unit,
     /** Null hides the button - only Android has the problem it links to. */
@@ -296,6 +298,7 @@ fun MainScreen(
                         onStopBolus = onStopBolus,
                         timeInRangeTodayPercent = timeInRangeTodayPercent,
                         isTrio = isTrio,
+                        trioOverview = trioOverview,
                         pumpNeedsSetup = pumpSetupPlugin != null,
                         onBgSourceClick = {
                             bgSourcePlugin?.let { plugin ->

@@ -394,7 +394,7 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
         aapsLogger.debug("Remote: " + config.REMOTE)
         aapsLogger.debug("Phone: " + Build.MANUFACTURER + " " + Build.MODEL)
         registerLocalBroadcastReceiver()
-        setupRemoteConfig()
+        if (BuildConfig.FIREBASE_ENABLED) setupRemoteConfig()
 
         // trigger here to see the new version on app start after an update
         handler.postDelayed({ versionCheckersUtils.triggerCheckVersion() }, 30000)
@@ -463,14 +463,16 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
             activePlugin.activeAPS?.let { fabricPrivacy.setUserProperty("Aps", it::class.java.simpleName) }
         activePlugin.activeBgSource.let { fabricPrivacy.setUserProperty("BgSource", it::class.java.simpleName) }
         activePlugin.activeSensitivity.let { fabricPrivacy.setUserProperty("Sensitivity", it::class.java.simpleName) }
-        FirebaseCrashlytics.getInstance().setCustomKey("HEAD", BuildConfig.HEAD)
-        FirebaseCrashlytics.getInstance().setCustomKey("Version", config.VERSION_NAME)
-        FirebaseCrashlytics.getInstance().setCustomKey("BuildType", config.BUILD_TYPE)
-        FirebaseCrashlytics.getInstance().setCustomKey("BuildFlavor", config.FLAVOR)
-        FirebaseCrashlytics.getInstance().setCustomKey("Remote", remote)
-        FirebaseCrashlytics.getInstance().setCustomKey("Committed", config.COMMITTED)
-        if (hashes.isNotEmpty()) FirebaseCrashlytics.getInstance().setCustomKey("Hash", hashes[0])
-        FirebaseCrashlytics.getInstance().setCustomKey("Email", preferences.get(StringKey.MaintenanceIdentification))
+        if (BuildConfig.FIREBASE_ENABLED) {
+            FirebaseCrashlytics.getInstance().setCustomKey("HEAD", BuildConfig.HEAD)
+            FirebaseCrashlytics.getInstance().setCustomKey("Version", config.VERSION_NAME)
+            FirebaseCrashlytics.getInstance().setCustomKey("BuildType", config.BUILD_TYPE)
+            FirebaseCrashlytics.getInstance().setCustomKey("BuildFlavor", config.FLAVOR)
+            FirebaseCrashlytics.getInstance().setCustomKey("Remote", remote)
+            FirebaseCrashlytics.getInstance().setCustomKey("Committed", config.COMMITTED)
+            if (hashes.isNotEmpty()) FirebaseCrashlytics.getInstance().setCustomKey("Hash", hashes[0])
+            FirebaseCrashlytics.getInstance().setCustomKey("Email", preferences.get(StringKey.MaintenanceIdentification))
+        }
     }
 
     private suspend fun passwordResetCheck() {

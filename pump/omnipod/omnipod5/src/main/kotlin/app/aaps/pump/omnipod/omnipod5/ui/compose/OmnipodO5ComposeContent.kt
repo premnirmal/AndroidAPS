@@ -14,13 +14,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.pump.BlePreCheck
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.ui.compose.ComposablePluginContent
 import app.aaps.core.ui.compose.ToolbarConfig
+import app.aaps.core.ui.compose.metroViewModel
 import app.aaps.core.ui.compose.dialogs.OkCancelDialog
 import app.aaps.core.ui.compose.dialogs.OkDialog
 import app.aaps.core.ui.compose.pump.BlePreCheckHost
@@ -59,7 +59,7 @@ class OmnipodO5ComposeContent(
         onNavigateBack: () -> Unit,
         onSettings: (() -> Unit)?
     ) {
-        val overviewViewModel: O5OverviewViewModel = hiltViewModel()
+        val overviewViewModel: O5OverviewViewModel = metroViewModel()
         val context = LocalContext.current
 
         var showWizard by remember { mutableStateOf(false) }
@@ -163,7 +163,7 @@ class OmnipodO5ComposeContent(
                 KeepScreenOnEffect()
                 BlePreCheckHost(blePreCheck = blePreCheck, onFailed = { showWizard = false })
 
-                val wizardViewModel: O5OmnipodWizardViewModel = hiltViewModel()
+                val wizardViewModel: O5OmnipodWizardViewModel = metroViewModel()
                 val wizardReady by wizardViewModel.ready.collectAsStateWithLifecycle()
                 LaunchedEffect(wizardReady, isDeactivation, wizardActivationType) {
                     if (!wizardReady) return@LaunchedEffect
@@ -195,7 +195,7 @@ class OmnipodO5ComposeContent(
                         )
                     )
                 }
-                val credentialViewModel: O5CredentialImportViewModel = hiltViewModel()
+                val credentialViewModel: O5CredentialImportViewModel = metroViewModel()
                 O5CredentialImportScreen(viewModel = credentialViewModel, rh = rh)
             }
 

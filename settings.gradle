@@ -11,6 +11,7 @@ plugins {
     id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
 }
 include ':app'
+include ':Trio'
 include ':wear'
 include ':wear:watchfacepush'
 include ':core:data'

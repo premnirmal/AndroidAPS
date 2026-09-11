@@ -12,9 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.ui.compose.AapsTopAppBar
+import app.aaps.core.ui.compose.metroViewModel
 import app.aaps.pump.omnipod.common.R
 
 @Composable
@@ -22,7 +22,7 @@ fun O5CertificateStoreScreen(
     rh: ResourceHelper,
     onBack: () -> Unit
 ) {
-    val viewModel: O5CredentialImportViewModel = hiltViewModel()
+    val viewModel: O5CredentialImportViewModel = metroViewModel()
     Scaffold(
         topBar = {
             AapsTopAppBar(

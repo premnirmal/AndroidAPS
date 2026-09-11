@@ -5,6 +5,7 @@ import app.aaps.pump.omnipod.common.R
 
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Stable
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.aaps.core.data.model.ICfg
 import app.aaps.core.data.model.TE
@@ -55,15 +56,17 @@ import app.aaps.pump.omnipod.common.keys.OmnipodBooleanPreferenceKey
 import app.aaps.pump.omnipod.common.keys.OmnipodIntPreferenceKey
 import app.aaps.pump.omnipod.common.queue.command.CommandDeactivatePod
 import app.aaps.pump.omnipod.omnipod5.util.mapProfileToBasalProgram
-import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import io.reactivex.rxjava3.core.Single
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.rx3.rxSingle
 import java.util.Date
-import javax.inject.Inject
-import javax.inject.Provider
 import app.aaps.pump.omnipod.common.R as CommonR
 
 /**
@@ -82,7 +85,8 @@ import app.aaps.pump.omnipod.common.R as CommonR
  * already-completed commands (matches Dash's identical resumability property).
  */
 @Stable
-@HiltViewModel
+@ContributesIntoMap(AppScope::class, binding = binding<ViewModel>())
+@ViewModelKey
 class O5OmnipodWizardViewModel @Inject constructor(
     private val bleManager: O5BleManager,
     private val podStateManager: O5PodStateManager,
@@ -95,7 +99,7 @@ class O5OmnipodWizardViewModel @Inject constructor(
     private val persistenceLayer: PersistenceLayer,
     profileFunction: ProfileFunction,
     profileRepository: ProfileRepository,
-    pumpEnactResultProvider: Provider<PumpEnactResult>,
+    pumpEnactResultProvider: () -> PumpEnactResult,
     logger: AAPSLogger,
     aapsSchedulers: AapsSchedulers
 ) : OmnipodWizardViewModel(logger, aapsSchedulers, pumpEnactResultProvider, profileFunction, profileRepository) {
@@ -281,10 +285,10 @@ class O5OmnipodWizardViewModel @Inject constructor(
             }
 
             podStateManager.activationProgress = ActivationProgress.PHASE_1_COMPLETED
-            pumpEnactResultProvider.get().success(true)
+            pumpEnactResultProvider().success(true)
         } catch (throwable: Throwable) {
             logger.error(LTag.PUMP, "Error in O5 Pod activation part 1", throwable)
-            pumpEnactResultProvider.get().success(false).comment(throwable.message ?: throwable.javaClass.simpleName)
+            pumpEnactResultProvider().success(false).comment(throwable.message ?: throwable.javaClass.simpleName)
         }
     }
 
@@ -373,10 +377,10 @@ class O5OmnipodWizardViewModel @Inject constructor(
             podStateManager.activationProgress = ActivationProgress.COMPLETED
             podStateManager.cumulativeBolusPulsesDelivered = podStateManager.totalPulsesDelivered ?: 0
             viewModelScope.launch { commandQueue.readStatus(rh.gs(CommonR.string.omnipod_common_pod_activation_wizard_pod_activated_title)) }
-            pumpEnactResultProvider.get().success(true)
+            pumpEnactResultProvider().success(true)
         } catch (throwable: Throwable) {
             logger.error(LTag.PUMP, "Error in O5 Pod activation part 2", throwable)
-            pumpEnactResultProvider.get().success(false).comment(throwable.message ?: throwable.javaClass.simpleName)
+            pumpEnactResultProvider().success(false).comment(throwable.message ?: throwable.javaClass.simpleName)
         }
     }
 

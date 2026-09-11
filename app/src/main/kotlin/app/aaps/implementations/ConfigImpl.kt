@@ -34,15 +34,15 @@ class ConfigImpl @Inject constructor(
 ) : Config {
 
     override val SUPPORTED_NS_VERSION = 150000 // 15.0.0
-    override val APS = BuildConfig.FLAVOR == "full" || BuildConfig.FLAVOR == "trio"
+    override val APS = BuildConfig.FLAVOR == "full" || BuildConfig.TRIO
     override val AAPSCLIENT = BuildConfig.FLAVOR == "aapsclient" || BuildConfig.FLAVOR == "aapsclient2" || BuildConfig.FLAVOR == "aapsclient3"
     override val AAPSCLIENT1 = BuildConfig.FLAVOR == "aapsclient"
     override val AAPSCLIENT2 = BuildConfig.FLAVOR == "aapsclient2"
     override val AAPSCLIENT3 = BuildConfig.FLAVOR == "aapsclient3"
     override val PUMPCONTROL = BuildConfig.FLAVOR == "pumpcontrol"
-    override val TRIO = BuildConfig.FLAVOR == "trio"
-    override val PUMPDRIVERS = BuildConfig.FLAVOR == "full" || BuildConfig.FLAVOR == "pumpcontrol" || BuildConfig.FLAVOR == "trio"
-    override val FLAVOR = BuildConfig.FLAVOR
+    override val TRIO = BuildConfig.TRIO
+    override val PUMPDRIVERS = BuildConfig.FLAVOR == "full" || BuildConfig.FLAVOR == "pumpcontrol" || BuildConfig.TRIO
+    override val FLAVOR = if (BuildConfig.TRIO) "trio" else BuildConfig.FLAVOR
     override val VERSION_NAME = BuildConfig.VERSION_NAME
     override val HEAD = BuildConfig.HEAD
     override val COMMITTED = BuildConfig.COMMITTED.toBoolean()

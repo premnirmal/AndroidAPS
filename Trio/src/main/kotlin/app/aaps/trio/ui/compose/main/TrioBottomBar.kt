@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
+import app.aaps.ui.compose.main.TrioNavTab
 import app.aaps.ui.R
 import app.aaps.core.ui.R as CoreUiR
 

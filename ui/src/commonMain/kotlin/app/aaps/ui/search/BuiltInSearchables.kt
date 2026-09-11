@@ -102,7 +102,7 @@ class BuiltInSearchables @Inject constructor(
                     UnitDoubleKey.OverviewHighMark
                 )
             ),
-
+            BooleanKey.OverviewShowNotesInDialogs,
             BooleanKey.OverviewShowNotesInDialogs,
             StringKey.GeneralDarkMode
         ),
@@ -367,4 +367,3 @@ class BuiltInSearchables @Inject constructor(
         add(SearchableItem.Category(siteRotation))
     }
 }
-

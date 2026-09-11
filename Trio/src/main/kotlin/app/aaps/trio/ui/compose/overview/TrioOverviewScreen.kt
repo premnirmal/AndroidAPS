@@ -1,4 +1,4 @@
-package app.aaps.ui.compose.overview
+package app.aaps.trio.ui.compose.overview
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,6 +55,7 @@ import app.aaps.core.ui.compose.navigation.color
 import app.aaps.ui.compose.notificationsSheet.toColor
 import app.aaps.ui.R
 import app.aaps.ui.compose.main.TempTargetChipState
+import app.aaps.ui.compose.overview.BgInfoSection
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.chips.CobUiState
 import app.aaps.ui.compose.overview.chips.IobUiState

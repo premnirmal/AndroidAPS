@@ -11,15 +11,16 @@ import app.aaps.pump.omnipod.common.bledriver.comm.interfaces.session.BleConnect
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.legacy.session.O5Connection
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.O5PodStateManager
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.util.P256KeyGenerator
-import javax.inject.Inject
-import javax.inject.Singleton
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Creates [O5Connection] instances, parallel to Dash's [LegacyBleConnectionFactory]
  * rather than a modification of it (that factory is hardwired to Dash's
  * [app.aaps.pump.omnipod.common.bledriver.pod.state.OmnipodDashPodStateManager]).
  */
-@Singleton
+@SingleIn(AppScope::class)
 class O5BleConnectionFactory @Inject constructor(
     private val context: Context,
     private val aapsLogger: AAPSLogger,

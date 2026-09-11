@@ -17,6 +17,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.Image
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingFlat
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
@@ -26,7 +29,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.core.app.ActivityCompat
 import androidx.core.net.toUri
 import androidx.fragment.app.FragmentActivity
@@ -64,6 +70,7 @@ import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginPermissions
 import app.aaps.core.interfaces.profile.ProfileUtil
 import app.aaps.core.interfaces.protection.ExportPasswordDataStore
@@ -91,12 +98,16 @@ import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.VisibilityContext
 import app.aaps.core.objects.crypto.CryptoUtil
+import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.MetroAppCompatActivity
 import app.aaps.core.ui.compose.MetroViewModelFactoryOwner
+import app.aaps.core.ui.compose.dialogs.OkDialog
 import app.aaps.core.ui.compose.navigation.NavigationRequest
+import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
 import app.aaps.core.ui.compose.pump.PumpActivityDialog
 import app.aaps.core.ui.compose.pump.PumpCommunicationStatus
 import app.aaps.core.ui.locale.LocaleHelper
+import app.aaps.core.ui.search.SearchableItem
 import app.aaps.core.utils.isRunningRealPumpTest
 import app.aaps.implementation.plugin.PluginPermissionsImpl
 import app.aaps.implementation.protection.BiometricCheck
@@ -104,20 +115,19 @@ import app.aaps.plugins.automation.AutomationRuntime
 import app.aaps.plugins.configuration.setupwizard.SWDefinition
 import app.aaps.plugins.source.DexcomPlugin
 import app.aaps.plugins.source.activities.RequestDexcomPermissionActivity
-import app.aaps.trio.ui.compose.main.TrioAddActionsSheet
-import app.aaps.trio.ui.compose.main.TrioBottomBar
-import app.aaps.trio.ui.compose.main.TrioNavTab
-import app.aaps.trio.ui.compose.main.TrioTopBar
+import app.aaps.trio.TrioUi
 import app.aaps.ui.compose.careDialog.CareportalEventType
 import app.aaps.ui.compose.clientcontrol.ClientControlPendingDialog
 import app.aaps.ui.compose.configuration.ConfigurationViewModel
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
 import app.aaps.ui.compose.loopSheet.LoopActionViewModel
+import app.aaps.ui.compose.main.MainScreen
 import app.aaps.ui.compose.main.MainViewModel
-import app.aaps.ui.compose.main.TrioNavTab as UiTrioNavTab
+import app.aaps.ui.compose.main.TrioNavTab
 import app.aaps.ui.compose.maintenance.ImportViewModel
 import app.aaps.ui.compose.maintenance.MaintenanceViewModel
 import app.aaps.ui.compose.manageSheet.ManageViewModel
+import app.aaps.ui.compose.manageSheet.ManageSheetHost
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import app.aaps.ui.compose.overview.statusLights.StatusViewModel
@@ -147,7 +157,6 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
-import javax.inject.Inject
 import app.aaps.core.ui.R as CoreUiR
 
 class ComposeMainActivity : MetroAppCompatActivity() {
@@ -173,6 +182,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     @Inject lateinit var configBuilder: ConfigBuilder
     @Inject lateinit var swDefinition: SWDefinition
     @Inject lateinit var config: Config
+    @Inject lateinit var trioUi: TrioUi
     @Inject lateinit var profileUtil: ProfileUtil
     @Inject lateinit var visibilityContext: VisibilityContext
     @Inject lateinit var dexcomBoyda: DexcomBoyda
@@ -234,6 +244,10 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     private var navController: NavHostController? = null
     private val _autoShowNotifications = mutableStateOf(false)
     private val disposable = CompositeDisposable()
+
+    override fun onMembersInjected() {
+        setTheme(if (config.TRIO) CoreUiR.style.AppTheme_Trio_NoActionBar else CoreUiR.style.AppTheme_NoActionBar)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Bar icon color is kept in sync with the AAPS-effective theme reactively
@@ -336,7 +350,9 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         // Track last navigated route as a Crashlytics custom key for crash reports
         DisposableEffect(navController) {
             val listener = NavController.OnDestinationChangedListener { _, dest, _ ->
-                FirebaseCrashlytics.getInstance().setCustomKey("last_route", dest.route ?: "unknown")
+                if (BuildConfig.FIREBASE_ENABLED) {
+                    FirebaseCrashlytics.getInstance().setCustomKey("last_route", dest.route ?: "unknown")
+                }
             }
             navController.addOnDestinationChangedListener(listener)
             onDispose { navController.removeOnDestinationChangedListener(listener) }
@@ -508,7 +524,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     isSimpleMode = state.isSimpleMode,
                     onNavigate = { request -> handleNavigationRequest(request, navController) },
                     onActionsError = { comment, title ->
-                        uiInteraction.runAlarm(comment, title, app.aaps.core.ui.R.raw.boluserror)
+                        uiInteraction.runAlarm(comment, title, AlarmSound.BOLUS_ERROR)
                     },
                 )
 
@@ -556,29 +572,35 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     onDismissSearchHardwarePump = { searchViewModel.dismissHardwarePump() },
                     onMenuClick = { mainViewModel.openDrawer() },
                     onNavigate = { request -> handleNavigationRequest(request, navController) },
-                    onTrioTabSelected = { tab -> navigateToTrioTab(tab.toAppTrioTab(), navController) },
-                    trioSelectedTab = trioTabForRoute(currentRoute).toUiTrioTab(),
+                    onTrioTabSelected = { tab -> navigateToTrioTab(tab, navController) },
+                    trioSelectedTab = trioTabForRoute(currentRoute),
                     trioTopBar = { title, modifier ->
-                        TrioTopBar(title = title, modifier = modifier)
+                        trioUi.topBar(title = title, modifier = modifier)
                     },
                     trioBottomBar = { selectedTab, onTabSelected, onAddClick, modifier ->
-                        TrioBottomBar(
-                            selectedTab = selectedTab.toAppTrioTab(),
-                            onTabSelected = { onTabSelected(it.toUiTrioTab()) },
+                        trioUi.bottomBar(
+                            selectedTab = selectedTab,
+                            onTabSelected = onTabSelected,
                             onAddClick = onAddClick,
                             modifier = modifier
                         )
                     },
                     trioAddActionsSheet = { onDismiss, onBolusClick, onCarbsClick, onWizardClick ->
-                        TrioAddActionsSheet(
+                        trioUi.addActionsSheet(
                             onDismiss = onDismiss,
                             onBolusClick = onBolusClick,
                             onCarbsClick = onCarbsClick,
                             onWizardClick = onWizardClick
                         )
                     },
+                    trioOverview = trioUi::overview,
                     onDrawerClosed = { mainViewModel.closeDrawer() },
                     onAboutDialogDismiss = { mainViewModel.setShowAboutDialog(false) },
+                    onOpenBatteryHelp = if (mainViewModel.showBatteryHelp) {
+                        { mainViewModel.openBatteryHelp() }
+                    } else {
+                        null
+                    },
                     onMaintenanceSheetDismiss = { mainViewModel.setShowMaintenanceSheet(false) },
                     onDirectoryClick = {
                         try {
@@ -714,6 +736,19 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 },
                 isTrio = config.TRIO,
                 onNavigateToTrioTab = { tab -> navigateToTrioTab(tab, navController) },
+                trioTabScaffold = { selectedTab, title, showTopBar, topBarActions, content ->
+                    trioUi.tabScaffold(
+                        selectedTab = selectedTab,
+                        title = title,
+                        onTabSelected = { tab -> navigateToTrioTab(tab, navController) },
+                        onBolusClick = { handleNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
+                        onCarbsClick = { handleNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
+                        onWizardClick = { handleNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) },
+                        showTopBar = showTopBar,
+                        topBarActions = topBarActions,
+                        content = content
+                    )
+                },
                 findScreenDef = { key -> findScreenDef(key) },
             )
         }
@@ -744,6 +779,39 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         }
     }
 
+    private val pluginScreenDefsCache: List<PreferenceSubScreenDef> by lazy {
+        activePlugin.getPluginsList().mapNotNull { it.getPreferenceScreenContent() as? PreferenceSubScreenDef }
+    }
+
+    private fun findScreenDef(key: String): PreferenceSubScreenDef? {
+        builtInSearchables.getSearchableItems().forEach { item ->
+            if (item is SearchableItem.Category) {
+                if (item.screenDef.key == key) return item.screenDef
+                val nested = findNestedScreen(item.screenDef, key)
+                if (nested != null) return nested
+            }
+        }
+        for (content in pluginScreenDefsCache) {
+            if (content.key == key) return content
+            val nested = findNestedScreen(content, key)
+            if (nested != null) return nested
+        }
+        return null
+    }
+
+    private fun findNestedScreen(
+        screen: PreferenceSubScreenDef,
+        key: String
+    ): PreferenceSubScreenDef? {
+        for (item in screen.items) {
+            if (item is PreferenceSubScreenDef) {
+                if (item.key == key) return item
+                val nested = findNestedScreen(item, key)
+                if (nested != null) return nested
+            }
+        }
+        return null
+    }
 
     private var isProtectionCheckActive = false
 
@@ -876,20 +944,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         else -> TrioNavTab.Overview
     }
 
-    private fun TrioNavTab.toUiTrioTab(): UiTrioNavTab = when (this) {
-        TrioNavTab.Overview -> UiTrioNavTab.Overview
-        TrioNavTab.Adjustments -> UiTrioNavTab.Adjustments
-        TrioNavTab.Treatments -> UiTrioNavTab.Treatments
-        TrioNavTab.Settings -> UiTrioNavTab.Settings
-    }
-
-    private fun UiTrioNavTab.toAppTrioTab(): TrioNavTab = when (this) {
-        UiTrioNavTab.Overview -> TrioNavTab.Overview
-        UiTrioNavTab.Adjustments -> TrioNavTab.Adjustments
-        UiTrioNavTab.Treatments -> TrioNavTab.Treatments
-        UiTrioNavTab.Settings -> TrioNavTab.Settings
-    }
-
     private fun openCgmApp(packageName: String) {
         try {
             val intent = packageManager.getLaunchIntentForPackage(packageName) ?: throw ActivityNotFoundException()
@@ -897,99 +951,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             startActivity(intent)
         } catch (_: ActivityNotFoundException) {
             aapsLogger.debug("Error opening CGM app: $packageName")
-        }
-    }
-
-    /**
-     * Navigate to [elementType] using hierarchical authorization.
-     * For management screens, the granted level determines the screen mode
-     * (PLAY for BOLUS, EDIT for PREFERENCES or higher).
-     */
-
-    /**
-     * Execute [action] after verifying protection level.
-     * Protection level is defined once in [ElementType] — no manual lookup needed at call sites.
-     */
-
-    /**
-     * Navigate to an [ElementType] destination. Protection is handled by the caller.
-     * No `else` — compiler catches missing enum values.
-     */
-
-            ElementType.PROFILE_HELPER          -> navController.navigate(AppRoute.ProfileHelper.route)
-            ElementType.HISTORY_BROWSER         -> navController.navigate(AppRoute.HistoryBrowser.route)
-            ElementType.SETUP_WIZARD            -> if (!config.TRIO) navController.navigate(AppRoute.SetupWizard.route)
-            ElementType.MAINTENANCE             -> mainViewModel.setShowMaintenanceSheet(true)
-            ElementType.CONFIGURATION           -> navController.navigate(AppRoute.Configuration.route)
-            ElementType.ABOUT                   -> mainViewModel.setShowAboutDialog(true)
-
-            // Management screens — mode determined by granted auth level
-            ElementType.INSULIN_MANAGEMENT      -> navController.navigate(AppRoute.InsulinManagement.createRoute(mode))
-            ElementType.PROFILE_MANAGEMENT      -> navController.navigate(AppRoute.Profile.createRoute(mode))
-            ElementType.TEMP_TARGET_MANAGEMENT  -> navController.navigate(AppRoute.TempTargetManagement.createRoute(mode))
-            ElementType.QUICK_WIZARD_MANAGEMENT -> navController.navigate(AppRoute.QuickWizardManagement.createRoute(mode))
-            ElementType.FOOD_MANAGEMENT         -> navController.navigate(AppRoute.FoodManagement.route)
-            ElementType.RUNNING_MODE            -> navController.navigate(AppRoute.RunningMode.route)
-            ElementType.SCENE_MANAGEMENT        -> navController.navigate(AppRoute.SceneList.route)
-            ElementType.AUTOMATION_MANAGEMENT   -> navController.navigate(AppRoute.AutomationList.route)
-            ElementType.AUTHORIZED_CLIENTS      -> navController.navigate(AppRoute.AuthorizedClients.route)
-            ElementType.PAIR_WITH_MASTER        -> navController.navigate(AppRoute.PairWithMaster.route)
-            ElementType.QUICK_LAUNCH_CONFIG     -> navController.navigate(AppRoute.QuickLaunchConfig.route)
-
-            // Treatment dialogs
-            ElementType.CARBS                   -> navController.navigate(AppRoute.CarbsDialog.route)
-            ElementType.INSULIN                 -> navController.navigate(AppRoute.InsulinDialog.route)
-            ElementType.TREATMENT               -> navController.navigate(AppRoute.TreatmentDialog.route)
-            ElementType.FILL                    -> navController.navigate(AppRoute.FillDialog.createRoute(FillPreselect.CARTRIDGE_CHANGE.ordinal))
-            ElementType.CANNULA_CHANGE          -> navController.navigate(AppRoute.FillDialog.createRoute(FillPreselect.SITE_CHANGE.ordinal))
-            ElementType.BOLUS_WIZARD            -> navController.navigate(AppRoute.WizardDialog.createRoute())
-            ElementType.TEMP_BASAL              -> navController.navigate(AppRoute.TempBasalDialog.route)
-            ElementType.EXTENDED_BOLUS          -> navController.navigate(AppRoute.ExtendedBolusDialog.route)
-
-            // CGM
-            ElementType.CGM_XDRIP               -> openCgmApp("com.eveningoutpost.dexdrip")
-            ElementType.CGM_DEX                 -> dexcomBoyda.dexcomPackages().forEach { openCgmApp(it) }
-
-            ElementType.CALIBRATION             -> navController.navigate(AppRoute.CalibrationDialog.route)
-
-            // Careportal
-            ElementType.BG_CHECK                -> navController.navigate(AppRoute.CareDialog.createRoute(CareportalEventType.BGCHECK.ordinal))
-            ElementType.SENSOR_INSERT           -> navController.navigate(AppRoute.CareDialog.createRoute(CareportalEventType.SENSOR_INSERT.ordinal))
-            ElementType.BATTERY_CHANGE          -> navController.navigate(AppRoute.CareDialog.createRoute(CareportalEventType.BATTERY_CHANGE.ordinal))
-            ElementType.NOTE                    -> navController.navigate(AppRoute.CareDialog.createRoute(CareportalEventType.NOTE.ordinal))
-            ElementType.EXERCISE                -> navController.navigate(AppRoute.CareDialog.createRoute(CareportalEventType.EXERCISE.ordinal))
-            ElementType.QUESTION                -> navController.navigate(AppRoute.CareDialog.createRoute(CareportalEventType.QUESTION.ordinal))
-            ElementType.ANNOUNCEMENT            -> navController.navigate(AppRoute.CareDialog.createRoute(CareportalEventType.ANNOUNCEMENT.ordinal))
-            ElementType.SITE_ROTATION           -> navController.navigate(AppRoute.SiteRotationManagement.route)
-
-            // Settings
-            ElementType.SETTINGS                -> navController.navigate(AppRoute.Preferences.route)
-
-            // App lifecycle
-            ElementType.EXIT                    -> {
-                finish()
-                configBuilder.exitApp("Menu", Sources.Aaps, false)
-            }
-
-            ElementType.PUMP                    -> handlePluginClick(activePlugin.activePumpInternal as PluginBase)
-
-            // Non-searchable types — listed explicitly so the compiler catches new enum values
-            ElementType.QUICK_WIZARD,
-            ElementType.SCENE,
-            ElementType.AUTOMATION,
-            ElementType.COB,
-            ElementType.SENSITIVITY,
-            ElementType.USER_ENTRY,
-            ElementType.LOOP,
-            ElementType.AAPS                    -> {
-            }
-        }
-    }
-
-    private fun handlePluginClick(plugin: PluginBase) {
-        val pluginIndex = activePlugin.getPluginsList().indexOf(plugin)
-        if (plugin.hasComposeContent()) {
-            navController?.navigate(AppRoute.PluginContent.createRoute(pluginIndex))
         }
     }
 }

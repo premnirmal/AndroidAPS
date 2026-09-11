@@ -28,6 +28,21 @@
         <item name="windowNoTitle">true</item>
     </style>
 
+    <style name="AppTheme.Trio" parent="AppTheme">
+        <item name="colorPrimary">@color/trio_theme_light_primary</item>
+        <item name="colorSecondary">@color/trio_theme_light_secondary</item>
+        <item name="android:colorBackground">@color/trio_theme_light_background</item>
+        <item name="colorSurface">@color/trio_theme_light_surface</item>
+        <item name="colorPrimaryDark">@color/trio_theme_light_primary</item>
+        <item name="colorAccent">@color/trio_theme_light_secondary</item>
+        <item name="android:windowBackground">@color/trio_theme_light_background</item>
+    </style>
+
+    <style name="AppTheme.Trio.NoActionBar" parent="AppTheme.Trio">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
     <!-- BolusProgress, Error -->
     <style name="Theme.MaterialComponents.Translucent" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="android:windowNoTitle">true</item>

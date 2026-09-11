@@ -3,6 +3,7 @@ package app.aaps.appshell.navigation
 import androidx.navigation.NavBackStackEntry
 import androidx.savedstate.read
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -74,8 +75,6 @@ import app.aaps.plugins.configuration.setupwizard.SWDefinition
 import app.aaps.plugins.configuration.setupwizard.SetupWizardScreen
 import app.aaps.plugins.sync.nsclientV3.clientcontrol.compose.AuthorizedClientsScreen
 import app.aaps.plugins.sync.nsclientV3.clientcontrol.compose.PairWithMasterScreen
-import app.aaps.trio.ui.compose.main.TrioNavTab
-import app.aaps.trio.ui.compose.main.TrioTabScaffold
 import app.aaps.ui.compose.calibrationDialog.CalibrationDialogScreen
 import app.aaps.ui.compose.carbsDialog.CarbsDialogScreen
 import app.aaps.ui.compose.careDialog.CareDialogScreen
@@ -89,6 +88,7 @@ import app.aaps.ui.compose.insulinDialog.InsulinDialogScreen
 import app.aaps.ui.compose.insulinManagement.InsulinManagementScreen
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
 import app.aaps.ui.compose.main.VersionOverlay
+import app.aaps.ui.compose.main.TrioNavTab
 import app.aaps.ui.compose.maintenance.ImportSettingsScreen
 import app.aaps.ui.compose.maintenance.ImportSource
 import app.aaps.ui.compose.maintenance.ImportViewModel
@@ -121,10 +121,9 @@ import app.aaps.ui.compose.treatmentDialog.TreatmentDialogScreen
 import app.aaps.ui.compose.treatments.TreatmentsScreen
 import app.aaps.ui.compose.treatments.viewmodels.TreatmentsViewModel
 import app.aaps.ui.compose.wizardDialog.WizardDialogScreen
+import app.aaps.ui.UiStrings
 import app.aaps.ui.search.BuiltInSearchables
 import kotlinx.coroutines.launch
-import app.aaps.plugins.main.R as PluginsMainR
-import app.aaps.ui.R as UiR
 
 /**
  * Safe popBackStack that prevents double-navigation during transitions.
@@ -183,6 +182,13 @@ fun NavGraphBuilder.appNavGraph(
     onOpenHealthConnect: () -> Unit,
     isTrio: Boolean,
     onNavigateToTrioTab: (TrioNavTab) -> Unit,
+    trioTabScaffold: @Composable (
+        selectedTab: TrioNavTab,
+        title: String,
+        showTopBar: Boolean,
+        topBarActions: @Composable RowScope.() -> Unit,
+        content: @Composable (PaddingValues) -> Unit
+    ) -> Unit,
     findScreenDef: (key: String) -> PreferenceSubScreenDef?,
     /**
      * The overview, which is the app home screen.
@@ -525,13 +531,11 @@ fun NavGraphBuilder.appNavGraph(
 
     if (isTrio) {
         composable(AppRoute.TrioTreatmentList.route) {
-            TrioTabScaffold(
-                selectedTab = TrioNavTab.Treatments,
-                title = stringResource(app.aaps.core.ui.R.string.treatments),
-                onTabSelected = onNavigateToTrioTab,
-                onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
-                onCarbsClick = { onNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
-                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) }
+            trioTabScaffold(
+                TrioNavTab.Treatments,
+                stringResource(CoreUiStrings.treatments),
+                true,
+                {}
             ) { paddingValues ->
                 Box(
                     modifier = Modifier
@@ -548,14 +552,11 @@ fun NavGraphBuilder.appNavGraph(
         }
 
         composable(AppRoute.TrioTreatments.route) {
-            TrioTabScaffold(
-                selectedTab = TrioNavTab.Adjustments,
-                title = stringResource(UiR.string.trio_tab_adjustments),
-                onTabSelected = onNavigateToTrioTab,
-                onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
-                onCarbsClick = { onNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
-                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) },
-                showTopBar = false
+            trioTabScaffold(
+                TrioNavTab.Adjustments,
+                stringResource(UiStrings.trio_tab_adjustments),
+                false,
+                {}
             ) { paddingValues ->
                 Box(
                     modifier = Modifier
@@ -598,16 +599,14 @@ fun NavGraphBuilder.appNavGraph(
 
     if (isTrio) {
         composable(AppRoute.TrioHistory.route) {
-            TrioTabScaffold(
-                selectedTab = TrioNavTab.Adjustments,
-                title = stringResource(PluginsMainR.string.nav_history_browser),
-                onTabSelected = onNavigateToTrioTab,
-                onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
-                onCarbsClick = { onNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
-                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) }
+            trioTabScaffold(
+                TrioNavTab.Adjustments,
+                stringResource(MainStrings.nav_history_browser),
+                true,
+                {}
             ) { paddingValues ->
                 HistoryScreen(
-                    title = stringResource(PluginsMainR.string.nav_history_browser),
+                    title = stringResource(MainStrings.nav_history_browser),
                     onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
                     modifier = Modifier.padding(paddingValues),
                     showTopBar = false
@@ -721,14 +720,11 @@ fun NavGraphBuilder.appNavGraph(
 
     if (isTrio) {
         composable(AppRoute.TrioSettings.route) {
-            TrioTabScaffold(
-                selectedTab = TrioNavTab.Settings,
-                title = stringResource(app.aaps.core.ui.R.string.settings),
-                onTabSelected = onNavigateToTrioTab,
-                onBolusClick = { onNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
-                onCarbsClick = { onNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
-                onWizardClick = { onNavigationRequest(NavigationRequest.Element(ElementType.BOLUS_WIZARD), navController) },
-                topBarActions = {
+            trioTabScaffold(
+                TrioNavTab.Settings,
+                stringResource(CoreUiStrings.settings),
+                true,
+                {
                     VersionOverlay()
                 }
             ) { paddingValues ->

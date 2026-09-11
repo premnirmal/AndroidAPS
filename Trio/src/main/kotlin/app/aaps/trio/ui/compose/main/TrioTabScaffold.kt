@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import app.aaps.core.ui.compose.AapsSystemBarStyleEffect
 import app.aaps.core.ui.compose.AapsTheme
+import app.aaps.ui.compose.main.TrioNavTab
 
 @Composable
 fun TrioTabScaffold(

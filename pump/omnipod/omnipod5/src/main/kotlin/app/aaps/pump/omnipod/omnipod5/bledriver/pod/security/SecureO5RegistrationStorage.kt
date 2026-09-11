@@ -7,8 +7,9 @@ import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
 import app.aaps.pump.omnipod.omnipod5.keys.O5StringNonPreferenceKey
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import javax.inject.Inject
-import javax.inject.Singleton
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.SingleIn
 
 /**
  * Persists O5 registration (credential) data across app restarts, encrypted at rest via
@@ -26,7 +27,7 @@ import javax.inject.Singleton
  * ServiceLoader-discovered module on every app start, and DOWNLOADED entries aren't a
  * pattern this codebase actually implements yet (see O5RegistrationData's class doc).
  */
-@Singleton
+@SingleIn(AppScope::class)
 class SecureO5RegistrationStorage @Inject constructor(
     private val logger: AAPSLogger,
     private val preferences: Preferences,

@@ -4,12 +4,15 @@ import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.security.SecureO5RegistrationStorage
-import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.zacsweers.metro.AppScope
+import dev.zacsweers.metro.ContributesIntoMap
+import dev.zacsweers.metro.Inject
+import dev.zacsweers.metro.binding
+import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONException
 import org.json.JSONObject
-import javax.inject.Inject
 
 /** One row of the "currently installed credentials" list shown in the import screen. */
 data class InstalledCredentialRow(
@@ -38,7 +41,8 @@ sealed class ImportResult {
  * credentials [O5RegistrationData] knows about, nothing about pairing, connection, or
  * pod control.
  */
-@HiltViewModel
+@ContributesIntoMap(AppScope::class, binding = binding<ViewModel>())
+@ViewModelKey
 class O5CredentialImportViewModel @Inject constructor(
     private val secureO5RegistrationStorage: SecureO5RegistrationStorage
 ) : ViewModel() {

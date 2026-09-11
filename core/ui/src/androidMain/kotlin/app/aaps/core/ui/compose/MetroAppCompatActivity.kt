@@ -19,6 +19,9 @@ abstract class MetroAppCompatActivity : AppCompatActivity() {
         check(application.injectMembers(this)) {
             "No Metro binding for ${this::class.java.name}. Add a @Provides @IntoMap @ClassKey entry for it."
         }
+        onMembersInjected()
         super.onCreate(savedInstanceState)
     }
+
+    protected open fun onMembersInjected() = Unit
 }

@@ -934,7 +934,7 @@
     <string name="open_navigation">Open navigation</string>
     <string name="nav_history_browser">History browser</string>
     <string name="nav_history_browser_desc">Browse historical graphs</string>
-    <string name="appearance">Appearance</string>
+    <string name="appearance">Display</string>
     <string name="manage">Manage</string>
     <string name="localprofile">Profile</string>
     <string name="nav_setupwizard">Setup Wizard</string>

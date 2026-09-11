@@ -126,6 +126,8 @@ android {
         buildConfigField("String", "REMOTE", "\"${generateGitRemote()}\"")
         buildConfigField("String", "HEAD", "\"${generateGitBuild()}\"")
         buildConfigField("String", "COMMITTED", "\"${allCommitted()}\"")
+        buildConfigField("boolean", "TRIO", "false")
+        buildConfigField("boolean", "FIREBASE_ENABLED", "true")
 
         // Runner for instrumentation tests in this module.
         testInstrumentationRunner = "app.aaps.runners.AapsTestRunner"
@@ -139,17 +141,6 @@ android {
             dimension = "standard"
             resValue("string", "app_name", "AAPS")
             versionName = Versions.appVersion
-            manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher"
-            manifestPlaceholders["appIconRound"] = "@mipmap/ic_launcher_round"
-        }
-        // Full remains the default app; Trio is an opt-in variant.
-        create("trio") {
-            applicationId = "info.nightscout.androidaps"
-            dimension = "standard"
-            matchingFallbacks += listOf("full")
-            resValue("string", "app_name", "AAPS")
-            versionName = Versions.appVersion + "-trio"
-            targetSdk = Versions.trioTargetSdk
             manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher"
             manifestPlaceholders["appIconRound"] = "@mipmap/ic_launcher_round"
         }
@@ -197,12 +188,8 @@ android {
 
 
     sourceSets {
+        getByName("main") { kotlin.directories.add("src/androidaps/kotlin") }
         getByName("full") { kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/withPumps/kotlin")) }
-        getByName("trio") {
-            kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/trio/kotlin"))
-            kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/withPumps/kotlin"))
-            res.directories.add("src/trio/res")
-        }
         getByName("pumpcontrol") { kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/withPumps/kotlin")) }
         getByName("aapsclient") { kotlin.directories.add("src/aaps/kotlin") }
         getByName("aapsclient2") { kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/aapsclient/kotlin")) }
@@ -233,6 +220,7 @@ dependencies {
     implementation(project(":database:persistence"))
     implementation(project(":pump:virtual"))
     implementation(project(":workflow"))
+    implementation(libs.androidx.core)
 
     // Pump drivers — only for full + pumpcontrol flavors. Derived from the :pump:* modules included
     // in settings.gradle (single source of truth) minus two exceptions:
@@ -246,7 +234,6 @@ dependencies {
         .forEach {
             "fullImplementation"(project(it.path))
             "pumpcontrolImplementation"(project(it.path))
-            "trioImplementation"(project(it.path))
         }
     implementation(libs.androidx.lifecycle.process)
 
