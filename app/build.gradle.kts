@@ -126,7 +126,6 @@ android {
         buildConfigField("String", "REMOTE", "\"${generateGitRemote()}\"")
         buildConfigField("String", "HEAD", "\"${generateGitBuild()}\"")
         buildConfigField("String", "COMMITTED", "\"${allCommitted()}\"")
-        buildConfigField("boolean", "TRIO", "false")
         buildConfigField("boolean", "FIREBASE_ENABLED", "true")
 
         // Runner for instrumentation tests in this module.
@@ -139,10 +138,10 @@ android {
             isDefault = true
             applicationId = "info.nightscout.androidaps"
             dimension = "standard"
-            resValue("string", "app_name", "AAPS")
+            resValue("string", "app_name", "Trio")
             versionName = Versions.appVersion
-            manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher"
-            manifestPlaceholders["appIconRound"] = "@mipmap/ic_launcher_round"
+            manifestPlaceholders["appIcon"] = "@drawable/ic_launcher"
+            manifestPlaceholders["appIconRound"] = "@drawable/ic_launcher"
         }
         create("pumpcontrol") {
             applicationId = "info.nightscout.aapspumpcontrol"

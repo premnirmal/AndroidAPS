@@ -567,8 +567,10 @@ fun GraphsSection(
             }
         }
         }
-        // Spacer so the last graph / Add button isn't covered by QuickLaunch toolbar
-        Spacer(Modifier.height(48.dp))
+        if (!mainChartOnly) {
+            // Spacer so the last graph / Add button isn't covered by QuickLaunch toolbar
+            Spacer(Modifier.height(48.dp))
+        }
     }
 }
 

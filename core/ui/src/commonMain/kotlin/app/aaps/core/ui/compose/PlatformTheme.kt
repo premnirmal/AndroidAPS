@@ -1,6 +1,7 @@
 package app.aaps.core.ui.compose
 
 import androidx.compose.runtime.Composable
+import androidx.compose.material3.ColorScheme
 
 /**
  * Keeps the system bar icons legible against the bar scrims, which use `colorScheme.surface`.
@@ -11,6 +12,15 @@ import androidx.compose.runtime.Composable
  */
 @Composable
 expect fun SystemBarAppearance(isDark: Boolean)
+
+/**
+ * Uses the platform Material color scheme when one is available.
+ *
+ * Android 12 and newer can derive neutral and brand colors from the system wallpaper. Other
+ * platforms, and older Android versions, return [fallback].
+ */
+@Composable
+expect fun platformColorScheme(isDark: Boolean, fallback: ColorScheme): ColorScheme
 
 /**
  * Smallest screen width in dp, used to decide whether this is a tablet and scale typography.

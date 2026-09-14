@@ -6,7 +6,7 @@ import androidx.compose.runtime.Immutable
 data class ObjectivesUiState(
     val objectives: List<ObjectiveUiItem> = emptyList(),
     val isFakeMode: Boolean = false,
-    val showDebugControls: Boolean = false,
+    val showDebugControls: Boolean = true,
     val ntpVerification: NtpVerificationState? = null,
     val examSheet: ExamSheetState? = null,
     val learnedSheet: LearnedSheetState? = null,

@@ -66,11 +66,13 @@ import app.aaps.core.interfaces.overview.graph.TherapyEventType
 import app.aaps.core.interfaces.overview.graph.TimeRange
 import app.aaps.core.interfaces.overview.graph.TreatmentGraphData
 import app.aaps.core.interfaces.overview.graph.VarSensGraphData
+import app.aaps.core.interfaces.overview.graph.toPredictionDataPoints
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.profile.ProfileFunction
 import app.aaps.core.interfaces.profile.ProfileUtil
 import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.rx.events.EventAppInitialized
 import app.aaps.core.interfaces.rx.events.EventBucketedDataCreated
 import app.aaps.core.interfaces.rx.events.EventLoopUpdateGui
 import app.aaps.core.interfaces.rx.events.EventNewOpenLoopNotification
@@ -97,6 +99,8 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -207,6 +211,48 @@ class OverviewDataCacheImpl @AssistedInject constructor(
     override val runningModeFlow: StateFlow<RunningModeDisplayData?> = _runningModeFlow.asStateFlow()
     private val _tbrFlow = MutableStateFlow<TbrDisplayData?>(null)
     override val tbrFlow: StateFlow<TbrDisplayData?> = _tbrFlow.asStateFlow()
+
+    override suspend fun hydrateOverviewData() {
+        var firstFailure: Exception? = null
+
+        suspend fun hydratePart(name: String, block: suspend () -> Unit) {
+            try {
+                block()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                aapsLogger.error(LTag.UI, "OverviewDataCache: Failed to hydrate $name", e)
+                if (firstFailure == null) firstFailure = e
+            }
+        }
+
+        hydratePart("profile") { updateProfileFromDatabase() }
+        hydratePart("temporary target") { updateTempTargetFromDatabase() }
+        hydratePart("running mode") { updateRunningModeFromDatabase() }
+        hydratePart("temporary basal") { updateTbrFromDatabase() }
+        hydratePart("BG info") { updateBgInfoFromDatabase() }
+        hydratePart("predictions") { updatePredictionsFromDatabase() }
+
+        firstFailure?.let { throw it }
+    }
+
+    private suspend fun updatePredictionsFromDatabase() {
+        val now = dateUtil.now()
+        val persistedResult = persistenceLayer
+            .getApsResults(now - T.days(1).msecs(), now)
+            .maxByOrNull { it.date }
+        val apsResult = if (config.AAPSCLIENT) {
+            processedDeviceStatusData.getAPSResult() ?: persistedResult
+        } else {
+            persistedResult
+        }
+        val lowMarkInUnits = preferences.get(UnitDoubleKey.OverviewLowMark)
+        val highMarkInUnits = preferences.get(UnitDoubleKey.OverviewHighMark)
+        _predictionsFlow.value = apsResult
+            ?.takeIf { it.latestPredictionsTime > now }
+            ?.toPredictionDataPoints(profileUtil, lowMarkInUnits, highMarkInUnits)
+            ?: emptyList()
+    }
 
     override fun refreshTempTarget() {
         scope.launch { updateTempTargetFromDatabase() }
@@ -319,6 +365,13 @@ class OverviewDataCacheImpl @AssistedInject constructor(
         }
 
         if (observeDatabase) {
+            scope.launch(start = CoroutineStart.UNDISPATCHED) {
+                rxBus.toFlow(EventAppInitialized::class).collect {
+                    updateProfileFromDatabase()
+                    updateTempTargetFromDatabase()
+                }
+            }
+
             // Load initial data from database.
             // Gated on app init: updateTbrFromDatabase -> iobCobCalculator.getBasalData ->
             // PluginStore.activePumpInternal throws "No pump selected" when the cache is
@@ -328,11 +381,7 @@ class OverviewDataCacheImpl @AssistedInject constructor(
             scope.launch {
                 config.initProgressFlow.first { it.done }
                 aapsLogger.debug(LTag.UI, "OverviewDataCache: Loading initial data")
-                updateBgInfoFromDatabase()
-                updateProfileFromDatabase()
-                updateTempTargetFromDatabase()
-                updateRunningModeFromDatabase()
-                updateTbrFromDatabase()
+                hydrateOverviewData()
             }
 
             // Observe GlucoseValue changes
@@ -659,7 +708,12 @@ class OverviewDataCacheImpl @AssistedInject constructor(
         }
 
         _profileFlow.value = ProfileDisplayData(
-            profileName = profileFunction.getProfileName(),  // Raw name, ViewModel adds remaining time
+            profileName = when (profile) {
+                is ProfileSealed.EPS -> profile.value.originalCustomizedName
+                is ProfileSealed     -> profile.profileName
+                null                 -> ""
+                else                 -> profileFunction.getProfileName()
+            },
             isLoaded = profile != null,
             isModified = isModified,
             percentage = percentage,

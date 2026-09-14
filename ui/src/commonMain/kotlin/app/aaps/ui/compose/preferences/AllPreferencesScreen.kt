@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +41,7 @@ import app.aaps.core.ui.compose.LocalSnackbarHostState
 import app.aaps.core.ui.compose.MasterOfflineBanner
 import app.aaps.core.ui.compose.masterEditingEnabled
 import app.aaps.core.ui.compose.preference.LocalNavigateToCompose
+import app.aaps.core.ui.compose.preference.Preference
 import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
 import app.aaps.core.ui.compose.preference.ProvidePreferenceTheme
 import app.aaps.core.ui.compose.preference.addPreferenceContent
@@ -61,6 +63,7 @@ import kotlinx.coroutines.launch
  * @param builtInSearchables BuiltInSearchables instance (single source of truth for built-in screens)
  * @param configBuilder ConfigBuilder for the synced-selection gate (client APS visibility)
  * @param onBackClick Callback when back button is clicked
+ * @param onConfigurationClick Optional action shown at the bottom of the settings list
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,7 +74,8 @@ fun AllPreferencesScreen(
     configBuilder: ConfigBuilder,
     onBackClick: () -> Unit,
     showTopBar: Boolean = true,
-    showSimpleModeHiddenPreferences: Boolean = false
+    showSimpleModeHiddenPreferences: Boolean = false,
+    onConfigurationClick: (() -> Unit)? = null
 ) {
     val preferences = LocalPreferences.current
     val config = LocalConfig.current
@@ -221,6 +225,22 @@ fun AllPreferencesScreen(
 
                     // Built-in: Maintenance settings (always last)
                     addPreferenceContent(maintenancePreferences, onShowMessage, sectionState)
+
+                    onConfigurationClick?.let { onClick ->
+                        item {
+                            Preference(
+                                title = { Text(stringResource(CoreUiStrings.nav_configuration)) },
+                                summary = { Text(stringResource(CoreUiStrings.nav_configuration_desc)) },
+                                icon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = null
+                                    )
+                                },
+                                onClick = onClick
+                            )
+                        }
+                    }
                 }
             }
         }

@@ -58,6 +58,7 @@ import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.IntNonKey
+import app.aaps.core.keys.LongNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.objects.constraints.ConstraintObject
 import app.aaps.core.objects.extensions.asAnnouncement
@@ -154,7 +155,12 @@ class LoopPlugin @Inject constructor(
     @Volatile override var lastBgTriggeredRun: Long = 0
     private var carbsSuggestionsSuspendedUntil: Long = 0
     private var prevCarbsreq = 0
-    override var lastRun: LastRun? = null
+    override var lastRun: LastRun? = preferences
+        .get(LongNonKey.LastLoopRunTimestamp)
+        .takeIf { it > 0L }
+        ?.let { timestamp ->
+            LastRun().apply { lastAPSRun = timestamp }
+        }
     override var closedLoopEnabled: Constraint<Boolean>? = null
 
     // Debounces the device-status upload. Was a Handler on its own HandlerThread; a Job on the app
@@ -172,6 +178,7 @@ class LoopPlugin @Inject constructor(
     @OptIn(FlowPreview::class)
     override suspend fun onStart() {
         super.onStart()
+        hydrateLastRunTimestamp()
         // TempTarget changes
         persistenceLayer.observeChanges(TT::class)
             // Skip db change of ending previous TT
@@ -207,6 +214,25 @@ class LoopPlugin @Inject constructor(
     override suspend fun onStop() {
         deviceStatusJob?.cancel()
         super.onStop()
+    }
+
+    private suspend fun hydrateLastRunTimestamp() {
+        val now = dateUtil.now()
+        val savedTimestamp = preferences.get(LongNonKey.LastLoopRunTimestamp)
+        val databaseTimestamp = persistenceLayer
+            .getApsResults(now - T.days(1).msecs(), now)
+            .maxOfOrNull { it.date }
+            ?: 0L
+        val timestamp = maxOf(savedTimestamp, databaseTimestamp)
+        if (timestamp <= 0L) return
+
+        lastRun = lastRun
+            ?.apply { lastAPSRun = maxOf(lastAPSRun, timestamp) }
+            ?: LastRun().apply { lastAPSRun = timestamp }
+        if (timestamp > savedTimestamp) {
+            preferences.put(LongNonKey.LastLoopRunTimestamp, timestamp)
+        }
+        rxBus.send(EventLoopUpdateGui())
     }
 
     override fun specialEnableCondition(): Boolean {
@@ -550,7 +576,9 @@ class LoopPlugin @Inject constructor(
             lastRun?.let { lastRun ->
                 lastRun.request = apsResult
                 lastRun.constraintsProcessed = resultAfterConstraints
-                lastRun.lastAPSRun = dateUtil.now()
+                lastRun.lastAPSRun = dateUtil.now().also { timestamp ->
+                    preferences.put(LongNonKey.LastLoopRunTimestamp, timestamp)
+                }
                 lastRun.source = (usedAPS as PluginBase).name
                 lastRun.tbrSetByPump = null
                 lastRun.smbSetByPump = null

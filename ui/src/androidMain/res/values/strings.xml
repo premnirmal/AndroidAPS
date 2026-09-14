@@ -9,12 +9,74 @@
     <string name="trio_metric_isf">ISF</string>
     <string name="trio_metric_remaining">Remaining</string>
     <string name="trio_metric_range" comment="%1$s=start value, %2$s=end value. Example: 10 → 12">%1$s → %2$s</string>
+    <string name="cob_with_carbs_required" comment="%1$s=current COB with its unit, %2$s=required carbs with its unit. Example: 11 g · 23 g required">%1$s · %2$s required</string>
+    <string name="trio_carbs_required_badge" comment="%1$d=grams of carbohydrates required. Example: 23 g">%1$d g</string>
+    <string name="trio_tab_carbs_required" comment="%1$s=tab name, %2$d=grams of carbohydrates required. Example: Home, 23 g carbs required">%1$s, %2$d g carbs required</string>
     <string name="trio_bolusing_title">Bolusing</string>
     <string name="trio_bolusing_progress" comment="%1$.2f=delivered insulin amount, %2$.2f=total insulin amount. Example: 0.05 of 0.10 U">%1$.2f of %2$.2f U</string>
     <string name="trio_time_in_range_percent" comment="%1$d=time in range percent. Example: 100%">%1$d%%</string>
     <string name="trio_time_in_range_today">Time in Range today</string>
     <string name="trio_no_pump">No Pump</string>
+    <string name="trio_pump_time_days_hours" comment="%1$d=whole days left, %2$d=remaining whole hours. Example: 2d 6h">%1$dd %2$dh</string>
+    <string name="trio_pump_time_hours" comment="%1$d=whole hours left. Example: 6h">%1$dh</string>
     <string name="trio_no_glucose_source">No CGM</string>
+    <string name="trio_loop_less_than_one_minute">&lt; 1 m</string>
+    <string name="trio_loop_minutes" comment="%1$d=number of minutes since the last loop. Example: 4 m">%1$d m</string>
+    <string name="trio_reservoir_over_50">50+ U</string>
+    <string name="trio_reservoir_units" comment="%1$d=whole units of insulin left in the pump. Example: 24 U">%1$d U</string>
+    <string name="trio_profile_with_temp_target" comment="%1$s=current profile name, %2$s=active temporary target and remaining time. Example: Standard - 110 mg/dL (25 min)">%1$s - %2$s</string>
+    <string name="trio_profile_summary" comment="%1$d=profile percentage, %2$s=current profile target range. Example: Profile at 100% · 90–110 mg/dL">Profile at %1$d%% · %2$s</string>
+    <string name="trio_stats_days" comment="%1$d=number of days included in the statistics. Example: 14 days">%1$d days</string>
+    <string name="trio_stats_all_history">All</string>
+    <string name="trio_stats_readings" comment="%1$d=number of glucose readings included. Example: 4032 readings">%1$d readings</string>
+    <string name="trio_stats_percent" comment="%1$.1f=percentage value. Example: 72.4%">%1$.1f%%</string>
+    <string name="trio_stats_cv">CV</string>
+    <string name="trio_stats_no_data">No glucose data is available for this range.</string>
+    <string name="trio_stats_today">Today</string>
+    <string name="trio_stats_12_hours">12 h</string>
+    <string name="trio_stats_short_days" comment="%1$d=number of days. Example: 14d">%1$dd</string>
+    <string name="trio_stats_overview">Glycemic overview</string>
+    <string name="trio_stats_readings_and_coverage" comment="%1$d=reading count, %2$.1f=sensor coverage percentage. Example: 288 readings · 100.0% coverage">%1$d readings · %2$.1f%% coverage</string>
+    <string name="trio_stats_metrics">Metrics</string>
+    <string name="trio_stats_average">Average glucose</string>
+    <string name="trio_stats_gmi">GMI</string>
+    <string name="trio_stats_median">Median</string>
+    <string name="trio_stats_iqr">IQR</string>
+    <string name="trio_stats_glucose_range" comment="%1$s=lower glucose value with units, %2$s=upper glucose value with units. Example: 90 mg/dL – 140 mg/dL">%1$s – %2$s</string>
+    <string name="trio_stats_standard_deviation">Standard deviation</string>
+    <string name="trio_stats_gvi">GVI</string>
+    <string name="trio_stats_psg">PSG</string>
+    <string name="trio_stats_psg_value" comment="%1$.0f=confidence percentage, %2$+.0f=trend percentage. Example: 82% confidence · -4% trend">%1$.0f%% confidence · %2$+.0f%% trend</string>
+    <string name="trio_stats_tight_range">Time in tight range</string>
+    <string name="trio_stats_dawn_rise">Dawn rise</string>
+    <string name="trio_stats_mage">MAGE</string>
+    <string name="trio_stats_modd">MODD</string>
+    <string name="trio_stats_best_streak">Best TIR streak</string>
+    <string name="trio_stats_streak_days" comment="%1$d=number of days. Example: 4 days">%1$d days</string>
+    <string name="trio_stats_minimum">Minimum</string>
+    <string name="trio_stats_maximum">Maximum</string>
+    <string name="trio_stats_previous_period">Change from previous period</string>
+    <string name="trio_stats_signed_percent" comment="%1$+.1f=signed percentage change. Example: +4.2%">%1$+.1f%%</string>
+    <string name="trio_stats_signed_value" comment="%1$s=plus or minus sign, %2$s=glucose change with units. Example: -12 mg/dL">%1$s%2$s</string>
+    <string name="trio_stats_episodes">Episodes</string>
+    <string name="trio_stats_episode_summary" comment="%1$s=Low or High, %2$d=episode count, %3$d=severe episode count. Example: Low: 2 episodes · 1 severe">%1$s: %2$d episodes · %3$d severe</string>
+    <string name="trio_stats_episode_duration" comment="%1$d=total minutes, %2$d=longest episode minutes. Example: 45 min total · 30 min longest">%1$d min total · %2$d min longest</string>
+    <string name="trio_stats_hourly_patterns">Time of day</string>
+    <string name="trio_stats_weekday_patterns">Weekdays</string>
+    <string name="trio_stats_day_by_day">Day by day</string>
+    <string name="trio_stats_pattern_value" comment="%1$s=average glucose with units, %2$.1f=time in range percentage. Example: 120 mg/dL · 75.0% TIR">%1$s · %2$.1f%% TIR</string>
+    <string name="trio_stats_risk">Glycemic risk</string>
+    <string name="trio_stats_gri">GRI</string>
+    <string name="trio_stats_lbgi">LBGI</string>
+    <string name="trio_stats_hbgi">HBGI</string>
+    <string name="trio_stats_decimal" comment="%1$.1f=decimal score. Example: 12.4">%1$.1f</string>
+    <string name="trio_stats_insights">Insights</string>
+    <string name="trio_stats_insight_coverage" comment="%1$.1f=sensor coverage percentage. Example: Sensor coverage is low at 65.0%.">Sensor coverage is low at %1$.1f%%.</string>
+    <string name="trio_stats_insight_tir_good" comment="%1$.1f=time in range percentage. Example: Time in range is on target at 74.0%.">Time in range is on target at %1$.1f%%.</string>
+    <string name="trio_stats_insight_tir_low" comment="%1$.1f=time in range percentage. Example: Time in range is below target at 55.0%.">Time in range is below target at %1$.1f%%.</string>
+    <string name="trio_stats_insight_variability" comment="%1$.1f=coefficient of variation percentage. Example: Glucose variability is high at 42.0%.">Glucose variability is high at %1$.1f%%.</string>
+    <string name="trio_stats_insight_lows" comment="%1$d=number of low episodes. Example: 2 low episodes were found.">%1$d low episodes were found.</string>
+    <string name="trio_stats_insight_highs" comment="%1$d=number of high episodes. Example: 3 high episodes were found.">%1$d high episodes were found.</string>
     <string name="health_connect">Health Connect</string>
     <string name="health_connect_settings_subtitle">Manage health data sharing</string>
     <string name="health_connect_not_available">Health Connect is not available on this device</string>

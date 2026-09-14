@@ -1,17 +1,20 @@
 package app.aaps.implementations
 
-import app.aaps.core.keys.interfaces.AppPlatform
-import app.aaps.core.keys.interfaces.TextRef
+import android.content.SharedPreferences
 import android.os.Build
 import app.aaps.BuildConfig
 import app.aaps.R
+import app.aaps.core.keys.interfaces.AppPlatform
+import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.configuration.ExternalOptions
 import app.aaps.core.interfaces.configuration.InitProgress
 import app.aaps.core.interfaces.maintenance.FileListProvider
+import app.aaps.core.keys.BooleanKey
 import app.aaps.di.ExternalOptionsOverride
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
+import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.binding
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -20,7 +23,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import dev.zacsweers.metro.Inject
 
 // @Singleton (not @Reusable): Config owns the single app-global init-progress flow that
 // ComposeMainActivity's splash gate observes; a guaranteed single instance keeps that flow shared
@@ -30,19 +32,22 @@ import dev.zacsweers.metro.Inject
 @SingleIn(AppScope::class)
 class ConfigImpl @Inject constructor(
     private val fileListProvider: () -> FileListProvider,
-    private val externalOptionsOverride: ExternalOptionsOverride
+    private val externalOptionsOverride: ExternalOptionsOverride,
+    private val sharedPreferences: SharedPreferences
 ) : Config {
 
     override val SUPPORTED_NS_VERSION = 150000 // 15.0.0
-    override val APS = BuildConfig.FLAVOR == "full" || BuildConfig.TRIO
+    override val APS = BuildConfig.FLAVOR == "full"
     override val AAPSCLIENT = BuildConfig.FLAVOR == "aapsclient" || BuildConfig.FLAVOR == "aapsclient2" || BuildConfig.FLAVOR == "aapsclient3"
     override val AAPSCLIENT1 = BuildConfig.FLAVOR == "aapsclient"
     override val AAPSCLIENT2 = BuildConfig.FLAVOR == "aapsclient2"
     override val AAPSCLIENT3 = BuildConfig.FLAVOR == "aapsclient3"
     override val PUMPCONTROL = BuildConfig.FLAVOR == "pumpcontrol"
-    override val TRIO = BuildConfig.TRIO
-    override val PUMPDRIVERS = BuildConfig.FLAVOR == "full" || BuildConfig.FLAVOR == "pumpcontrol" || BuildConfig.TRIO
-    override val FLAVOR = if (BuildConfig.TRIO) "trio" else BuildConfig.FLAVOR
+    override val TRIO: Boolean
+        get() = BuildConfig.FLAVOR == "full" && sharedPreferences.getBoolean(BooleanKey.GeneralTrioMode.key, BooleanKey.GeneralTrioMode.defaultValue)
+    override val PUMPDRIVERS = BuildConfig.FLAVOR == "full" || BuildConfig.FLAVOR == "pumpcontrol"
+    override val FLAVOR: String
+        get() = if (TRIO) "trio" else BuildConfig.FLAVOR
     override val VERSION_NAME = BuildConfig.VERSION_NAME
     override val HEAD = BuildConfig.HEAD
     override val COMMITTED = BuildConfig.COMMITTED.toBoolean()

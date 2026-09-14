@@ -1,13 +1,16 @@
 package app.aaps.core.ui.compose.navigation
 
 import androidx.compose.runtime.compositionLocalOf
+import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.navigation.ElementType
 
 sealed class NavigationRequest {
     data class Element(val type: ElementType) : NavigationRequest()
     data class QuickWizard(val guid: String) : NavigationRequest()
     data class Plugin(val className: String) : NavigationRequest()
+    data class PluginCategory(val type: PluginType) : NavigationRequest()
     data class PluginPreferences(val pluginKey: String) : NavigationRequest()
+    data object TrioStatistics : NavigationRequest()
 }
 
 /**

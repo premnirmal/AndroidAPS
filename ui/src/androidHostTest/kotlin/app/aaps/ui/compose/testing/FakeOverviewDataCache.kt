@@ -76,6 +76,7 @@ class FakeOverviewDataCache : OverviewDataCache {
     override fun updatePredictions(data: List<BgDataPoint>) { predictionsFlow.value = data }
     override fun updateBgInfo(data: BgInfoData?) { bgInfoFlow.value = data }
 
+    override suspend fun hydrateOverviewData() = Unit
     override fun refreshTempTarget() = Unit
     override fun refreshProfile() = Unit
     override fun refreshRunningMode() = Unit

@@ -241,6 +241,18 @@ object AapsTheme {
     val spacing: AapsSpacing get() = AapsSpacing
 }
 
+@Composable
+fun AapsTheme(
+    useSystemTheme: Boolean = false,
+    trioMode: Boolean = false,
+    content: @Composable () -> Unit
+) {
+    val preferences = LocalPreferences.current
+    val darkModeValue by preferences.observe(StringKey.GeneralDarkMode).collectAsState()
+    val uiMode = if (useSystemTheme) UiMode.SYSTEM else UiMode.fromString(darkModeValue)
+    AapsTheme(useSystemTheme, trioMode, uiMode, content)
+}
+
 /**
  * Main AndroidAPS theme wrapper that applies Material 3 theming with custom extensions.
  * Wraps content with Material 3 ColorScheme and provides AndroidAPS-specific theme values.
@@ -269,17 +281,16 @@ object AapsTheme {
  *
  * @param useSystemTheme When true, ignore the stored theme preference and follow the system theme.
  * @param trioMode When true, use the Trio color palette.
+ * @param uiMode The UI mode [UiMode].
  * @param content The composable content to wrap with the theme
  */
 @Composable
 fun AapsTheme(
     useSystemTheme: Boolean = false,
     trioMode: Boolean = false,
+    uiMode: UiMode,
     content: @Composable () -> Unit
 ) {
-    val preferences = LocalPreferences.current
-    val darkModeValue by preferences.observe(StringKey.GeneralDarkMode).collectAsState()
-    val uiMode = if (useSystemTheme) UiMode.SYSTEM else UiMode.fromString(darkModeValue)
 
     val lightColors = if (trioMode) {
         lightColorScheme(
@@ -314,7 +325,8 @@ fun AapsTheme(
     // colorScheme.surface). Reactive — no activity recreate needed.
     SystemBarAppearance(isDark)
 
-    val scheme = if (isDark) darkColors else lightColors
+    val fallbackScheme = if (isDark) darkColors else lightColors
+    val scheme = platformColorScheme(isDark = isDark, fallback = fallbackScheme)
     val profileViewerColors = if (isDark) DarkProfileHelperColors else LightProfileHelperColors
     val treatmentIconColors = if (isDark) DarkElementColors else LightElementColors
     val generalColors = if (isDark) DarkGeneralColors else LightGeneralColors

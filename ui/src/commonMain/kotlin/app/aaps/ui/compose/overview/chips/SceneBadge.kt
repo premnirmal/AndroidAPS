@@ -20,7 +20,7 @@ import app.aaps.core.ui.compose.navigation.icon
  * Shows the scene icon in a colored circle.
  */
 @Composable
-internal fun SceneBadge(modifier: Modifier = Modifier) {
+fun SceneBadge(modifier: Modifier = Modifier) {
     val sceneColor = ElementType.SCENE.color()
     Box(
         modifier = modifier

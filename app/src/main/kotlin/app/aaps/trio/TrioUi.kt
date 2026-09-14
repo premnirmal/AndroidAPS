@@ -18,6 +18,7 @@ interface TrioUi {
     @Composable
     fun bottomBar(
         selectedTab: TrioNavTab,
+        carbsRequired: Int,
         onTabSelected: (TrioNavTab) -> Unit,
         onAddClick: () -> Unit,
         modifier: Modifier
@@ -38,6 +39,7 @@ interface TrioUi {
     fun tabScaffold(
         selectedTab: TrioNavTab,
         title: String,
+        carbsRequired: Int,
         onTabSelected: (TrioNavTab) -> Unit,
         onBolusClick: () -> Unit,
         onCarbsClick: () -> Unit,

@@ -13,8 +13,12 @@ import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.profile.ProfileFunction
 import app.aaps.core.interfaces.profile.ProfileUtil
+import app.aaps.core.interfaces.pump.BolusProgressData
+import app.aaps.core.interfaces.pump.BolusProgressState
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.rx.events.EventAutosensCalculationFinished
+import app.aaps.core.interfaces.rx.events.EventLoopUpdateGui
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.keys.interfaces.Preferences
@@ -22,6 +26,7 @@ import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -45,6 +50,7 @@ internal class ChipsViewModelTest {
     @Mock private lateinit var processedDeviceStatusData: ProcessedDeviceStatusData
     @Mock private lateinit var profileUtil: ProfileUtil
     @Mock private lateinit var activePlugin: ActivePlugin
+    @Mock private lateinit var bolusProgressData: BolusProgressData
     @Mock private lateinit var rh: ResourceHelper
     @Mock private lateinit var decimalFormatter: DecimalFormatter
     @Mock private lateinit var dateUtil: DateUtil
@@ -62,9 +68,12 @@ internal class ChipsViewModelTest {
         Dispatchers.setMain(StandardTestDispatcher())
         whenever(cache.iobGraphFlow).thenReturn(MutableStateFlow(IobGraphData(emptyList(), emptyList())))
         whenever(cache.cobGraphFlow).thenReturn(MutableStateFlow(CobGraphData(emptyList(), emptyList())))
+        whenever(bolusProgressData.state).thenReturn(MutableStateFlow<BolusProgressState?>(null))
+        whenever(rxBus.toFlow(EventAutosensCalculationFinished::class)).thenReturn(emptyFlow())
+        whenever(rxBus.toFlow(EventLoopUpdateGui::class)).thenReturn(emptyFlow())
         sut = ChipsViewModel(
             cache, iobCobCalculator, loop, config, persistenceLayer, constraintChecker, profileFunction,
-            processedDeviceStatusData, profileUtil, activePlugin, rh, decimalFormatter, dateUtil, aapsLogger,
+            processedDeviceStatusData, profileUtil, activePlugin, bolusProgressData, rh, decimalFormatter, dateUtil, aapsLogger,
             preferences, rxBus
         )
     }

@@ -1,5 +1,6 @@
 package app.aaps.ui.compose.overview
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -68,6 +69,7 @@ fun OverviewScreenStacked(
     onDismissScene: () -> Unit = {},
     endSceneEnabled: Boolean = true,
     commandsAllowed: Boolean = true,
+    onBgSourceClick: () -> Unit = {},
     formatDuration: (Long) -> String = { ms -> "${(ms / 60000L).toInt()}m" },
     modifier: Modifier = Modifier
 ) {
@@ -105,7 +107,8 @@ fun OverviewScreenStacked(
             ) {
                 BgInfoSection(
                     bgInfo = bgInfoState.bgInfo,
-                    timeAgoText = bgInfoState.timeAgoText
+                    timeAgoText = bgInfoState.timeAgoText,
+                    modifier = Modifier.clickable(onClick = onBgSourceClick)
                 )
             }
 

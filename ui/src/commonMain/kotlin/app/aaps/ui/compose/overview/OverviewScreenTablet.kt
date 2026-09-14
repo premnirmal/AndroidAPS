@@ -1,5 +1,6 @@
 package app.aaps.ui.compose.overview
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -78,6 +79,7 @@ fun OverviewScreenTablet(
     onDismissScene: () -> Unit = {},
     endSceneEnabled: Boolean = true,
     commandsAllowed: Boolean = true,
+    onBgSourceClick: () -> Unit = {},
     formatDuration: (Long) -> String = { ms -> "${(ms / 60000L).toInt()}m" },
     modifier: Modifier = Modifier
 ) {
@@ -128,7 +130,8 @@ fun OverviewScreenTablet(
                         BgInfoSection(
                             bgInfo = bgInfoState.bgInfo,
                             timeAgoText = bgInfoState.timeAgoText,
-                            showTimeAgo = false
+                            showTimeAgo = false,
+                            modifier = Modifier.clickable(onClick = onBgSourceClick)
                         )
                     }
 

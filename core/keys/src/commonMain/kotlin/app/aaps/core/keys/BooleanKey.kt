@@ -30,6 +30,15 @@ enum class BooleanKey(
 ) : BooleanPreferenceKey {
 
     GeneralSimpleMode(key = "simple_mode", defaultValue = true, title = KeysStrings.pref_title_simple_mode, sync = SyncSpec(SyncChannel.Cold, SyncDirection.Bidirectional)),
+    GeneralTrioMode(
+        key = "trio_mode",
+        defaultValue = true,
+        title = KeysStrings.pref_title_trio_mode,
+        summary = KeysStrings.pref_summary_trio_mode,
+        platforms = AppPlatform.ANDROID_ONLY,
+        showInNsClientMode = false,
+        showInPumpControlMode = false
+    ),
     GeneralInsulinConcentration(
         key = "insulin_concentration_enabled", defaultValue = false, title = KeysStrings.pref_title_insulin_concentration, summary = KeysStrings.pref_summary_insulin_concentration,
         defaultedBySM = true,

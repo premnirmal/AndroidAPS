@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.RM
 import app.aaps.core.data.model.TT
@@ -43,6 +44,7 @@ import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import app.aaps.ui.compose.overview.statusLights.StatusViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.StateFlow
 
 private val SPLIT_LAYOUT_MIN_WIDTH: Dp = 720.dp
 
@@ -52,6 +54,8 @@ fun OverviewScreen(
     profilePsId: Long = 0,
     isProfileModified: Boolean,
     profileProgress: Float,
+    profilePercentage: Int = 100,
+    profileTargetRangeText: String = "",
     tempTargetText: String,
     tempTargetState: TempTargetChipState,
     tempTargetProgress: Float,
@@ -62,10 +66,12 @@ fun OverviewScreen(
     runningModeRemaining: String,
     runningModeProgress: Float,
     runningModeRecordId: Long = 0,
+    lastLoopAgeMillis: Long? = null,
     tbrState: TbrState,
     smbEnabled: Boolean,
     isSimpleMode: Boolean,
     calcProgress: Int,
+    calcProgressFlow: StateFlow<Int>,
     graphViewModel: GraphViewModel,
     chipsViewModel: ChipsViewModel,
     manageViewModel: ManageViewModel,
@@ -74,7 +80,7 @@ fun OverviewScreen(
     onNavigate: (NavigationRequest) -> Unit,
     onTbrChipClick: () -> Unit,
     onIobChipClick: () -> Unit,
-    notifications: List<AapsNotification>,
+    notificationsFlow: StateFlow<List<AapsNotification>>,
     onDismissNotification: (AapsNotification) -> Unit,
     onNotificationActionClick: (AapsNotification) -> Unit,
     autoShowNotificationSheet: Boolean,
@@ -89,7 +95,7 @@ fun OverviewScreen(
     formatDuration: (Long) -> String = { ms -> "${(ms / 60000L).toInt()}m" },
     paddingValues: PaddingValues,
     fabBottomOffset: Dp = 0.dp,
-    bolusState: BolusProgressState? = null,
+    bolusStateFlow: StateFlow<BolusProgressState?>,
     pumpStatusText: String = "",
     queueStatusText: AnnotatedString? = null,
     isPumpCommunicating: Boolean = false,
@@ -97,13 +103,28 @@ fun OverviewScreen(
     isTrio: Boolean = false,
     trioOverview: @Composable (TrioOverviewModel) -> Unit = {},
     pumpNeedsSetup: Boolean = false,
+    pumpEndTimeMillis: Long? = null,
+    reservoirUnits: Double? = null,
     onBgSourceClick: () -> Unit = {},
-    timeInRangeTodayPercent: Int? = null,
+    timeInRangeTodayPercentFlow: StateFlow<Int?>,
     modifier: Modifier = Modifier
 ) {
+    val notifications by notificationsFlow.collectAsStateWithLifecycle()
+    val bolusState by bolusStateFlow.collectAsStateWithLifecycle()
+    var dismissedNotificationKeys by remember { mutableStateOf(emptySet<Int>()) }
+    val visibleNotifications = notifications.filterNot { it.instanceKey in dismissedNotificationKeys }
+    val dismissNotification: (AapsNotification) -> Unit = { notification ->
+        dismissedNotificationKeys = dismissedNotificationKeys + notification.instanceKey
+        onDismissNotification(notification)
+    }
     var showNotificationSheet by remember { mutableStateOf(false) }
     var showPumpActivityDialog by remember { mutableStateOf(false) }
-    val showPumpFab = isPumpCommunicating || (bolusState != null && bolusState.isSMB)
+
+    LaunchedEffect(notifications) {
+        val activeKeys = notifications.mapTo(mutableSetOf()) { it.instanceKey }
+        dismissedNotificationKeys = dismissedNotificationKeys.intersect(activeKeys)
+    }
+    val showPumpFab = isPumpCommunicating || bolusState?.isSMB == true
 
     LaunchedEffect(showPumpFab) {
         if (!showPumpFab && showPumpActivityDialog) {
@@ -112,8 +133,8 @@ fun OverviewScreen(
         }
     }
 
-    LaunchedEffect(autoShowNotificationSheet) {
-        if (autoShowNotificationSheet) {
+    LaunchedEffect(autoShowNotificationSheet, isTrio) {
+        if (autoShowNotificationSheet && !isTrio) {
             showNotificationSheet = true
             onAutoShowConsumed()
         }
@@ -137,6 +158,8 @@ fun OverviewScreen(
                     isProfileModified = isProfileModified,
                     profileProgress = profileProgress,
                     profileSceneManaged = profileSceneManaged,
+                    profilePercentage = profilePercentage,
+                    profileTargetRangeText = profileTargetRangeText,
                     tempTargetText = tempTargetText,
                     tempTargetState = tempTargetState,
                     tempTargetProgress = tempTargetProgress,
@@ -147,9 +170,10 @@ fun OverviewScreen(
                     runningModeRemaining = runningModeRemaining,
                     runningModeProgress = runningModeProgress,
                     runningModeSceneManaged = runningModeSceneManaged,
+                    lastLoopAgeMillis = lastLoopAgeMillis,
                     smbEnabled = smbEnabled,
-                    isSimpleMode = isSimpleMode,
                     tbrState = tbrState,
+                    calcProgressFlow = calcProgressFlow,
                     graphViewModel = graphViewModel,
                     chipsViewModel = chipsViewModel,
                     onNavigate = onNavigate,
@@ -163,13 +187,17 @@ fun OverviewScreen(
                     endSceneEnabled = endSceneEnabled,
                     commandsAllowed = commandsAllowed,
                     pumpNeedsSetup = pumpNeedsSetup,
+                    pumpEndTimeMillis = pumpEndTimeMillis,
+                    reservoirUnits = reservoirUnits,
                     onBgSourceClick = onBgSourceClick,
-                    notificationCount = notifications.size,
-                    highestNotificationLevel = notifications.minByOrNull { it.level.ordinal }?.level,
-                    onNotificationClick = { showNotificationSheet = true },
-                    bolusState = bolusState,
+                    notificationsFlow = notificationsFlow,
+                    onDismissNotification = onDismissNotification,
+                    onNotificationActionClick = onNotificationActionClick,
+                    autoShowNotificationSheet = autoShowNotificationSheet,
+                    onAutoShowConsumed = onAutoShowConsumed,
+                    bolusStateFlow = bolusStateFlow,
                     onStopBolus = onStopBolus,
-                    timeInRangeTodayPercent = timeInRangeTodayPercent,
+                    timeInRangeTodayPercentFlow = timeInRangeTodayPercentFlow,
                     formatDuration = formatDuration
                 )
             )
@@ -207,6 +235,7 @@ fun OverviewScreen(
                 onDismissScene = onDismissScene,
                 endSceneEnabled = endSceneEnabled,
                 commandsAllowed = commandsAllowed,
+                onBgSourceClick = onBgSourceClick,
                 formatDuration = formatDuration
             )
         } else BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -244,6 +273,7 @@ fun OverviewScreen(
                     onDismissScene = onDismissScene,
                     endSceneEnabled = endSceneEnabled,
                     commandsAllowed = commandsAllowed,
+                    onBgSourceClick = onBgSourceClick,
                     formatDuration = formatDuration
                 )
             } else {
@@ -280,6 +310,7 @@ fun OverviewScreen(
                     onDismissScene = onDismissScene,
                     endSceneEnabled = endSceneEnabled,
                     commandsAllowed = commandsAllowed,
+                    onBgSourceClick = onBgSourceClick,
                     formatDuration = formatDuration
                 )
             }
@@ -288,7 +319,7 @@ fun OverviewScreen(
         // Calculation progress (IOB / graph data). Overlaid on top of content so it never reflows
         // the layout — previously a flow child of the content Column which caused the screen to jump.
         AnimatedVisibility(
-            visible = calcProgress < 100,
+            visible = calcProgress < 100 && !isTrio,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
@@ -316,8 +347,8 @@ fun OverviewScreen(
 
         if (!isTrio) {
             NotificationFab(
-                notificationCount = notifications.size,
-                highestLevel = notifications.minByOrNull { it.level.ordinal }?.level,
+                notificationCount = visibleNotifications.size,
+                highestLevel = visibleNotifications.minByOrNull { it.level.ordinal }?.level,
                 onClick = { showNotificationSheet = true },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -338,11 +369,11 @@ fun OverviewScreen(
         )
     }
 
-    if (showNotificationSheet && notifications.isNotEmpty()) {
+    if (!isTrio && showNotificationSheet && visibleNotifications.isNotEmpty()) {
         NotificationBottomSheet(
-            notifications = notifications,
+            notifications = visibleNotifications,
             onDismissSheet = { showNotificationSheet = false },
-            onDismissNotification = onDismissNotification,
+            onDismissNotification = dismissNotification,
             onNotificationActionClick = onNotificationActionClick
         )
     }

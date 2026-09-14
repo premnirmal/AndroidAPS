@@ -77,6 +77,7 @@ class BuiltInSearchables @Inject constructor(
                         rh.gs(CoreUiStrings.simple_mode_blocked_by_concentration)
                     else null
                 },
+                BooleanKey.GeneralTrioMode,
                 BooleanKey.GeneralInsulinConcentration.withChangeGuard { newValue ->
                     if (!newValue && hasNonU100Insulin())
                         rh.gs(CoreUiStrings.concentration_disable_blocked)

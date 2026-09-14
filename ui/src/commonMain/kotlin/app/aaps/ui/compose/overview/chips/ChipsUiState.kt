@@ -17,6 +17,7 @@ data class IobUiState(
 @Immutable
 data class CobUiState(
     val text: String = "",
+    val baseText: String = "",
     val carbsReq: Int = 0,
     val cobValue: Double = 0.0
 )

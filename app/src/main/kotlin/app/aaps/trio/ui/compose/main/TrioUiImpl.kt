@@ -24,12 +24,14 @@ class TrioUiImpl @Inject constructor() : TrioUi {
     @Composable
     override fun bottomBar(
         selectedTab: TrioNavTab,
+        carbsRequired: Int,
         onTabSelected: (TrioNavTab) -> Unit,
         onAddClick: () -> Unit,
         modifier: Modifier
     ) {
         TrioBottomBar(
             selectedTab = selectedTab,
+            carbsRequired = carbsRequired,
             onTabSelected = onTabSelected,
             onAddClick = onAddClick,
             modifier = modifier
@@ -53,52 +55,14 @@ class TrioUiImpl @Inject constructor() : TrioUi {
 
     @Composable
     override fun overview(model: TrioOverviewModel) {
-        TrioOverviewScreen(
-            profileName = model.profileName,
-            isProfileModified = model.isProfileModified,
-            profileProgress = model.profileProgress,
-            profileSceneManaged = model.profileSceneManaged,
-            tempTargetText = model.tempTargetText,
-            tempTargetState = model.tempTargetState,
-            tempTargetProgress = model.tempTargetProgress,
-            tempTargetReason = model.tempTargetReason,
-            tempTargetSceneManaged = model.tempTargetSceneManaged,
-            runningMode = model.runningMode,
-            runningModeText = model.runningModeText,
-            runningModeRemaining = model.runningModeRemaining,
-            runningModeProgress = model.runningModeProgress,
-            runningModeSceneManaged = model.runningModeSceneManaged,
-            smbEnabled = model.smbEnabled,
-            isSimpleMode = model.isSimpleMode,
-            tbrState = model.tbrState,
-            graphViewModel = model.graphViewModel,
-            chipsViewModel = model.chipsViewModel,
-            onNavigate = model.onNavigate,
-            onTbrChipClick = model.onTbrChipClick,
-            onIobChipClick = model.onIobChipClick,
-            paddingValues = model.paddingValues,
-            activeSceneState = model.activeSceneState,
-            sceneExpired = model.sceneExpired,
-            onEndScene = model.onEndScene,
-            onDismissScene = model.onDismissScene,
-            endSceneEnabled = model.endSceneEnabled,
-            commandsAllowed = model.commandsAllowed,
-            pumpNeedsSetup = model.pumpNeedsSetup,
-            onBgSourceClick = model.onBgSourceClick,
-            notificationCount = model.notificationCount,
-            highestNotificationLevel = model.highestNotificationLevel,
-            onNotificationClick = model.onNotificationClick,
-            bolusState = model.bolusState,
-            onStopBolus = model.onStopBolus,
-            timeInRangeTodayPercent = model.timeInRangeTodayPercent,
-            formatDuration = model.formatDuration
-        )
+        TrioOverviewScreen(model)
     }
 
     @Composable
     override fun tabScaffold(
         selectedTab: TrioNavTab,
         title: String,
+        carbsRequired: Int,
         onTabSelected: (TrioNavTab) -> Unit,
         onBolusClick: () -> Unit,
         onCarbsClick: () -> Unit,
@@ -110,6 +74,7 @@ class TrioUiImpl @Inject constructor() : TrioUi {
         TrioTabScaffold(
             selectedTab = selectedTab,
             title = title,
+            carbsRequired = carbsRequired,
             onTabSelected = onTabSelected,
             onBolusClick = onBolusClick,
             onCarbsClick = onCarbsClick,

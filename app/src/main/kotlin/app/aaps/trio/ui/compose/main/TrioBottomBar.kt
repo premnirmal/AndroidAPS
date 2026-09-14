@@ -12,6 +12,8 @@ import androidx.compose.material.icons.filled.AreaChart
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -19,6 +21,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemColors
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +39,7 @@ private val FAB_VERTICAL_OFFSET = AapsSpacing.medium - AapsSpacing.extraSmall
 @Composable
 fun TrioBottomBar(
     selectedTab: TrioNavTab,
+    carbsRequired: Int,
     onTabSelected: (TrioNavTab) -> Unit,
     onAddClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -57,7 +61,30 @@ fun TrioBottomBar(
                 selected = selectedTab == TrioNavTab.Overview,
                 onClick = { onTabSelected(TrioNavTab.Overview) },
                 label = stringResource(R.string.trio_tab_home),
-                icon = { Icon(imageVector = Icons.Default.AreaChart, contentDescription = null) },
+                icon = {
+                    val label = stringResource(R.string.trio_tab_home)
+                    BadgedBox(
+                        badge = {
+                            if (carbsRequired > 0) {
+                                Badge {
+                                    Text(
+                                        text = stringResource(R.string.trio_carbs_required_badge, carbsRequired),
+                                        modifier = Modifier.padding(horizontal = AapsSpacing.small)
+                                    )
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AreaChart,
+                            contentDescription = if (carbsRequired > 0) {
+                                stringResource(R.string.trio_tab_carbs_required, label, carbsRequired)
+                            } else {
+                                label
+                            }
+                        )
+                    }
+                },
                 colors = colors
             )
             TrioTabItem(
@@ -125,6 +152,7 @@ private fun TrioBottomBarPreview() {
     AapsTheme {
         TrioBottomBar(
             selectedTab = TrioNavTab.Overview,
+            carbsRequired = 23,
             onTabSelected = {},
             onAddClick = {}
         )

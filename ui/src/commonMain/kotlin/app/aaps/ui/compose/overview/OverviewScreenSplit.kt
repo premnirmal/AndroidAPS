@@ -1,5 +1,6 @@
 package app.aaps.ui.compose.overview
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -70,6 +71,7 @@ fun OverviewScreenSplit(
     onDismissScene: () -> Unit = {},
     endSceneEnabled: Boolean = true,
     commandsAllowed: Boolean = true,
+    onBgSourceClick: () -> Unit = {},
     formatDuration: (Long) -> String = { ms -> "${(ms / 60000L).toInt()}m" },
     modifier: Modifier = Modifier
 ) {
@@ -119,7 +121,8 @@ fun OverviewScreenSplit(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         BgInfoSection(
                             bgInfo = bgInfoState.bgInfo,
-                            timeAgoText = bgInfoState.timeAgoText
+                            timeAgoText = bgInfoState.timeAgoText,
+                            modifier = Modifier.clickable(onClick = onBgSourceClick)
                         )
                     }
 

@@ -25,11 +25,15 @@ import app.aaps.core.interfaces.overview.graph.GraphConfig
 import app.aaps.core.interfaces.overview.graph.GraphConfigRepository
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.profile.ProfileFunction
+import app.aaps.core.interfaces.pump.BolusProgressData
+import app.aaps.core.interfaces.pump.BolusProgressState
 import app.aaps.core.interfaces.pump.PumpWithConcentration
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventCustomActionsChanged
+import app.aaps.core.interfaces.rx.events.EventAutosensCalculationFinished
 import app.aaps.core.interfaces.rx.events.EventInitializationChanged
+import app.aaps.core.interfaces.rx.events.EventLoopUpdateGui
 import app.aaps.core.interfaces.rx.events.EventNsClientStatusUpdated
 import app.aaps.core.interfaces.rx.events.EventPumpStatusChanged
 import app.aaps.core.interfaces.source.BgSource
@@ -81,6 +85,7 @@ internal class OverviewViewModelFixture(private val screen: AapsScreenFixture) {
     val rxBus: RxBus = mock()
     val persistenceLayer: PersistenceLayer = mock()
     val activePlugin: ActivePlugin = mock()
+    val bolusProgressData: BolusProgressData = mock()
     val profileFunction: ProfileFunction = mock()
     val loop: Loop = mock()
 
@@ -154,7 +159,10 @@ internal class OverviewViewModelFixture(private val screen: AapsScreenFixture) {
         whenever(activePump.batteryLevel).thenReturn(MutableStateFlow<Int?>(null))
         whenever(pumpPlugin.pumpDescription).thenReturn(pumpDescription)
         whenever(pumpPlugin.batteryLevel).thenReturn(MutableStateFlow<Int?>(null))
+        whenever(bolusProgressData.state).thenReturn(MutableStateFlow<BolusProgressState?>(null))
+        whenever(rxBus.toFlow(EventAutosensCalculationFinished::class)).thenReturn(emptyFlow())
         whenever(rxBus.toFlow(EventInitializationChanged::class)).thenReturn(emptyFlow())
+        whenever(rxBus.toFlow(EventLoopUpdateGui::class)).thenReturn(emptyFlow())
         whenever(rxBus.toFlow(EventPumpStatusChanged::class)).thenReturn(emptyFlow())
         whenever(rxBus.toFlow(EventNsClientStatusUpdated::class)).thenReturn(emptyFlow())
         whenever(rxBus.toFlow(EventCustomActionsChanged::class)).thenReturn(emptyFlow())
@@ -172,7 +180,7 @@ internal class OverviewViewModelFixture(private val screen: AapsScreenFixture) {
     val chipsViewModel: ChipsViewModel by lazy {
         ChipsViewModel(
             cache, iobCobCalculator, loop, screen.config, persistenceLayer, constraintChecker, profileFunction,
-            processedDeviceStatusData, screen.profileUtil, activePlugin, rh, decimalFormatter, screen.dateUtil,
+            processedDeviceStatusData, screen.profileUtil, activePlugin, bolusProgressData, rh, decimalFormatter, screen.dateUtil,
             aapsLogger, screen.preferences, rxBus
         )
     }

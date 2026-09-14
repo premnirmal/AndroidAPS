@@ -22,6 +22,7 @@ import app.aaps.ui.compose.main.TrioNavTab
 fun TrioTabScaffold(
     selectedTab: TrioNavTab,
     title: String,
+    carbsRequired: Int,
     onTabSelected: (TrioNavTab) -> Unit,
     onBolusClick: () -> Unit,
     onCarbsClick: () -> Unit,
@@ -48,6 +49,7 @@ fun TrioTabScaffold(
         bottomBar = {
             TrioBottomBar(
                 selectedTab = selectedTab,
+                carbsRequired = carbsRequired,
                 onTabSelected = onTabSelected,
                 onAddClick = { showAddSheet = true }
             )
@@ -82,6 +84,7 @@ private fun TrioTabScaffoldPreview() {
         TrioTabScaffold(
             selectedTab = TrioNavTab.Adjustments,
             title = "Adjustments",
+            carbsRequired = 23,
             onTabSelected = {},
             onBolusClick = {},
             onCarbsClick = {},

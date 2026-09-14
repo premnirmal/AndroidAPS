@@ -113,6 +113,7 @@ import app.aaps.ui.compose.scenes.wizard.SceneWizardScreen
 import app.aaps.ui.compose.siteRotationDialog.SiteRotationManagementScreen
 import app.aaps.ui.compose.siteRotationDialog.viewModels.SiteRotationManagementViewModel
 import app.aaps.ui.compose.stats.StatsScreen
+import app.aaps.ui.compose.stats.TrioStatsScreen
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import app.aaps.ui.compose.tempBasalDialog.TempBasalDialogScreen
 import app.aaps.ui.compose.tempTarget.TempTargetManagementScreen
@@ -534,7 +535,7 @@ fun NavGraphBuilder.appNavGraph(
             trioTabScaffold(
                 TrioNavTab.Treatments,
                 stringResource(CoreUiStrings.treatments),
-                true,
+                false,
                 {}
             ) { paddingValues ->
                 Box(
@@ -544,8 +545,7 @@ fun NavGraphBuilder.appNavGraph(
                 ) {
                     TreatmentsScreen(
                         viewModel = treatmentsViewModel,
-                        onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
-                        showTopBar = false
+                        onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) }
                     )
                 }
             }
@@ -581,6 +581,15 @@ fun NavGraphBuilder.appNavGraph(
             viewModel = statsViewModel,
             onNavigateBack = { navController.safePopBackStack() }
         )
+    }
+
+    if (isTrio) {
+        composable(AppRoute.TrioStats.route) {
+            TrioStatsScreen(
+                viewModel = statsViewModel,
+                onNavigateBack = { navController.safePopBackStack() }
+            )
+        }
     }
 
     composable(AppRoute.ProfileHelper.route) {
@@ -740,7 +749,10 @@ fun NavGraphBuilder.appNavGraph(
                         configBuilder = configBuilder,
                         onBackClick = { onNavigateToTrioTab(TrioNavTab.Overview) },
                         showTopBar = false,
-                        showSimpleModeHiddenPreferences = true
+                        showSimpleModeHiddenPreferences = true,
+                        onConfigurationClick = {
+                            navController.navigate(AppRoute.Configuration.route)
+                        }
                     )
                 }
             }

@@ -89,7 +89,7 @@ enum class StringKey(
     ),
     GeneralDarkMode(
         key = "use_dark_mode",
-        defaultValue = "dark",
+        defaultValue = "system",
         title = KeysStrings.pref_title_app_color_scheme,
         summary = KeysStrings.pref_summary_theme_switcher,
         preferenceType = PreferenceType.LIST,

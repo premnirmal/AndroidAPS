@@ -27,7 +27,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -68,6 +67,7 @@ import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
+import app.aaps.core.interfaces.notifications.NotificationHandle
 import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
@@ -87,14 +87,12 @@ import app.aaps.core.interfaces.sync.NsClient
 import app.aaps.core.interfaces.ui.IconsProvider
 import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.core.interfaces.utils.DateUtil
-import app.aaps.core.interfaces.utils.MidnightTime
 import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.interfaces.ui.UiRestart
 import app.aaps.core.keys.StringKey
-import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.VisibilityContext
 import app.aaps.core.objects.crypto.CryptoUtil
@@ -152,11 +150,9 @@ import app.aaps.ui.search.SearchViewModel
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dev.zacsweers.metro.Inject
 import io.reactivex.rxjava3.disposables.CompositeDisposable
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
 import app.aaps.core.ui.R as CoreUiR
 
 class ComposeMainActivity : MetroAppCompatActivity() {
@@ -333,7 +329,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             clientControlActionDispatcher = clientControlActionDispatcher,
             // The two per-build bitmaps the shared root cannot paint itself.
             appIcon = { modifier -> Image(painterResource(iconsProvider.getIcon()), null, modifier) },
-            splashLogo = { modifier -> Image(painterResource(CoreUiR.drawable.splash_logo), null, modifier) },
+            splashLogo = { modifier -> Image(painterResource(CoreUiR.mipmap.ic_launcher_round), null, modifier) },
             // The Activity keeps a reference so an incoming intent can route without the composition.
             onNavControllerReady = { navController = it },
             onClose = { finish() },
@@ -454,6 +450,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         }
 
         val state by mainViewModel.uiState.collectAsStateWithLifecycle()
+        val cobUiState by chipsViewModel.cobUiState.collectAsStateWithLifecycle()
         val bolusState by bolusProgressData.state.collectAsStateWithLifecycle()
         val pumpStatusBanner by pumpCommunicationStatus.statusBannerFlow.collectAsStateWithLifecycle()
         val pumpQueueStatus by pumpCommunicationStatus.queueStatusFlow.collectAsStateWithLifecycle()
@@ -463,27 +460,14 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             startDestination = AppRoute.Main.route
         ) {
             composable(AppRoute.Main.route) {
+                val state by mainViewModel.uiState.collectAsStateWithLifecycle()
+                val pumpStatusBanner by pumpCommunicationStatus.statusBannerFlow.collectAsStateWithLifecycle()
+                val pumpQueueStatus by pumpCommunicationStatus.queueStatusFlow.collectAsStateWithLifecycle()
                 val searchState by searchViewModel.uiState.collectAsStateWithLifecycle()
                 val currentBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = currentBackStackEntry?.destination?.route
                 val calcProgress by mainViewModel.calcProgressFlow.collectAsStateWithLifecycle()
-                val notifications by notificationManager.notifications.collectAsStateWithLifecycle()
                 val quickLaunchItems by mainViewModel.quickLaunchItems.collectAsStateWithLifecycle()
-                val timeInRangeTodayPercent by produceState<Int?>(initialValue = null, calcProgress) {
-                    value = withContext(Dispatchers.IO) {
-                        val start = MidnightTime.calc(dateUtil.now())
-                        val end = dateUtil.now()
-                        val lowMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewLowMark))
-                        val highMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewHighMark))
-                        val readings = persistenceLayer.getBgReadingsDataFromTimeToTime(start, end, true)
-                            .filter { it.value >= 39.0 }
-                        if (readings.isEmpty()) null
-                        else {
-                            val inRange = readings.count { it.value in lowMgdl..highMgdl }
-                            (inRange * 100.0 / readings.size).roundToInt()
-                        }
-                    }
-                }
 
                 // Pump setup button in bottom bar
                 val pumpPlugin = activePlugin.activePumpInternal as PluginBase
@@ -577,9 +561,10 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     trioTopBar = { title, modifier ->
                         trioUi.topBar(title = title, modifier = modifier)
                     },
-                    trioBottomBar = { selectedTab, onTabSelected, onAddClick, modifier ->
+                    trioBottomBar = { selectedTab, carbsRequired, onTabSelected, onAddClick, modifier ->
                         trioUi.bottomBar(
                             selectedTab = selectedTab,
+                            carbsRequired = carbsRequired,
                             onTabSelected = onTabSelected,
                             onAddClick = onAddClick,
                             modifier = modifier
@@ -634,9 +619,9 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     },
                     onRecreateActivity = { recreate() },
                     // Notifications
-                    notifications = notifications,
+                    notificationsFlow = notificationManager.notifications,
                     onDismissNotification = { notification ->
-                        notificationManager.dismiss(notification.id)
+                        notificationManager.dismiss(NotificationHandle(notification.instanceKey))
                     },
                     onNotificationActionClick = { notification ->
                         handleNotificationAction(notification.id, navController)
@@ -644,7 +629,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     autoShowNotificationSheet = _autoShowNotifications.value,
                     onAutoShowConsumed = { _autoShowNotifications.value = false },
                     pumpSetupPlugin = pumpSetupPlugin,
-                    bgSourcePlugin = bgSourcePlugin,
                     bgSetupPlugin = bgSetupPlugin,
                     bgQualityBadgeIcon = bgQualityBadgeIcon,
                     bgQualityBadgeTint = bgQualityBadgeTint,
@@ -664,11 +648,10 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     statusLightsDef = builtInSearchables.statusLights,
                     treatmentButtonsDef = builtInSearchables.treatmentButtons,
                     // Pump activity
-                    bolusState = bolusState,
+                    bolusStateFlow = bolusProgressData.state,
                     pumpStatusText = pumpStatusBanner?.text ?: "",
                     queueStatusText = pumpQueueStatus,
                     isPumpCommunicating = pumpStatusBanner != null,
-                    timeInRangeTodayPercent = timeInRangeTodayPercent,
                     onStopBolus = {
                         if (config.AAPSCLIENT) {
                             clientControlActionDispatcher.stopBolus()
@@ -740,6 +723,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     trioUi.tabScaffold(
                         selectedTab = selectedTab,
                         title = title,
+                        carbsRequired = cobUiState.carbsReq,
                         onTabSelected = { tab -> navigateToTrioTab(tab, navController) },
                         onBolusClick = { handleNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
                         onCarbsClick = { handleNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
@@ -859,6 +843,9 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         // Language change requires full restart to reload resources
         lifecycleScope.launch {
             preferences.observe(StringKey.GeneralLanguage).drop(1).collect { recreate() }
+        }
+        lifecycleScope.launch {
+            preferences.observe(BooleanKey.GeneralTrioMode).drop(1).collect { recreate() }
         }
         // The same rebuild, asked for by code that cannot reach this activity - an import applying
         // its settings, for one. Android answers it by recreating, because that is the only thing

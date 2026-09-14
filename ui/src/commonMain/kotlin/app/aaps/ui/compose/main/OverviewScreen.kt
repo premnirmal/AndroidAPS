@@ -112,10 +112,8 @@ fun OverviewScreen(
     val state by mainViewModel.uiState.collectAsStateWithLifecycle()
     val searchState by searchViewModel.uiState.collectAsStateWithLifecycle()
     val calcProgress by mainViewModel.calcProgressFlow.collectAsStateWithLifecycle()
-    val notifications by notificationManager.notifications.collectAsStateWithLifecycle()
     val quickLaunchItems by mainViewModel.quickLaunchItems.collectAsStateWithLifecycle()
     val permState by permissionsViewModel.uiState.collectAsStateWithLifecycle()
-    val bolusState by bolusProgressData.state.collectAsStateWithLifecycle()
     val pumpStatusBanner by pumpCommunicationStatus.statusBannerFlow.collectAsStateWithLifecycle()
     val pumpQueueStatus by pumpCommunicationStatus.queueStatusFlow.collectAsStateWithLifecycle()
 
@@ -214,7 +212,7 @@ fun OverviewScreen(
         onImportSettingsNavigate = onImportSettingsNavigate,
         onRecreateActivity = onRecreateActivity,
         // Notifications
-        notifications = notifications,
+        notificationsFlow = notificationManager.notifications,
         onDismissNotification = { notification -> notificationManager.dismiss(notification.id) },
         onNotificationActionClick = onNotificationActionClick,
         autoShowNotificationSheet = autoShowNotificationSheet,
@@ -237,7 +235,7 @@ fun OverviewScreen(
         statusLightsDef = builtInSearchables.statusLights,
         treatmentButtonsDef = builtInSearchables.treatmentButtons,
         // Pump activity
-        bolusState = bolusState,
+        bolusStateFlow = bolusProgressData.state,
         pumpStatusText = pumpStatusBanner?.text ?: "",
         queueStatusText = pumpQueueStatus,
         isPumpCommunicating = pumpStatusBanner != null,

@@ -4,19 +4,22 @@ import androidx.compose.foundation.layout.PaddingValues
 import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.RM
 import app.aaps.core.data.model.TT
-import app.aaps.core.interfaces.notifications.NotificationLevel
+import app.aaps.core.interfaces.notifications.AapsNotification
 import app.aaps.core.interfaces.overview.graph.TbrState
 import app.aaps.core.interfaces.pump.BolusProgressState
 import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.ui.compose.main.TempTargetChipState
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
+import kotlinx.coroutines.flow.StateFlow
 
 data class TrioOverviewModel(
     val profileName: String,
     val isProfileModified: Boolean,
     val profileProgress: Float,
     val profileSceneManaged: Boolean,
+    val profilePercentage: Int,
+    val profileTargetRangeText: String,
     val tempTargetText: String,
     val tempTargetState: TempTargetChipState,
     val tempTargetProgress: Float,
@@ -27,9 +30,10 @@ data class TrioOverviewModel(
     val runningModeRemaining: String,
     val runningModeProgress: Float,
     val runningModeSceneManaged: Boolean,
+    val lastLoopAgeMillis: Long?,
     val smbEnabled: Boolean,
-    val isSimpleMode: Boolean,
     val tbrState: TbrState,
+    val calcProgressFlow: StateFlow<Int>,
     val graphViewModel: GraphViewModel,
     val chipsViewModel: ChipsViewModel,
     val onNavigate: (NavigationRequest) -> Unit,
@@ -43,12 +47,16 @@ data class TrioOverviewModel(
     val endSceneEnabled: Boolean,
     val commandsAllowed: Boolean,
     val pumpNeedsSetup: Boolean,
+    val pumpEndTimeMillis: Long?,
+    val reservoirUnits: Double?,
     val onBgSourceClick: () -> Unit,
-    val notificationCount: Int,
-    val highestNotificationLevel: NotificationLevel?,
-    val onNotificationClick: () -> Unit,
-    val bolusState: BolusProgressState?,
+    val notificationsFlow: StateFlow<List<AapsNotification>>,
+    val onDismissNotification: (AapsNotification) -> Unit,
+    val onNotificationActionClick: (AapsNotification) -> Unit,
+    val autoShowNotificationSheet: Boolean,
+    val onAutoShowConsumed: () -> Unit,
+    val bolusStateFlow: StateFlow<BolusProgressState?>,
     val onStopBolus: () -> Unit,
-    val timeInRangeTodayPercent: Int?,
+    val timeInRangeTodayPercentFlow: StateFlow<Int?>,
     val formatDuration: (Long) -> String
 )

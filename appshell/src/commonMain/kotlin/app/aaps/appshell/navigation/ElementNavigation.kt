@@ -65,9 +65,15 @@ class ElementNavigator(
                 openPlugin(plugin, navController, activePlugin)
             }
 
+            is NavigationRequest.PluginCategory    -> guarded(ElementType.CONFIGURATION.protection) {
+                navController.navigate(AppRoute.PluginCategory.createRoute(request.type.ordinal))
+            }
+
             is NavigationRequest.PluginPreferences -> guarded(ElementType.SETTINGS.protection) {
                 navController.navigate(AppRoute.PluginPreferences.createRoute(request.pluginKey))
             }
+
+            NavigationRequest.TrioStatistics       -> navController.navigate(AppRoute.TrioStats.route)
         }
     }
 
