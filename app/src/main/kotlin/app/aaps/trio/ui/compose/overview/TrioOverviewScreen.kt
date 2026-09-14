@@ -1,5 +1,6 @@
 package app.aaps.trio.ui.compose.overview
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -19,6 +20,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
@@ -39,14 +41,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.RM
 import app.aaps.core.data.model.TT
+import app.aaps.core.data.model.TrendArrow
 import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.interfaces.notifications.NotificationLevel
+import app.aaps.core.interfaces.overview.graph.BgInfoData
+import app.aaps.core.interfaces.overview.graph.BgRange
 import app.aaps.core.interfaces.overview.graph.TbrState
 import app.aaps.core.interfaces.pump.BolusProgressState
+import app.aaps.core.ui.UiMode
 import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.icons.Pump
@@ -121,6 +130,106 @@ fun TrioOverviewScreen(
         if (value >= 40.0) value.roundToInt().toString()
         else String.format(Locale.getDefault(), "%.1f", value)
     } ?: stringResource(app.aaps.core.ui.R.string.value_unavailable_short)
+
+    TrioOverviewContent(
+        profileName = profileName,
+        isProfileModified = isProfileModified,
+        profileProgress = profileProgress,
+        profileSceneManaged = profileSceneManaged,
+        tempTargetText = tempTargetText,
+        tempTargetState = tempTargetState,
+        tempTargetProgress = tempTargetProgress,
+        tempTargetReason = tempTargetReason,
+        tempTargetSceneManaged = tempTargetSceneManaged,
+        runningMode = runningMode,
+        runningModeText = runningModeText,
+        runningModeRemaining = runningModeRemaining,
+        runningModeProgress = runningModeProgress,
+        runningModeSceneManaged = runningModeSceneManaged,
+        smbEnabled = smbEnabled,
+        tbrState = tbrState,
+        bgInfo = bgInfoState.bgInfo,
+        bgTimeAgoText = bgInfoState.timeAgoText,
+        sensitivityUiState = sensitivityUiState,
+        iobUiState = iobUiState,
+        cobUiState = cobUiState,
+        predictedText = predictedText,
+        onNavigate = onNavigate,
+        onTbrChipClick = onTbrChipClick,
+        onIobChipClick = onIobChipClick,
+        paddingValues = paddingValues,
+        activeSceneState = activeSceneState,
+        sceneExpired = sceneExpired,
+        onEndScene = onEndScene,
+        onDismissScene = onDismissScene,
+        endSceneEnabled = endSceneEnabled,
+        commandsAllowed = commandsAllowed,
+        pumpNeedsSetup = pumpNeedsSetup,
+        notificationCount = notificationCount,
+        highestNotificationLevel = highestNotificationLevel,
+        onNotificationClick = onNotificationClick,
+        bolusState = bolusState,
+        onStopBolus = onStopBolus,
+        timeInRangeTodayPercent = timeInRangeTodayPercent,
+        formatDuration = formatDuration,
+        modifier = modifier,
+        graphContent = { chartHeight ->
+            GraphsSection(
+                graphViewModel = graphViewModel,
+                isSimpleMode = isSimpleMode,
+                mainChartOnly = true,
+                mainChartHeight = chartHeight,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    )
+}
+
+@Composable
+private fun TrioOverviewContent(
+    profileName: String,
+    isProfileModified: Boolean,
+    profileProgress: Float,
+    profileSceneManaged: Boolean,
+    tempTargetText: String,
+    tempTargetState: TempTargetChipState,
+    tempTargetProgress: Float,
+    tempTargetReason: TT.Reason?,
+    tempTargetSceneManaged: Boolean,
+    runningMode: RM.Mode,
+    runningModeText: String,
+    runningModeRemaining: String,
+    runningModeProgress: Float,
+    runningModeSceneManaged: Boolean,
+    smbEnabled: Boolean,
+    tbrState: TbrState,
+    bgInfo: BgInfoData?,
+    bgTimeAgoText: String,
+    sensitivityUiState: SensitivityUiState,
+    iobUiState: IobUiState,
+    cobUiState: CobUiState,
+    predictedText: String,
+    onNavigate: (NavigationRequest) -> Unit,
+    onTbrChipClick: () -> Unit,
+    onIobChipClick: () -> Unit,
+    paddingValues: PaddingValues,
+    activeSceneState: ActiveSceneState?,
+    sceneExpired: Boolean,
+    onEndScene: () -> Unit,
+    onDismissScene: () -> Unit,
+    endSceneEnabled: Boolean,
+    commandsAllowed: Boolean,
+    pumpNeedsSetup: Boolean,
+    notificationCount: Int,
+    highestNotificationLevel: NotificationLevel?,
+    onNotificationClick: () -> Unit,
+    bolusState: BolusProgressState?,
+    onStopBolus: () -> Unit,
+    timeInRangeTodayPercent: Int?,
+    formatDuration: (Long) -> String,
+    graphContent: @Composable (Dp) -> Unit,
+    modifier: Modifier = Modifier
+) {
     var showPredictionInfo by remember { mutableStateOf(false) }
 
     BoxWithConstraints(
@@ -149,8 +258,8 @@ fun TrioOverviewScreen(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 PumpEntryPoint(
                     onClick = { onNavigate(NavigationRequest.Element(ElementType.PUMP)) },
@@ -158,8 +267,8 @@ fun TrioOverviewScreen(
                     modifier = Modifier.weight(1f)
                 )
                 BgInfoSection(
-                    bgInfo = bgInfoState.bgInfo,
-                    timeAgoText = bgInfoState.timeAgoText,
+                    bgInfo = bgInfo,
+                    timeAgoText = bgTimeAgoText,
                     modifier = Modifier.weight(1f)
                 )
                 LoopStatusAndPrediction(
@@ -205,13 +314,7 @@ fun TrioOverviewScreen(
                 }
             }
 
-            GraphsSection(
-                graphViewModel = graphViewModel,
-                isSimpleMode = isSimpleMode,
-                mainChartOnly = true,
-                mainChartHeight = chartHeight,
-                modifier = Modifier.fillMaxWidth()
-            )
+            graphContent(chartHeight)
 
             bolusState?.let { state ->
                 TrioBolusingCard(
@@ -271,6 +374,93 @@ fun TrioOverviewScreen(
             sensitivityUiState = sensitivityUiState,
             predictedText = predictedText,
             onDismiss = { showPredictionInfo = false }
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400, heightDp = 900)
+@Composable
+private fun TrioOverviewScreenPreview() {
+    AapsTheme(
+        uiMode = UiMode.SYSTEM,
+    ) {
+        TrioOverviewContent(
+            profileName = "Standard",
+            isProfileModified = true,
+            profileProgress = 0.65f,
+            profileSceneManaged = false,
+            tempTargetText = "110 mg/dL",
+            tempTargetState = TempTargetChipState.Active,
+            tempTargetProgress = 0.5f,
+            tempTargetReason = TT.Reason.ACTIVITY,
+            tempTargetSceneManaged = false,
+            runningMode = RM.Mode.CLOSED_LOOP,
+            runningModeText = "Closed loop",
+            runningModeRemaining = "",
+            runningModeProgress = 0f,
+            runningModeSceneManaged = false,
+            smbEnabled = true,
+            tbrState = TbrState.HIGH,
+            bgInfo = BgInfoData(
+                bgValue = 118.0,
+                bgText = "118",
+                bgRange = BgRange.IN_RANGE,
+                isOutdated = false,
+                timestamp = 1_780_000_000_000L,
+                trendArrow = TrendArrow.FLAT,
+                trendDescription = "Flat",
+                delta = 2.0,
+                deltaText = "+2",
+                shortAvgDelta = 1.5,
+                shortAvgDeltaText = "+1.5",
+                longAvgDelta = 1.0,
+                longAvgDeltaText = "+1.0"
+            ),
+            bgTimeAgoText = "2 min",
+            sensitivityUiState = SensitivityUiState(
+                asText = "105%",
+                isfFrom = "45",
+                isfTo = "47",
+                ratio = 1.05,
+                hasData = true
+            ),
+            iobUiState = IobUiState(text = "1.25 U", iobTotal = 1.25),
+            cobUiState = CobUiState(text = "18 g", cobValue = 18.0),
+            predictedText = "132",
+            onNavigate = {},
+            onTbrChipClick = {},
+            onIobChipClick = {},
+            paddingValues = PaddingValues(),
+            activeSceneState = null,
+            sceneExpired = false,
+            onEndScene = {},
+            onDismissScene = {},
+            endSceneEnabled = true,
+            commandsAllowed = true,
+            pumpNeedsSetup = false,
+            notificationCount = 2,
+            highestNotificationLevel = NotificationLevel.NORMAL,
+            onNotificationClick = {},
+            bolusState = null,
+            onStopBolus = {},
+            timeInRangeTodayPercent = 82,
+            formatDuration = { "30 min" },
+            graphContent = { chartHeight ->
+                Surface(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(chartHeight)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Glucose graph",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+            }
         )
     }
 }
@@ -500,19 +690,16 @@ private fun PumpEntryPoint(
     needsSetup: Boolean,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
-        color = ElementType.PUMP.color().copy(alpha = 0.16f),
-        modifier = modifier.widthIn(min = AapsSpacing.bgCircleSize)
+    Box(
+        modifier = modifier.clickable(onClick = onClick),
     ) {
         Column(
             modifier = Modifier.padding(AapsSpacing.medium),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.Start,
             verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
         ) {
             Icon(
-                imageVector = if (needsSetup) Icons.Default.Warning else Pump,
+                imageVector = if (needsSetup) Icons.Default.Warning else Icons.Default.Timer,
                 contentDescription = null,
                 tint = if (needsSetup) MaterialTheme.colorScheme.error else ElementType.PUMP.color()
             )
@@ -646,7 +833,10 @@ private fun MetricRow(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
-    val rowContent: @Composable () -> Unit = {
+    Box(
+        modifier = modifier.clickable(enabled = onClick != null, onClick = onClick ?: {}),
+        contentAlignment = Alignment.Center,
+    ) {
         Row(
             modifier = Modifier.padding(horizontal = AapsSpacing.medium, vertical = AapsSpacing.small),
             horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small),
@@ -663,15 +853,5 @@ private fun MetricRow(
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-    }
-
-    Surface(
-        onClick = onClick ?: {},
-        enabled = onClick != null,
-        shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = modifier
-    ) {
-        rowContent()
     }
 }
