@@ -644,7 +644,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     autoShowNotificationSheet = _autoShowNotifications.value,
                     onAutoShowConsumed = { _autoShowNotifications.value = false },
                     pumpSetupPlugin = pumpSetupPlugin,
-                    bgSourcePlugin = bgSourcePlugin,
                     bgSetupPlugin = bgSetupPlugin,
                     bgQualityBadgeIcon = bgQualityBadgeIcon,
                     bgQualityBadgeTint = bgQualityBadgeTint,

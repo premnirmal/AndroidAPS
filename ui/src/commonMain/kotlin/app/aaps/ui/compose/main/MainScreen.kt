@@ -41,6 +41,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.interfaces.notifications.AapsNotification
 import app.aaps.core.interfaces.plugin.PluginBase
@@ -140,7 +141,6 @@ fun MainScreen(
     // Pump setup
     pumpSetupPlugin: PluginBase? = null,
     // BG source shortcut
-    bgSourcePlugin: PluginBase? = null,
     bgSetupPlugin: PluginBase? = null,
     bgQualityBadgeIcon: ImageVector? = null,
     bgQualityBadgeTint: Color = Color.Unspecified,
@@ -301,9 +301,7 @@ fun MainScreen(
                         trioOverview = trioOverview,
                         pumpNeedsSetup = pumpSetupPlugin != null,
                         onBgSourceClick = {
-                            bgSourcePlugin?.let { plugin ->
-                                onNavigate(NavigationRequest.Plugin(plugin.javaClass.simpleName))
-                            }
+                            onNavigate(NavigationRequest.PluginCategory(PluginType.BGSOURCE))
                         }
                     )
 
