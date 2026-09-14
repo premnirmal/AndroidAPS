@@ -860,6 +860,9 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         lifecycleScope.launch {
             preferences.observe(StringKey.GeneralLanguage).drop(1).collect { recreate() }
         }
+        lifecycleScope.launch {
+            preferences.observe(BooleanKey.GeneralTrioMode).drop(1).collect { recreate() }
+        }
         // The same rebuild, asked for by code that cannot reach this activity - an import applying
         // its settings, for one. Android answers it by recreating, because that is the only thing
         // that re-runs `attachBaseContext` and so the only thing that can change the locale

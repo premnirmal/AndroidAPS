@@ -104,6 +104,7 @@ class BuiltInSearchables @Inject constructor(
             ),
             BooleanKey.OverviewShowNotesInDialogs,
             BooleanKey.OverviewShowNotesInDialogs,
+            BooleanKey.GeneralTrioMode,
             StringKey.GeneralDarkMode
         ),
         icon = Icons.Outlined.Palette

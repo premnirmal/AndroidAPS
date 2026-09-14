@@ -126,7 +126,6 @@ android {
         buildConfigField("String", "REMOTE", "\"${generateGitRemote()}\"")
         buildConfigField("String", "HEAD", "\"${generateGitBuild()}\"")
         buildConfigField("String", "COMMITTED", "\"${allCommitted()}\"")
-        buildConfigField("boolean", "TRIO", "false")
         buildConfigField("boolean", "FIREBASE_ENABLED", "true")
 
         // Runner for instrumentation tests in this module.
