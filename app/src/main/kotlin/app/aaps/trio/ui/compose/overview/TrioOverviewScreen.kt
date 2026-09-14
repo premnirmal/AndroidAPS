@@ -157,6 +157,7 @@ fun TrioOverviewScreen(
         onNavigate = onNavigate,
         onTbrChipClick = onTbrChipClick,
         onIobChipClick = onIobChipClick,
+        onBgSourceClick = onBgSourceClick,
         paddingValues = paddingValues,
         activeSceneState = activeSceneState,
         sceneExpired = sceneExpired,
@@ -212,6 +213,7 @@ private fun TrioOverviewContent(
     onNavigate: (NavigationRequest) -> Unit,
     onTbrChipClick: () -> Unit,
     onIobChipClick: () -> Unit,
+    onBgSourceClick: () -> Unit,
     paddingValues: PaddingValues,
     activeSceneState: ActiveSceneState?,
     sceneExpired: Boolean,
@@ -269,7 +271,9 @@ private fun TrioOverviewContent(
                 BgInfoSection(
                     bgInfo = bgInfo,
                     timeAgoText = bgTimeAgoText,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(onClick = onBgSourceClick)
                 )
                 LoopStatusAndPrediction(
                     runningMode = runningMode,
@@ -430,6 +434,7 @@ private fun TrioOverviewScreenPreview() {
             onNavigate = {},
             onTbrChipClick = {},
             onIobChipClick = {},
+            onBgSourceClick = {},
             paddingValues = PaddingValues(),
             activeSceneState = null,
             sceneExpired = false,
