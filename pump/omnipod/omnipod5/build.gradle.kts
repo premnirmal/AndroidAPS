@@ -26,5 +26,4 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(project(":shared:tests"))
-
 }

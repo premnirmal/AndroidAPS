@@ -1,6 +1,5 @@
 package app.aaps.pump.omnipod.omnipod5.ui.compose
 
-import android.content.Context
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.insulin.ConcentrationHelper
 import app.aaps.core.interfaces.queue.CommandQueue
@@ -49,15 +48,13 @@ internal class O5OverviewViewModelTest {
     @Mock private lateinit var dateUtil: DateUtil
     @Mock private lateinit var config: Config
     @Mock private lateinit var ch: ConcentrationHelper
-    @Mock private lateinit var context: Context
-
     @BeforeEach
     fun setUp() {
         MockitoAnnotations.openMocks(this)
         Dispatchers.setMain(UnconfinedTestDispatcher())
 
-        whenever(rxBus.toFlow(EventPumpStatusChanged::class.java)).thenReturn(emptyFlow())
-        whenever(rxBus.toFlow(EventQueueChanged::class.java)).thenReturn(emptyFlow())
+        whenever(rxBus.toFlow(EventPumpStatusChanged::class)).thenReturn(emptyFlow())
+        whenever(rxBus.toFlow(EventQueueChanged::class)).thenReturn(emptyFlow())
 
         whenever(podStateManager.activationProgress).thenReturn(ActivationProgress.NOT_STARTED)
 
@@ -72,7 +69,7 @@ internal class O5OverviewViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel() = O5OverviewViewModel(rh, podStateManager, commandQueue, rxBus, dateUtil, config, ch, context)
+    private fun createViewModel() = O5OverviewViewModel(rh, podStateManager, commandQueue, rxBus, dateUtil, config, ch)
 
     @Test
     fun preActivation_buildsPlaceholderRows_criticalPodStatus_andOffersActivate() {

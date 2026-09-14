@@ -10,8 +10,8 @@ import app.aaps.pump.omnipod.common.bledriver.comm.interfaces.session.BleConnect
 import app.aaps.pump.omnipod.common.bledriver.comm.legacy.callbacks.BleCommCallbacks
 import app.aaps.pump.omnipod.common.bledriver.comm.session.Connected
 import app.aaps.pump.omnipod.common.bledriver.comm.session.ConnectionWaitCondition
-import app.aaps.pump.omnipod.common.bledriver.pod.definition.PodType
 import app.aaps.pump.omnipod.common.bledriver.comm.session.STOP_CONNECTING_CHECK_INTERVAL_MS
+import app.aaps.pump.omnipod.common.bledriver.pod.definition.PodType
 import java.math.BigInteger
 import java.util.UUID
 

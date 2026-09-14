@@ -52,7 +52,9 @@ class AndroidKeystoreAesCipher @Inject constructor() : O5RegistrationCipher {
 
     private val keyAlias: String = DEFAULT_KEY_ALIAS
 
-    private val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEY_STORE).apply { load(null) }
+    private val keyStore: KeyStore by lazy {
+        KeyStore.getInstance(ANDROID_KEY_STORE).apply { load(null) }
+    }
 
     private fun getOrCreateKey(): SecretKey {
         (keyStore.getKey(keyAlias, null) as? SecretKey)?.let { return it }
