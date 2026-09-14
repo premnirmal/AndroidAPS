@@ -97,6 +97,7 @@ fun OverviewScreen(
     isTrio: Boolean = false,
     trioOverview: @Composable (TrioOverviewModel) -> Unit = {},
     pumpNeedsSetup: Boolean = false,
+    pumpEndTimeMillis: Long? = null,
     onBgSourceClick: () -> Unit = {},
     timeInRangeTodayPercent: Int? = null,
     modifier: Modifier = Modifier
@@ -163,6 +164,7 @@ fun OverviewScreen(
                     endSceneEnabled = endSceneEnabled,
                     commandsAllowed = commandsAllowed,
                     pumpNeedsSetup = pumpNeedsSetup,
+                    pumpEndTimeMillis = pumpEndTimeMillis,
                     onBgSourceClick = onBgSourceClick,
                     notificationCount = notifications.size,
                     highestNotificationLevel = notifications.minByOrNull { it.level.ordinal }?.level,

@@ -224,21 +224,41 @@ fun MainScreen(
             // and navigation-bar protection scrims rely on this: they read raw
             // WindowInsets.statusBars / navigationBars, which would be consumed
             // (returning zero height) if those Scaffold slots were populated.
-            Scaffold { scaffoldPadding ->
+            Scaffold(
+                bottomBar = {
+                    if (isTrio) {
+                        AnimatedVisibility(
+                            visible = showChrome,
+                            enter = slideInVertically { it },
+                            exit = slideOutVertically { it }
+                        ) {
+                            trioBottomBar(
+                                trioSelectedTab,
+                                { tab -> onTrioTabSelected(tab) },
+                                { showTrioAddSheet = true },
+                                Modifier
+                            )
+                        }
+                    }
+                }
+            ) { scaffoldPadding ->
                 val hasToolbar = quickLaunchItems.isNotEmpty()
                 val topScaffoldPadding = if (isTrio) 0.dp else scaffoldPadding.calculateTopPadding()
                 val bottomScaffoldPadding = if (isTrio) 0.dp else scaffoldPadding.calculateBottomPadding()
 
                 // Content padding: in preview mode use only system bars;
                 // in normal mode add measured bar heights
-                val contentPadding = if (previewMode) scaffoldPadding
-                else {
-                    val topBarHeight = with(density) { topBarHeightPx.toDp() }
-                    val bottomBarHeight = with(density) { bottomBarHeightPx.toDp() }
-                    PaddingValues(
-                        top = topScaffoldPadding + topBarHeight,
-                        bottom = bottomScaffoldPadding + bottomBarHeight
-                    )
+                val contentPadding = when {
+                    isTrio     -> PaddingValues(bottom = scaffoldPadding.calculateBottomPadding())
+                    previewMode -> scaffoldPadding
+                    else        -> {
+                        val topBarHeight = with(density) { topBarHeightPx.toDp() }
+                        val bottomBarHeight = with(density) { bottomBarHeightPx.toDp() }
+                        PaddingValues(
+                            top = topScaffoldPadding + topBarHeight,
+                            bottom = bottomScaffoldPadding + bottomBarHeight
+                        )
+                    }
                 }
 
                 val activeSceneState by mainViewModel.activeSceneState.collectAsStateWithLifecycle()
@@ -300,6 +320,7 @@ fun MainScreen(
                         isTrio = isTrio,
                         trioOverview = trioOverview,
                         pumpNeedsSetup = pumpSetupPlugin != null,
+                        pumpEndTimeMillis = uiState.pumpEndTimeMillis,
                         onBgSourceClick = {
                             onNavigate(NavigationRequest.PluginCategory(PluginType.BGSOURCE))
                         }
@@ -405,61 +426,48 @@ fun MainScreen(
 
                     // Bottom bar overlay
                     AnimatedVisibility(
-                        visible = showChrome,
+                        visible = showChrome && !isTrio,
                         enter = slideInVertically { it },
                         exit = slideOutVertically { it },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(bottom = bottomScaffoldPadding)
                     ) {
-                        if (isTrio) {
-                            trioBottomBar(
-                                trioSelectedTab,
-                                { tab ->
-                                    onTrioTabSelected(tab)
-                                },
-                                { showTrioAddSheet = true },
-                                Modifier.onSizeChanged {
-                                    if (it.height > 0 && it.height != bottomBarHeightPx) bottomBarHeightPx = it.height
-                                }
-                            )
-                        } else {
-                            val loopActionState = loopActionViewModel.uiState.collectAsStateWithLifecycle().value
-                            MainNavigationBar(
-                                onManageClick = { manageSheetState.show() },
-                                onTreatmentClick = {
-                                    treatmentViewModel.refreshState()
-                                    showTreatmentSheet = true
-                                },
-                                masterOrPairedClient = masterOrPairedClient,
-                                quickWizardCount = uiState.quickWizardItems.size,
-                                onAutomationClick = {
-                                    scenesViewModel.refreshState()
-                                    showAutomationSheet = true
-                                },
-                                // Total drives nav-button visibility (button stays visible whenever
-                                // scenes/automation exist, even if currently un-activatable).
-                                // Count drives the badge — only items the user can act on right now.
-                                automationTotal = automationState.items.size + automationState.sceneItems.size,
-                                automationCount = automationState.items.count { it.activationReason == null } +
-                                    automationState.sceneItems.count { it.activationReason == null },
-                                pumpSetupPlugin = pumpSetupPlugin,
-                                bgSetupPlugin = bgSetupPlugin,
-                                bgQualityBadgeIcon = bgQualityBadgeIcon,
-                                bgQualityBadgeTint = bgQualityBadgeTint,
-                                bgQualityBadgeDescription = bgQualityBadgeDescription,
-                                objectivesSetupPlugin = objectivesSetupPlugin,
-                                objectivesProgressText = objectivesProgressText,
-                                onNavigate = onNavigate,
-                                permissionsMissing = permissionsMissing,
-                                onPermissionsClick = onPermissionsClick,
-                                loopActionAvailable = loopActionState.actionAvailable,
-                                onLoopActionClick = { showLoopActionSheet = true },
-                                modifier = Modifier.onSizeChanged {
-                                    if (it.height > 0 && it.height != bottomBarHeightPx) bottomBarHeightPx = it.height
-                                }
-                            )
-                        }
+                        val loopActionState = loopActionViewModel.uiState.collectAsStateWithLifecycle().value
+                        MainNavigationBar(
+                            onManageClick = { manageSheetState.show() },
+                            onTreatmentClick = {
+                                treatmentViewModel.refreshState()
+                                showTreatmentSheet = true
+                            },
+                            masterOrPairedClient = masterOrPairedClient,
+                            quickWizardCount = uiState.quickWizardItems.size,
+                            onAutomationClick = {
+                                scenesViewModel.refreshState()
+                                showAutomationSheet = true
+                            },
+                            // Total drives nav-button visibility (button stays visible whenever
+                            // scenes/automation exist, even if currently un-activatable).
+                            // Count drives the badge — only items the user can act on right now.
+                            automationTotal = automationState.items.size + automationState.sceneItems.size,
+                            automationCount = automationState.items.count { it.activationReason == null } +
+                                automationState.sceneItems.count { it.activationReason == null },
+                            pumpSetupPlugin = pumpSetupPlugin,
+                            bgSetupPlugin = bgSetupPlugin,
+                            bgQualityBadgeIcon = bgQualityBadgeIcon,
+                            bgQualityBadgeTint = bgQualityBadgeTint,
+                            bgQualityBadgeDescription = bgQualityBadgeDescription,
+                            objectivesSetupPlugin = objectivesSetupPlugin,
+                            objectivesProgressText = objectivesProgressText,
+                            onNavigate = onNavigate,
+                            permissionsMissing = permissionsMissing,
+                            onPermissionsClick = onPermissionsClick,
+                            loopActionAvailable = loopActionState.actionAvailable,
+                            onLoopActionClick = { showLoopActionSheet = true },
+                            modifier = Modifier.onSizeChanged {
+                                if (it.height > 0 && it.height != bottomBarHeightPx) bottomBarHeightPx = it.height
+                            }
+                        )
                     }
 
                     // Quick launch toolbar overlay

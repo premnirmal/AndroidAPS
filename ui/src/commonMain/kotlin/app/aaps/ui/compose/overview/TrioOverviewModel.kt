@@ -43,6 +43,7 @@ data class TrioOverviewModel(
     val endSceneEnabled: Boolean,
     val commandsAllowed: Boolean,
     val pumpNeedsSetup: Boolean,
+    val pumpEndTimeMillis: Long?,
     val onBgSourceClick: () -> Unit,
     val notificationCount: Int,
     val highestNotificationLevel: NotificationLevel?,

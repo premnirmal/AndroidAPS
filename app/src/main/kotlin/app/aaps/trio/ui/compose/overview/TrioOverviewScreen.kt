@@ -111,6 +111,7 @@ fun TrioOverviewScreen(
     endSceneEnabled: Boolean = true,
     commandsAllowed: Boolean = true,
     pumpNeedsSetup: Boolean = false,
+    pumpEndTimeMillis: Long? = null,
     onBgSourceClick: () -> Unit = {},
     notificationCount: Int = 0,
     highestNotificationLevel: NotificationLevel? = null,
@@ -126,6 +127,14 @@ fun TrioOverviewScreen(
     val sensitivityUiState by chipsViewModel.sensitivityUiState.collectAsStateWithLifecycle()
     val iobUiState by chipsViewModel.iobUiState.collectAsStateWithLifecycle()
     val cobUiState by chipsViewModel.cobUiState.collectAsStateWithLifecycle()
+    val now by graphViewModel.nowTimestamp.collectAsStateWithLifecycle()
+    val pumpTimeRemainingText = pumpEndTimeMillis?.let { endTime ->
+        val totalHours = ((endTime - now).coerceAtLeast(0L) / 3_600_000L).toInt()
+        val days = totalHours / 24
+        val hours = totalHours % 24
+        if (days >= 1) stringResource(R.string.trio_pump_time_days_hours, days, hours)
+        else stringResource(R.string.trio_pump_time_hours, hours)
+    }
     val predictedText = predictions.lastOrNull()?.value?.let { value ->
         if (value >= 40.0) value.roundToInt().toString()
         else String.format(Locale.getDefault(), "%.1f", value)
@@ -166,6 +175,7 @@ fun TrioOverviewScreen(
         endSceneEnabled = endSceneEnabled,
         commandsAllowed = commandsAllowed,
         pumpNeedsSetup = pumpNeedsSetup,
+        pumpTimeRemainingText = pumpTimeRemainingText,
         notificationCount = notificationCount,
         highestNotificationLevel = highestNotificationLevel,
         onNotificationClick = onNotificationClick,
@@ -222,6 +232,7 @@ private fun TrioOverviewContent(
     endSceneEnabled: Boolean,
     commandsAllowed: Boolean,
     pumpNeedsSetup: Boolean,
+    pumpTimeRemainingText: String?,
     notificationCount: Int,
     highestNotificationLevel: NotificationLevel?,
     onNotificationClick: () -> Unit,
@@ -266,6 +277,7 @@ private fun TrioOverviewContent(
                 PumpEntryPoint(
                     onClick = { onNavigate(NavigationRequest.Element(ElementType.PUMP)) },
                     needsSetup = pumpNeedsSetup,
+                    timeRemainingText = pumpTimeRemainingText,
                     modifier = Modifier.weight(1f)
                 )
                 BgInfoSection(
@@ -443,6 +455,7 @@ private fun TrioOverviewScreenPreview() {
             endSceneEnabled = true,
             commandsAllowed = true,
             pumpNeedsSetup = false,
+            pumpTimeRemainingText = "2d 6h",
             notificationCount = 2,
             highestNotificationLevel = NotificationLevel.NORMAL,
             onNotificationClick = {},
@@ -693,6 +706,7 @@ private fun ActiveAdjustmentsRow(
 private fun PumpEntryPoint(
     onClick: () -> Unit,
     needsSetup: Boolean,
+    timeRemainingText: String?,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -709,7 +723,11 @@ private fun PumpEntryPoint(
                 tint = if (needsSetup) MaterialTheme.colorScheme.error else ElementType.PUMP.color()
             )
             Text(
-                text = stringResource(if (needsSetup) R.string.trio_no_pump else app.aaps.core.ui.R.string.pump),
+                text = when {
+                    needsSetup                  -> stringResource(R.string.trio_no_pump)
+                    timeRemainingText != null   -> timeRemainingText
+                    else                        -> "--"
+                },
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )

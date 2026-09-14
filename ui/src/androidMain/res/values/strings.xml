@@ -14,6 +14,8 @@
     <string name="trio_time_in_range_percent" comment="%1$d=time in range percent. Example: 100%">%1$d%%</string>
     <string name="trio_time_in_range_today">Time in Range today</string>
     <string name="trio_no_pump">No Pump</string>
+    <string name="trio_pump_time_days_hours" comment="%1$d=whole days left, %2$d=remaining whole hours. Example: 2d 6h">%1$dd %2$dh</string>
+    <string name="trio_pump_time_hours" comment="%1$d=whole hours left. Example: 6h">%1$dh</string>
     <string name="trio_no_glucose_source">No CGM</string>
     <string name="health_connect">Health Connect</string>
     <string name="health_connect_settings_subtitle">Manage health data sharing</string>

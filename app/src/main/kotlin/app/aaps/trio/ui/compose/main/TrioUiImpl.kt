@@ -84,6 +84,7 @@ class TrioUiImpl @Inject constructor() : TrioUi {
             endSceneEnabled = model.endSceneEnabled,
             commandsAllowed = model.commandsAllowed,
             pumpNeedsSetup = model.pumpNeedsSetup,
+            pumpEndTimeMillis = model.pumpEndTimeMillis,
             onBgSourceClick = model.onBgSourceClick,
             notificationCount = model.notificationCount,
             highestNotificationLevel = model.highestNotificationLevel,

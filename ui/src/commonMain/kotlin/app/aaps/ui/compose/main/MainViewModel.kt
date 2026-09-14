@@ -40,6 +40,7 @@ import app.aaps.core.interfaces.profile.ProfileFunction
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.protection.ProtectionResult
 import app.aaps.core.interfaces.pump.Pump
+import app.aaps.core.interfaces.pump.PumpTimeRemaining
 import app.aaps.core.interfaces.pump.defs.determineCorrectBolusStepSize
 import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.interfaces.rx.bus.RxBus
@@ -247,6 +248,7 @@ class MainViewModel @Inject constructor(
             runningModeRecordId = chip.runningModeRecordId,
             tbrState = chip.tbrState,
             smbEnabled = ev.smbEnabled,
+            pumpEndTimeMillis = chip.pumpEndTimeMillis,
             quickWizardItems = chip.quickWizardItems
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MainUiState())
@@ -361,6 +363,7 @@ class MainViewModel @Inject constructor(
             runningModeProgress = rmProgress,
             runningModeRecordId = if (rmExpired) 0 else rmData?.recordId ?: 0,
             tbrState = if (tbrExpired) TbrState.NONE else tbrData?.state ?: TbrState.NONE,
+            pumpEndTimeMillis = (activePlugin.activePumpInternal as? PumpTimeRemaining)?.expectedEndTimeMillis(),
             quickWizardItems = computeQuickWizardItems(rmData?.mode)
         )
     }
@@ -927,5 +930,6 @@ private data class ChipState(
     val runningModeProgress: Float = 0f,
     val runningModeRecordId: Long = 0,
     val tbrState: TbrState = TbrState.NONE,
+    val pumpEndTimeMillis: Long? = null,
     val quickWizardItems: List<QuickWizardItem> = emptyList()
 )
