@@ -53,6 +53,15 @@ data class TrioStatsComparison(
     val cvDelta: Double
 )
 
+data class TrioHourlyPercentile(
+    val hour: Int,
+    val p10Mgdl: Double,
+    val p25Mgdl: Double,
+    val medianMgdl: Double,
+    val p75Mgdl: Double,
+    val p90Mgdl: Double
+)
+
 data class TrioStatsData(
     val readingCount: Int = 0,
     val coveragePercent: Double = 0.0,
@@ -74,6 +83,7 @@ data class TrioStatsData(
     val dawnRiseMgdl: Double = 0.0,
     val bestStreakDays: Int = 0,
     val tir: TrioTirBreakdown = TrioTirBreakdown(),
+    val hourlyPercentiles: List<TrioHourlyPercentile> = emptyList(),
     val hourly: List<TrioPatternRow> = emptyList(),
     val daily: List<TrioPatternRow> = emptyList(),
     val weekdays: List<TrioPatternRow> = emptyList(),
@@ -123,6 +133,7 @@ internal fun calculateTrioStatsData(
         dawnRiseMgdl = calculateDawnRise(valid),
         bestStreakDays = calculateBestStreak(daily),
         tir = summary.tir,
+        hourlyPercentiles = calculateHourlyPercentiles(valid),
         hourly = calculateHourly(valid, lowMgdl, highMgdl),
         daily = daily,
         weekdays = calculateWeekdays(valid, lowMgdl, highMgdl),
@@ -284,6 +295,25 @@ private fun calculateBestStreak(days: List<TrioPatternRow>): Int {
         previousTimestamp = day.timestamp
     }
     return best
+}
+
+private fun calculateHourlyPercentiles(readings: List<GV>): List<TrioHourlyPercentile> {
+    val zone = TimeZone.currentSystemDefault()
+    return readings
+        .groupBy { Instant.fromEpochMilliseconds(it.timestamp).toLocalDateTime(zone).hour }
+        .entries
+        .sortedBy { it.key }
+        .map { (hour, readingsForHour) ->
+            val values = readingsForHour.map { it.value }.sorted()
+            TrioHourlyPercentile(
+                hour = hour,
+                p10Mgdl = percentile(values, 0.10),
+                p25Mgdl = percentile(values, 0.25),
+                medianMgdl = percentile(values, 0.50),
+                p75Mgdl = percentile(values, 0.75),
+                p90Mgdl = percentile(values, 0.90)
+            )
+        }
 }
 
 private fun calculateHourly(readings: List<GV>, lowMgdl: Double, highMgdl: Double): List<TrioPatternRow> {

@@ -50,13 +50,18 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.aaps.core.interfaces.InterfacesStrings
 import app.aaps.core.interfaces.overview.graph.BgDataPoint
 import app.aaps.core.interfaces.overview.graph.BgRange
 import app.aaps.core.interfaces.overview.graph.BgType
+import app.aaps.core.interfaces.overview.graph.BolusGraphPoint
+import app.aaps.core.interfaces.overview.graph.BolusType
 import app.aaps.core.interfaces.overview.graph.SeriesType
+import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.LocalDateUtil
+import app.aaps.core.ui.compose.stringResource
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -72,6 +77,7 @@ private const val NOW_POSITION_FRACTION = 0.6
 private const val FUTURE_POSITION_FRACTION = 1.0 - NOW_POSITION_FRACTION
 private const val DATA_GAP_MS = 17L * 60L * 1000L
 private const val DOUBLE_TAP_TIMEOUT_MS = 300L
+internal const val BOLUS_VALUE_THRESHOLD_UNITS = 0.5
 
 private val GRID_INTERVALS_MS = longArrayOf(
     5L * 60L * 1000L,
@@ -85,9 +91,15 @@ private val GRID_INTERVALS_MS = longArrayOf(
     24L * 60L * 60L * 1000L
 )
 
-private data class TrioGraphRange(
+internal data class TrioGraphRange(
     val min: Double,
     val max: Double
+)
+
+internal data class BolusMarkerPosition(
+    val bolus: BolusGraphPoint,
+    val x: Float,
+    val y: Float
 )
 
 @Composable
@@ -103,6 +115,7 @@ fun TrioOverviewGraph(
     val graphConfig by graphViewModel.graphConfigFlow.collectAsStateWithLifecycle()
     val derivedTimeRange by graphViewModel.derivedTimeRange.collectAsStateWithLifecycle()
     val nowTimestamp by graphViewModel.nowTimestamp.collectAsStateWithLifecycle()
+    val treatments by graphViewModel.treatmentGraphFlow.collectAsStateWithLifecycle()
 
     val history = remember(readings, bucketedReadings) {
         (readings + bucketedReadings)
@@ -131,12 +144,13 @@ fun TrioOverviewGraph(
             .fillMaxWidth()
             .height(height),
         shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = Color.Transparent,
         shadowElevation = 0.dp
     ) {
         InteractiveTrioGlucoseChart(
             history = history,
             predictions = visiblePredictions,
+            boluses = treatments.boluses,
             fullRange = range,
             nowTimestamp = nowTimestamp,
             lowMark = chartConfig.lowMark,
@@ -151,6 +165,7 @@ fun TrioOverviewGraph(
 private fun InteractiveTrioGlucoseChart(
     history: List<BgDataPoint>,
     predictions: List<BgDataPoint>,
+    boluses: List<BolusGraphPoint>,
     fullRange: Pair<Long, Long>,
     nowTimestamp: Long,
     lowMark: Double,
@@ -168,6 +183,8 @@ private fun InteractiveTrioGlucoseChart(
             maximumFractionDigits = 1
         }
     }
+    val bolusTitle = stringResource(InterfacesStrings.bolus)
+    val smbTitle = stringResource(CoreUiStrings.smb_shortname)
 
     val fullStart = fullRange.first
     val fullEnd = maxOf(fullRange.second, fullStart + MIN_WINDOW_MS)
@@ -180,6 +197,7 @@ private fun InteractiveTrioGlucoseChart(
         mutableLongStateOf(nowCenteredViewport(nowTimestamp, visibleDuration))
     }
     var selectedPoint by remember { mutableStateOf<BgDataPoint?>(null) }
+    var selectedBolus by remember { mutableStateOf<BolusGraphPoint?>(null) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
     val inertia = remember { Animatable(0f) }
 
@@ -204,11 +222,14 @@ private fun InteractiveTrioGlucoseChart(
         }
     }
 
-    LaunchedEffect(centerTime, visibleDuration, selectedPoint) {
+    LaunchedEffect(centerTime, visibleDuration, selectedPoint, selectedBolus) {
+        val start = centerTime - visibleDuration / 2L
+        val end = centerTime + visibleDuration / 2L
         selectedPoint?.let {
-            val start = centerTime - visibleDuration / 2L
-            val end = centerTime + visibleDuration / 2L
             if (it.timestamp !in start..end) selectedPoint = null
+        }
+        selectedBolus?.let {
+            if (it.timestamp !in start..end) selectedBolus = null
         }
     }
 
@@ -217,6 +238,7 @@ private fun InteractiveTrioGlucoseChart(
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val selectionColor = MaterialTheme.colorScheme.onSurface
     val targetColor = colors.bgTargetRangeArea
+    val insulinColor = AapsTheme.elementColors.insulin
     val lineColors = listOf(
         colors.bgVeryHigh,
         colors.bgHigh,
@@ -235,7 +257,7 @@ private fun InteractiveTrioGlucoseChart(
 
     Box(
         modifier = modifier
-            .pointerInput(history, predictions, fullStart, fullEnd, maxDuration) {
+            .pointerInput(history, predictions, boluses, fullStart, fullEnd, maxDuration) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     coroutineScope.launch { inertia.stop() }
@@ -308,6 +330,8 @@ private fun InteractiveTrioGlucoseChart(
                             }
                             visibleDuration = targetDuration
                             centerTime = clampCenter(centerTime, targetDuration)
+                            selectedPoint = null
+                            selectedBolus = null
                             lastTapTime = 0L
                             onInteraction()
                         }
@@ -315,9 +339,39 @@ private fun InteractiveTrioGlucoseChart(
                         wasTap -> {
                             lastTapTime = downTime
                             val viewportStart = centerTime - visibleDuration / 2L
+                            val viewportEnd = centerTime + visibleDuration / 2L
+                            val visibleHistory = history.withRangePadding(viewportStart, viewportEnd)
+                            val visiblePredictionPoints = predictions.withRangePadding(viewportStart, viewportEnd)
+                            val yRange = calculateYRange(
+                                points = visibleHistory + visiblePredictionPoints,
+                                lowMark = lowMark,
+                                highMark = highMark
+                            )
+                            val plotHeight = (size.height - 32.dp.toPx()).coerceAtLeast(1f)
+                            val markers = calculateBolusMarkerPositions(
+                                boluses = boluses,
+                                history = history,
+                                viewportStart = viewportStart,
+                                viewportDuration = visibleDuration,
+                                width = size.width.toFloat(),
+                                plotHeight = plotHeight,
+                                yRange = yRange,
+                                markerOffset = 12.dp.toPx()
+                            )
+                            val tappedBolus = findTappedBolus(
+                                markers = markers,
+                                tapX = down.position.x,
+                                tapY = down.position.y,
+                                hitRadius = 20.dp.toPx()
+                            )
                             val tappedTime = viewportStart +
                                 (down.position.x / size.width.coerceAtLeast(1)) * visibleDuration
-                            selectedPoint = nearestPoint(history, tappedTime.toLong())
+                            selectedBolus = tappedBolus
+                            selectedPoint = if (tappedBolus == null) {
+                                nearestPoint(history, tappedTime.toLong())
+                            } else {
+                                null
+                            }
                         }
 
                         horizontalGesture -> {
@@ -461,6 +515,45 @@ private fun InteractiveTrioGlucoseChart(
                 )
             }
 
+            val bolusMarkers = calculateBolusMarkerPositions(
+                boluses = boluses,
+                history = history,
+                viewportStart = viewportStart,
+                viewportDuration = renderedDuration,
+                width = size.width,
+                plotHeight = plotHeight,
+                yRange = yRange,
+                markerOffset = 12.dp.toPx()
+            )
+            val markerHalfWidth = 5.dp.toPx()
+            val markerHalfHeight = 5.dp.toPx()
+            bolusMarkers.forEach { marker ->
+                val markerPath = Path().apply {
+                    moveTo(marker.x - markerHalfWidth, marker.y - markerHalfHeight)
+                    lineTo(marker.x + markerHalfWidth, marker.y - markerHalfHeight)
+                    lineTo(marker.x, marker.y + markerHalfHeight)
+                    close()
+                }
+                drawPath(
+                    path = markerPath,
+                    color = insulinColor
+                )
+                if (shouldShowBolusValue(marker.bolus.amount)) {
+                    val labelLayout = textMeasurer.measure(marker.bolus.label, labelStyle)
+                    drawText(
+                        textMeasurer = textMeasurer,
+                        text = marker.bolus.label,
+                        topLeft = Offset(
+                            x = (marker.x - labelLayout.size.width / 2f)
+                                .coerceIn(0f, size.width - labelLayout.size.width),
+                            y = (marker.y - markerHalfHeight - labelLayout.size.height)
+                                .coerceAtLeast(0f)
+                        ),
+                        style = labelStyle
+                    )
+                }
+            }
+
             if (nowTimestampInRange(viewportStart, viewportEnd, nowTimestamp)) {
                 val x = timeToX(nowTimestamp)
                 drawLine(
@@ -493,7 +586,44 @@ private fun InteractiveTrioGlucoseChart(
             }
         }
 
-        selectedPoint?.let { point ->
+        selectedBolus?.let { bolus ->
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = AapsSpacing.medium),
+                shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                shadowElevation = AapsSpacing.extraSmall
+            ) {
+                Row(
+                    modifier = Modifier.padding(
+                        horizontal = AapsSpacing.large,
+                        vertical = AapsSpacing.medium
+                    ),
+                    horizontalArrangement = Arrangement.spacedBy(AapsSpacing.large)
+                ) {
+                    Text(
+                        text = bolusTitle,
+                        color = insulinColor,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    Text(
+                        text = stringResource(InterfacesStrings.format_insulin_units, bolus.amount),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    if (bolus.bolusType == BolusType.SMB) {
+                        Text(
+                            text = smbTitle,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                    Text(
+                        text = dateUtil.timeString(bolus.timestamp),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            }
+        } ?: selectedPoint?.let { point ->
             Surface(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -546,6 +676,58 @@ private fun nearestPoint(points: List<BgDataPoint>, timestamp: Long): BgDataPoin
     val before = points[insertionPoint - 1]
     val after = points[insertionPoint]
     return if (timestamp - before.timestamp <= after.timestamp - timestamp) before else after
+}
+
+internal fun shouldShowBolusValue(amount: Double): Boolean =
+    amount > BOLUS_VALUE_THRESHOLD_UNITS
+
+internal fun calculateBolusMarkerPositions(
+    boluses: List<BolusGraphPoint>,
+    history: List<BgDataPoint>,
+    viewportStart: Long,
+    viewportDuration: Long,
+    width: Float,
+    plotHeight: Float,
+    yRange: TrioGraphRange,
+    markerOffset: Float
+): List<BolusMarkerPosition> {
+    if (history.isEmpty() || viewportDuration <= 0L || width <= 0f || plotHeight <= 0f) return emptyList()
+    val viewportEnd = viewportStart + viewportDuration
+    val ySpan = (yRange.max - yRange.min).coerceAtLeast(0.1)
+    val maxMarkerY = (plotHeight - markerOffset).coerceAtLeast(markerOffset)
+    return boluses
+        .asSequence()
+        .filter { it.isValid && it.amount > 0.0 && it.timestamp in viewportStart..viewportEnd }
+        .mapNotNull { bolus ->
+            val glucose = nearestPoint(history, bolus.timestamp) ?: return@mapNotNull null
+            val x = ((bolus.timestamp - viewportStart).toDouble() / viewportDuration * width).toFloat()
+            val glucoseY = (plotHeight - ((glucose.value - yRange.min) / ySpan * plotHeight)).toFloat()
+            BolusMarkerPosition(
+                bolus = bolus,
+                x = x,
+                y = (glucoseY - markerOffset).coerceIn(markerOffset, maxMarkerY)
+            )
+        }
+        .toList()
+}
+
+internal fun findTappedBolus(
+    markers: List<BolusMarkerPosition>,
+    tapX: Float,
+    tapY: Float,
+    hitRadius: Float
+): BolusGraphPoint? {
+    val maxDistanceSquared = hitRadius * hitRadius
+    return markers
+        .map { marker ->
+            val dx = marker.x - tapX
+            val dy = marker.y - tapY
+            marker to dx * dx + dy * dy
+        }
+        .filter { (_, distanceSquared) -> distanceSquared <= maxDistanceSquared }
+        .minByOrNull { (_, distanceSquared) -> distanceSquared }
+        ?.first
+        ?.bolus
 }
 
 private fun calculateYRange(

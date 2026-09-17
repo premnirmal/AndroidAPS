@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Notifications
@@ -302,7 +301,7 @@ private fun TrioOverviewContent(
         TrioBgGlow(
             visible = bgInfo != null,
             center = bgGlowCenter,
-            modifier = Modifier.matchParentSize()
+            modifier = Modifier.size(width = AapsSpacing.bgCircleSize * 2, height = AapsSpacing.bgCircleSize * 2)
         )
 
         Column(
@@ -329,14 +328,16 @@ private fun TrioOverviewContent(
                     Column(
                         verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
                     ) {
-                        if (calcProgress < 100) {
-                            LinearProgressIndicator(
-                                progress = { animatedCalcProgress.value },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = AapsSpacing.small)
-                                    .height(AapsSpacing.chipProgressHeight)
-                            )
+                        Box(modifier = Modifier.fillMaxWidth().height(AapsSpacing.chipProgressHeight)) {
+                            if (calcProgress < 100) {
+                                LinearProgressIndicator(
+                                    progress = { animatedCalcProgress.value },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = AapsSpacing.small)
+                                        .height(AapsSpacing.chipProgressHeight)
+                                )
+                            }
                         }
 
                         Row(
@@ -374,11 +375,9 @@ private fun TrioOverviewContent(
                                 runningMode = runningMode,
                                 runningModeText = runningModeText,
                                 lastLoopAgeMillis = lastLoopAgeMillis,
-                                commandsAllowed = commandsAllowed,
                                 predictedText = predictedText,
-                                onRunningModeClick = { onNavigate(NavigationRequest.Element(ElementType.RUNNING_MODE)) },
-                                onPredictionClick = { showPredictionInfo = true },
-                                modifier = Modifier.weight(1f)
+                                onClick = { showPredictionInfo = true },
+                                modifier = Modifier.weight(1f),
                             )
                         }
                     }
@@ -386,7 +385,7 @@ private fun TrioOverviewContent(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = AapsSpacing.chipHeight + AapsSpacing.extraLarge),
+                            .heightIn(min = AapsSpacing.chipHeight + AapsSpacing.large),
                         horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -530,11 +529,7 @@ private fun TrioBgGlow(
         ),
         label = "trioBgGlowOffset"
     )
-    val primary = MaterialTheme.colorScheme.primary
-    val tertiary = MaterialTheme.colorScheme.tertiary
-    val isDark = isSystemInDarkTheme()
-    val innerAlpha = if (isDark) 0.28f else 0.18f
-    val middleAlpha = if (isDark) 0.16f else 0.10f
+    val glowColor = AapsTheme.generalColors.trioBgGlow
 
     Canvas(modifier = modifier) {
         val animatedCenter = Offset(
@@ -545,8 +540,8 @@ private fun TrioBgGlow(
         drawCircle(
             brush = Brush.radialGradient(
                 colors = listOf(
-                    primary.copy(alpha = innerAlpha),
-                    tertiary.copy(alpha = middleAlpha),
+                    glowColor,
+                    glowColor.copy(alpha = glowColor.alpha * 0.55f),
                     Color.Transparent
                 ),
                 center = animatedCenter,
@@ -880,14 +875,14 @@ private fun LoopStatusAndPrediction(
     runningMode: RM.Mode,
     runningModeText: String,
     lastLoopAgeMillis: Long?,
-    commandsAllowed: Boolean,
     predictedText: String,
-    onRunningModeClick: () -> Unit,
-    onPredictionClick: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier,
+        modifier = modifier.clickable(
+            onClick = onClick
+        ),
         horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
     ) {
@@ -895,12 +890,9 @@ private fun LoopStatusAndPrediction(
             mode = runningMode,
             modeDescription = runningModeText,
             lastLoopAgeMillis = lastLoopAgeMillis,
-            enabled = commandsAllowed,
-            onClick = onRunningModeClick
         )
         PredictionText(
             predictedText = predictedText,
-            onClick = onPredictionClick
         )
     }
 }
@@ -910,8 +902,6 @@ private fun TrioLoopStatusPill(
     mode: RM.Mode,
     modeDescription: String,
     lastLoopAgeMillis: Long?,
-    enabled: Boolean,
-    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = AapsTheme.generalColors
@@ -931,8 +921,6 @@ private fun TrioLoopStatusPill(
 
     CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides Dp.Unspecified) {
         Surface(
-            onClick = onClick,
-            enabled = enabled,
             modifier = modifier.height(AapsSpacing.chipHeight),
             shape = RoundedCornerShape(AapsSpacing.chipHeight),
             color = Color.Transparent,
@@ -1050,12 +1038,10 @@ private fun PumpEntryPoint(
 @Composable
 private fun PredictionText(
     predictedText: String,
-    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
-            .clickable(onClick = onClick)
             .height(AapsSpacing.chipHeight)
             .padding(horizontal = AapsSpacing.large),
         horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),

@@ -43,6 +43,9 @@ import androidx.compose.ui.graphics.Color
  * @property bgHigh Color for BG readings above high mark (matches highColor attr)
  * @property bgInRange Color for BG readings within target range (matches bgInRange attr)
  * @property bgLow Color for BG readings below low mark (matches lowColor attr)
+ * @property trioBgAccent Color for the Trio BG trend arrow and the cyan ring stop
+ * @property trioBgGlow Color and opacity for the Trio BG glow
+ * @property trioBgCircle Color inside the Trio BG ring
  * @property originalBgValue Color for regular CGM BG readings (white/outlined dots)
  * @property iobPrediction Color for IOB-based BG predictions (blue)
  * @property cobPrediction Color for COB-based BG predictions (orange)
@@ -73,6 +76,13 @@ data class GeneralColors(
     val bgVeryLow: Color,
     val bgVeryHigh: Color,
     val bgTargetRangeArea: Color,
+    val trioBgAccent: Color,
+    val trioBgGlow: Color,
+    val trioBgRingPurple: Color,
+    val trioBgRingViolet: Color,
+    val trioBgRingIndigo: Color,
+    val trioBgRingBlue: Color,
+    val trioBgCircle: Color,
     val originalBgValue: Color,
     val iobPrediction: Color,
     val cobPrediction: Color,
@@ -134,6 +144,13 @@ val LightGeneralColors = GeneralColors(
     bgVeryLow = Color(0xFF8B0000),           // dark red for very low BG (Dexcom TIR 5-range)
     bgVeryHigh = Color(0xFFD84315),          // deep orange-red for very high BG (Dexcom TIR 5-range)
     bgTargetRangeArea = Color(0x2800FF00),   // green with ~16% alpha for target range area (matches @color/inRangeBackground)
+    trioBgAccent = Color(0xFF43BBE9),
+    trioBgGlow = Color(0x3343BBE9),
+    trioBgRingPurple = Color(0xFFB857FF),
+    trioBgRingViolet = Color(0xFF9F6CFA),
+    trioBgRingIndigo = Color(0xFF7C8BF3),
+    trioBgRingBlue = Color(0xFF57AAEC),
+    trioBgCircle = Color(0xFFFFFFFF),
     originalBgValue = Color(0xFFFFFFFF),     // white for regular CGM readings (matches originalBgValueColor attr)
     iobPrediction = Color(0xFF1E88E5),       // blue for IOB predictions (matches iobColor attr)
     cobPrediction = Color(0xFFFB8C00),       // orange for COB predictions (matches cobColor attr)
@@ -191,6 +208,13 @@ val DarkGeneralColors = GeneralColors(
     bgVeryLow = Color(0xFFB71C1C),           // dark red for very low BG (dark mode, Dexcom TIR 5-range)
     bgVeryHigh = Color(0xFFFB8C00),          // orange for very high BG (dark mode, differentiates from yellow bgHigh)
     bgTargetRangeArea = Color(0x4000FF00),   // green with ~25% alpha for target range area (matches @color/inRangeBackground in values-night)
+    trioBgAccent = Color(0xFF43BBE9),
+    trioBgGlow = Color(0x5243BBE9),
+    trioBgRingPurple = Color(0xFFB857FF),
+    trioBgRingViolet = Color(0xFF9F6CFA),
+    trioBgRingIndigo = Color(0xFF7C8BF3),
+    trioBgRingBlue = Color(0xFF57AAEC),
+    trioBgCircle = Color(0xFF21212E),
     originalBgValue = Color(0xFFFFFFFF),     // white for regular CGM readings (same in both modes)
     iobPrediction = Color(0xFF64B5F6),       // lighter blue for IOB predictions (dark mode)
     cobPrediction = Color(0xFFFFB74D),       // lighter orange for COB predictions (dark mode)

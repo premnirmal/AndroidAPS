@@ -7,11 +7,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -37,8 +39,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.ui.CoreUiStrings
@@ -50,6 +58,7 @@ import app.aaps.core.ui.compose.stringResource
 import app.aaps.ui.UiStrings
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlinx.datetime.DayOfWeek
 
 private val trioStatsRanges = listOf(
@@ -125,6 +134,13 @@ fun TrioStatsScreen(
                 }
 
                 else -> state.trioStatsData?.let { data ->
+                    item {
+                        TrioGlucosePercentileCard(
+                            percentiles = data.hourlyPercentiles,
+                            lowMgdl = viewModel.trioLowMgdl,
+                            highMgdl = viewModel.trioHighMgdl
+                        )
+                    }
                     item { TrioGlycemicOverviewCard(data) }
                     item { TrioMetricsCard(data) }
                     data.comparison?.let { comparison ->
@@ -158,6 +174,218 @@ fun TrioStatsScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun TrioGlucosePercentileCard(
+    percentiles: List<TrioHourlyPercentile>,
+    lowMgdl: Double,
+    highMgdl: Double
+) {
+    val profileUtil = LocalProfileUtil.current
+    val density = LocalDensity.current
+    val colors = AapsTheme.generalColors
+    val wideBandColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+    val narrowBandColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.42f)
+    val medianColor = MaterialTheme.colorScheme.primary
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
+    val highThresholdColor = MaterialTheme.colorScheme.tertiary
+    val tightHighMgdl = 140.0
+    val chartMinimumMgdl = 40.0
+    val highestValue = maxOf(
+        highMgdl,
+        percentiles.maxOfOrNull { it.p90Mgdl } ?: highMgdl
+    )
+    val chartMaximumMgdl = ceil(highestValue / 50.0).coerceAtLeast(2.0) * 50.0
+    val chartDescription = stringResource(UiStrings.trio_stats_glucose_percentile_chart)
+    val chartHeight = AapsSpacing.bgCircleSize + AapsSpacing.bgCircleSize / 2
+    val axisWidth = AapsSpacing.xxLarge + AapsSpacing.extraLarge
+    val strokeWidth = with(density) { AapsSpacing.extraSmall.toPx() }
+    val gridWidth = strokeWidth / 2f
+    val dashEffect = PathEffect.dashPathEffect(
+        floatArrayOf(
+            with(density) { AapsSpacing.medium.toPx() },
+            with(density) { AapsSpacing.small.toPx() }
+        )
+    )
+
+    TrioStatsCard {
+        Text(
+            text = stringResource(UiStrings.trio_stats_agp),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = profileUtil.units.displayLabel,
+            modifier = Modifier.align(Alignment.End),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
+        ) {
+            Canvas(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(chartHeight)
+                    .semantics { contentDescription = chartDescription }
+            ) {
+                fun yPosition(valueMgdl: Double): Float =
+                    size.height * (1f - ((valueMgdl - chartMinimumMgdl) / (chartMaximumMgdl - chartMinimumMgdl)).toFloat())
+
+                repeat(5) { index ->
+                    val y = size.height * index / 4f
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = gridWidth
+                    )
+                }
+                for (hour in 0..21 step 3) {
+                    val x = size.width * hour / 23f
+                    drawLine(
+                        color = gridColor,
+                        start = Offset(x, 0f),
+                        end = Offset(x, size.height),
+                        strokeWidth = gridWidth,
+                        pathEffect = dashEffect
+                    )
+                }
+
+                fun drawThreshold(valueMgdl: Double, color: Color) {
+                    if (valueMgdl !in chartMinimumMgdl..chartMaximumMgdl) return
+                    val y = yPosition(valueMgdl)
+                    drawLine(
+                        color = color,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = strokeWidth,
+                        pathEffect = dashEffect
+                    )
+                }
+
+                drawThreshold(lowMgdl, colors.bgLow)
+                drawThreshold(tightHighMgdl, colors.bgInRange)
+                drawThreshold(highMgdl, highThresholdColor)
+
+                if (percentiles.isNotEmpty()) {
+                    fun xPosition(hour: Int): Float = size.width * hour / 23f
+
+                    fun drawBand(
+                        lower: (TrioHourlyPercentile) -> Double,
+                        upper: (TrioHourlyPercentile) -> Double,
+                        color: Color
+                    ) {
+                        val path = Path()
+                        percentiles.forEachIndexed { index, point ->
+                            val offset = Offset(xPosition(point.hour), yPosition(upper(point)))
+                            if (index == 0) path.moveTo(offset.x, offset.y) else path.lineTo(offset.x, offset.y)
+                        }
+                        percentiles.asReversed().forEach { point ->
+                            path.lineTo(xPosition(point.hour), yPosition(lower(point)))
+                        }
+                        path.close()
+                        drawPath(path = path, color = color, style = Fill)
+                    }
+
+                    drawBand(
+                        lower = TrioHourlyPercentile::p10Mgdl,
+                        upper = TrioHourlyPercentile::p90Mgdl,
+                        color = wideBandColor
+                    )
+                    drawBand(
+                        lower = TrioHourlyPercentile::p25Mgdl,
+                        upper = TrioHourlyPercentile::p75Mgdl,
+                        color = narrowBandColor
+                    )
+
+                    val medianPath = Path()
+                    percentiles.forEachIndexed { index, point ->
+                        val offset = Offset(xPosition(point.hour), yPosition(point.medianMgdl))
+                        if (index == 0) medianPath.moveTo(offset.x, offset.y) else medianPath.lineTo(offset.x, offset.y)
+                    }
+                    drawPath(
+                        path = medianPath,
+                        color = medianColor,
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .width(axisWidth)
+                    .height(chartHeight),
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.End
+            ) {
+                repeat(5) { index ->
+                    val valueMgdl = chartMaximumMgdl - (chartMaximumMgdl - chartMinimumMgdl) * index / 4.0
+                    Text(
+                        text = profileUtil.fromMgdlToStringInUnits(valueMgdl),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                for (hour in 0..21 step 3) {
+                    Text(
+                        text = hour.toString().padStart(2, '0'),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(axisWidth + AapsSpacing.medium))
+        }
+        val legendItems = listOf(
+            stringResource(UiStrings.trio_stats_percentile_10_90) to wideBandColor,
+            stringResource(UiStrings.trio_stats_percentile_25_75) to narrowBandColor,
+            stringResource(UiStrings.trio_stats_median) to medianColor,
+            profileUtil.fromMgdlToStringWithUnits(lowMgdl) to colors.bgLow,
+            profileUtil.fromMgdlToStringWithUnits(tightHighMgdl) to colors.bgInRange,
+            profileUtil.fromMgdlToStringWithUnits(highMgdl) to highThresholdColor
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
+        ) {
+            legendItems.chunked(3).forEach { columnItems ->
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
+                ) {
+                    columnItems.forEach { (label, color) ->
+                        TrioChartLegendItem(label, color)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrioChartLegendItem(label: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Surface(
+            modifier = Modifier.size(AapsSpacing.large),
+            shape = RoundedCornerShape(AapsSpacing.large),
+            color = color
+        ) {}
+        Spacer(modifier = Modifier.width(AapsSpacing.medium))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

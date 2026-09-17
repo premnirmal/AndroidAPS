@@ -102,6 +102,10 @@ class StatsViewModel(
      * nothing in it and a Reset button that reset nothing.
      */
     val showActivityStats: Boolean get() = config.platform == AppPlatform.Android
+    val trioLowMgdl: Double
+        get() = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewLowMark))
+    val trioHighMgdl: Double
+        get() = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewHighMark))
 
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()
@@ -213,8 +217,8 @@ class StatsViewModel(
                     previousReadings = previousReadings,
                     startTime = startTime,
                     endTime = endTime,
-                    lowMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewLowMark)),
-                    highMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewHighMark))
+                    lowMgdl = trioLowMgdl,
+                    highMgdl = trioHighMgdl
                 )
             }
             _uiState.update {

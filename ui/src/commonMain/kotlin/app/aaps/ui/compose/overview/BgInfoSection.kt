@@ -85,14 +85,18 @@ fun BgInfoSection(
     } else {
         bgColor
     }
-    val trendColor = bgColor
+    val trioColors = AapsTheme.generalColors
+    val trendColor = if (useGradientRing) trioColors.trioBgAccent else bgColor
     val ringColor = bgColor.copy(alpha = 0.3f)
-    val circleColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    val circleColor = if (useGradientRing) trioColors.trioBgCircle else MaterialTheme.colorScheme.surfaceContainerHigh
     val ringStrokeWidth = AapsSpacing.bgRingStrokeWidth * LocalAapsScale.current
     val gradientColors = listOf(
-        bgColor.copy(alpha = 0.55f),
-        bgColor,
-        bgColor.copy(alpha = 0.55f)
+        trioColors.trioBgRingPurple,
+        trioColors.trioBgRingViolet,
+        trioColors.trioBgRingIndigo,
+        trioColors.trioBgRingBlue,
+        trioColors.trioBgAccent,
+        trioColors.trioBgRingPurple
     )
 
     // Build accessibility description: "BG 120, Flat, delta +2, 2 min ago"

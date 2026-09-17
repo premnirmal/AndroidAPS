@@ -218,6 +218,7 @@ dependencies {
     implementation(project(":database:persistence"))
     implementation(project(":pump:virtual"))
     implementation(project(":workflow"))
+    implementation(libs.androidx.car.app)
     implementation(libs.androidx.core)
 
     // Pump drivers — only for full + pumpcontrol flavors. Derived from the :pump:* modules included
