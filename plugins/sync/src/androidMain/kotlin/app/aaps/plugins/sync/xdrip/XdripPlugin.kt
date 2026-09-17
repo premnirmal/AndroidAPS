@@ -88,7 +88,8 @@ import org.json.JSONArray
 @ContributesBinding(AppScope::class, binding = binding<XDripBroadcast>())
 @IntKey(330)
 @SingleIn(AppScope::class)
-class XdripPlugin @Inject constructor(
+@Inject
+class XdripPlugin(
     aapsLogger: AAPSLogger,
     override val rh: ResourceHelper,
     preferences: Preferences,
@@ -175,6 +176,11 @@ class XdripPlugin @Inject constructor(
     }
 
     private fun sendStatusLine() {
+        // buildStatusLine below reads the active pump through ProcessedTbrEbData. Until
+        // ConfigBuilder.initialize() has run verifySelectionInCategories() there is no pump selected and
+        // PluginStore throws "No pump selected". onStart subscribes to every database change and startup
+        // writes to the database, so this really can fire inside that window.
+        if (!config.appInitialized) return
         if (preferences.get(BooleanKey.XdripSendStatus)) {
             val status = runBlocking { profileFunction.getProfile() }?.let { buildStatusLine(it) } ?: ""
             context.sendBroadcast(

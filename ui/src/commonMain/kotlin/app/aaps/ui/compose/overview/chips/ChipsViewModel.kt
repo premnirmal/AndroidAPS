@@ -45,7 +45,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @Stable
-class ChipsViewModel @AssistedInject constructor(
+@AssistedInject
+class ChipsViewModel(
     @Assisted cache: OverviewDataCache,
     private val iobCobCalculator: IobCobCalculator,
     private val loop: Loop,

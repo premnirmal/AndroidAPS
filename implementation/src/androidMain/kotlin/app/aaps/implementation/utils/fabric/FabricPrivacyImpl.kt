@@ -27,7 +27,8 @@ import dev.zacsweers.metro.SingleIn
  */
 @ContributesBinding(AppScope::class)
 @SingleIn(AppScope::class)
-class FabricPrivacyImpl @Inject constructor(
+@Inject
+class FabricPrivacyImpl(
     private val aapsLogger: AAPSLogger,
     private val sharedPreferences: SharedPreferences, // Injecting Preferences is causing circular dependencies
     private val config: Config

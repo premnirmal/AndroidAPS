@@ -100,7 +100,8 @@ private val BACKUP_TIMESTAMP_REGEX = Regex("^\\d{4}-\\d{2}-\\d{2}_\\d{6}")
 
 @ContributesBinding(AppScope::class)
 @SingleIn(AppScope::class)
-class ImportExportPrefsImpl @Inject constructor(
+@Inject
+class ImportExportPrefsImpl(
     private var aapsLogger: AAPSLogger,
     private val rh: ResourceHelper,
     private val sp: SP,
@@ -1040,7 +1041,8 @@ class ImportExportPrefsImpl @Inject constructor(
     }
 
 
-    class CsvExportWorker @AssistedInject constructor(
+    @AssistedInject
+    class CsvExportWorker(
         @Assisted private val context: Context,
         @Assisted params: WorkerParameters,
         aapsLogger: AAPSLogger,
@@ -1187,7 +1189,8 @@ class ImportExportPrefsImpl @Inject constructor(
     }
 
 
-    class ApsResultExportWorker @AssistedInject constructor(
+    @AssistedInject
+    class ApsResultExportWorker(
         @Assisted context: Context,
         @Assisted params: WorkerParameters,
         aapsLogger: AAPSLogger,

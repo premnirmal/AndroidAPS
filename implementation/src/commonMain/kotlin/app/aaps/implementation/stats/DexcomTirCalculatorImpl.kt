@@ -35,7 +35,8 @@ import dev.zacsweers.metro.SingleIn
  */
 @ContributesBinding(AppScope::class)
 @SingleIn(AppScope::class)
-class DexcomTirCalculatorImpl @Inject constructor(
+@Inject
+class DexcomTirCalculatorImpl(
     private val dateUtil: DateUtil,
     private val persistenceLayer: PersistenceLayer
 ) : DexcomTirCalculator {
