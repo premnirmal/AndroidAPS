@@ -11,7 +11,6 @@ import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,7 +19,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
-import app.aaps.ui.R
 import app.aaps.core.interfaces.R as CoreInterfacesR
 import app.aaps.core.ui.R as CoreUiR
 
@@ -40,41 +38,37 @@ fun TrioAddActionsSheet(
                     horizontal = AapsSpacing.extraLarge + AapsSpacing.small,
                     vertical = AapsSpacing.large
                 ),
-            verticalArrangement = Arrangement.spacedBy(AapsSpacing.large)
+                verticalArrangement = Arrangement.spacedBy(AapsSpacing.large)
         ) {
-            Text(
-                text = stringResource(R.string.trio_add_action),
-                style = MaterialTheme.typography.titleMedium
-            )
-            Button(
-                onClick = onBolusClick,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(imageVector = Icons.Default.Bloodtype, contentDescription = null)
-                Text(
-                    text = stringResource(CoreInterfacesR.string.bolus),
-                    modifier = Modifier.padding(start = AapsSpacing.medium)
-                )
-            }
-            Button(
-                onClick = onCarbsClick,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(imageVector = Icons.Default.Restaurant, contentDescription = null)
-                Text(
-                    text = stringResource(CoreInterfacesR.string.carbs),
-                    modifier = Modifier.padding(start = AapsSpacing.medium)
-                )
-            }
-            Button(
-                onClick = onWizardClick,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(imageVector = Icons.Default.Calculate, contentDescription = null)
-                Text(
-                    text = stringResource(CoreUiR.string.boluswizard),
-                    modifier = Modifier.padding(start = AapsSpacing.medium)
-                )
+                Button(
+                    onClick = onWizardClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(imageVector = Icons.Default.Calculate, contentDescription = null)
+                    Text(
+                        text = stringResource(CoreUiR.string.boluswizard),
+                        modifier = Modifier.padding(start = AapsSpacing.medium)
+                    )
+                }
+                Button(
+                    onClick = onBolusClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(imageVector = Icons.Default.Bloodtype, contentDescription = null)
+                    Text(
+                        text = stringResource(CoreInterfacesR.string.bolus),
+                        modifier = Modifier.padding(start = AapsSpacing.medium)
+                    )
+                }
+                Button(
+                    onClick = onCarbsClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(imageVector = Icons.Default.Restaurant, contentDescription = null)
+                    Text(
+                        text = stringResource(CoreInterfacesR.string.carbs),
+                        modifier = Modifier.padding(start = AapsSpacing.medium)
+                    )
             }
         }
     }
