@@ -28,7 +28,7 @@ class NotificationHolderImpl(
     private val uiInteraction: UiInteraction
 ) : NotificationHolder {
 
-    override val channelID = "AndroidAPS-Ongoing"
+    override val channelID = "Trio-Ongoing"
     override val notificationID = 4711
     private var _notification: Notification? = null
     override var notification: Notification

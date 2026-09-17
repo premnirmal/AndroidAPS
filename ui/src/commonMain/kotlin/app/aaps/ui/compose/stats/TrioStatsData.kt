@@ -3,6 +3,7 @@ package app.aaps.ui.compose.stats
 import app.aaps.core.data.model.GV
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.utils.MidnightTime
+import kotlin.math.abs
 import kotlin.math.sqrt
 import kotlin.time.Instant
 import kotlinx.datetime.DayOfWeek
@@ -53,8 +54,18 @@ data class TrioStatsComparison(
     val cvDelta: Double
 )
 
+data class TrioHourlyPercentile(
+    val hour: Int,
+    val p10Mgdl: Double,
+    val p25Mgdl: Double,
+    val medianMgdl: Double,
+    val p75Mgdl: Double,
+    val p90Mgdl: Double
+)
+
 data class TrioStatsData(
     val readingCount: Int = 0,
+    val availableDays: Double = 0.0,
     val coveragePercent: Double = 0.0,
     val averageMgdl: Double = 0.0,
     val medianMgdl: Double = 0.0,
@@ -74,6 +85,7 @@ data class TrioStatsData(
     val dawnRiseMgdl: Double = 0.0,
     val bestStreakDays: Int = 0,
     val tir: TrioTirBreakdown = TrioTirBreakdown(),
+    val hourlyPercentiles: List<TrioHourlyPercentile> = emptyList(),
     val hourly: List<TrioPatternRow> = emptyList(),
     val daily: List<TrioPatternRow> = emptyList(),
     val weekdays: List<TrioPatternRow> = emptyList(),
@@ -101,6 +113,7 @@ internal fun calculateTrioStatsData(
 
     return TrioStatsData(
         readingCount = valid.size,
+        availableDays = calculateAvailableSampleDays(valid),
         coveragePercent = calculateCoverage(valid, effectiveStart, endTime),
         averageMgdl = summary.average,
         medianMgdl = summary.median,
@@ -123,6 +136,7 @@ internal fun calculateTrioStatsData(
         dawnRiseMgdl = calculateDawnRise(valid),
         bestStreakDays = calculateBestStreak(daily),
         tir = summary.tir,
+        hourlyPercentiles = calculateHourlyPercentiles(valid),
         hourly = calculateHourly(valid, lowMgdl, highMgdl),
         daily = daily,
         weekdays = calculateWeekdays(valid, lowMgdl, highMgdl),
@@ -174,12 +188,28 @@ private fun calculateTir(values: List<Double>, lowMgdl: Double, highMgdl: Double
 
 private fun calculateCoverage(readings: List<GV>, startTime: Long, endTime: Long): Double {
     if (readings.size < 2 || endTime <= startTime) return 0.0
+    val cadence = medianCadence(readings)
+    val expected = ((endTime - startTime) / cadence + 1L).coerceAtLeast(1L)
+    return (readings.size * 100.0 / expected).coerceIn(0.0, 100.0)
+}
+
+private fun calculateAvailableSampleDays(readings: List<GV>): Double {
+    if (readings.isEmpty()) return 0.0
+    val cadence = medianCadence(readings)
+    val sampleDays = readings.size * cadence.toDouble() / DAY_MS
+    val spanDays = if (readings.size < 2) {
+        sampleDays
+    } else {
+        (readings.last().timestamp - readings.first().timestamp + cadence).coerceAtLeast(0L).toDouble() / DAY_MS
+    }
+    return minOf(sampleDays, spanDays)
+}
+
+private fun medianCadence(readings: List<GV>): Long {
     val gaps = readings.zipWithNext { first, second -> second.timestamp - first.timestamp }
         .filter { it in MIN_CADENCE_MS..MAX_CADENCE_MS }
         .sorted()
-    val cadence = gaps.getOrNull(gaps.size / 2) ?: DEFAULT_CADENCE_MS
-    val expected = ((endTime - startTime) / cadence + 1L).coerceAtLeast(1L)
-    return (readings.size * 100.0 / expected).coerceIn(0.0, 100.0)
+    return gaps.getOrNull(gaps.size / 2) ?: DEFAULT_CADENCE_MS
 }
 
 private fun calculateGvi(readings: List<GV>, average: Double, standardDeviation: Double): Double {
@@ -188,7 +218,7 @@ private fun calculateGvi(readings: List<GV>, average: Double, standardDeviation:
     var rateOfChange = 0.0
     var rateSamples = 0
     readings.zipWithNext { first, second ->
-        val delta = kotlin.math.abs(second.value - first.value)
+        val delta = abs(second.value - first.value)
         val elapsedMinutes = (second.timestamp - first.timestamp).toDouble() / MINUTE_MS
         totalDelta += delta
         if (elapsedMinutes in 0.1..30.0) {
@@ -225,7 +255,7 @@ private fun calculateMage(readings: List<GV>): Double {
         if ((current > previous && current >= next) || (current < previous && current <= next)) extrema += current
     }
     extrema += values.last()
-    val amplitudes = extrema.zipWithNext { first, second -> kotlin.math.abs(second - first) }
+    val amplitudes = extrema.zipWithNext { first, second -> abs(second - first) }
         .filter { it > standardDeviation }
     return amplitudes.takeIf { it.isNotEmpty() }?.average() ?: 0.0
 }
@@ -241,8 +271,8 @@ private fun calculateModd(readings: List<GV>): Double {
             candidateIndex++
         }
         val candidate = readings[candidateIndex]
-        if (kotlin.math.abs(candidate.timestamp - target) <= DEFAULT_CADENCE_MS) {
-            total += kotlin.math.abs(reading.value - candidate.value)
+        if (abs(candidate.timestamp - target) <= DEFAULT_CADENCE_MS) {
+            total += abs(reading.value - candidate.value)
             count++
         }
     }
@@ -284,6 +314,25 @@ private fun calculateBestStreak(days: List<TrioPatternRow>): Int {
         previousTimestamp = day.timestamp
     }
     return best
+}
+
+private fun calculateHourlyPercentiles(readings: List<GV>): List<TrioHourlyPercentile> {
+    val zone = TimeZone.currentSystemDefault()
+    return readings
+        .groupBy { Instant.fromEpochMilliseconds(it.timestamp).toLocalDateTime(zone).hour }
+        .entries
+        .sortedBy { it.key }
+        .map { (hour, readingsForHour) ->
+            val values = readingsForHour.map { it.value }.sorted()
+            TrioHourlyPercentile(
+                hour = hour,
+                p10Mgdl = percentile(values, 0.10),
+                p25Mgdl = percentile(values, 0.25),
+                medianMgdl = percentile(values, 0.50),
+                p75Mgdl = percentile(values, 0.75),
+                p90Mgdl = percentile(values, 0.90)
+            )
+        }
 }
 
 private fun calculateHourly(readings: List<GV>, lowMgdl: Double, highMgdl: Double): List<TrioPatternRow> {

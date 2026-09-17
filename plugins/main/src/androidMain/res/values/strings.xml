@@ -26,5 +26,8 @@
     <string name="description_persistent_notification">Shows an ongoing notification with a short overview of what your loop is doing</string>
     <string name="old_data">OLD DATA</string>
     <string name="notification_iob_short">%1$.1fU</string>
+    <string name="android_auto_device_user">You</string>
+    <string name="android_auto_reply">Reply</string>
+    <string name="android_auto_mark_as_read">Mark as read</string>
 
 </resources>

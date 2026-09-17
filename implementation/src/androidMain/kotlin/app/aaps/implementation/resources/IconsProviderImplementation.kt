@@ -26,6 +26,7 @@ class IconsProviderImplementation(private val config: Config) : IconsProvider {
         when {
             config.AAPSCLIENT  -> R.drawable.ic_notif_nsclient
             config.PUMPCONTROL -> R.drawable.ic_notif_pumpcontrol
+            config.TRIO        -> app.aaps.core.ui.R.drawable.ic_notif_aaps
             else               -> app.aaps.core.ui.R.drawable.ic_notif_aaps
         }
 }
