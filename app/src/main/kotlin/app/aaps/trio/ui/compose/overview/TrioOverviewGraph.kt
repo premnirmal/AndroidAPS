@@ -54,6 +54,7 @@ import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.util.addPointerInputChange
+import androidx.compose.ui.res.stringResource as androidStringResource
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
@@ -188,7 +189,7 @@ fun TrioOverviewGraph(
                 IconButton(onClick = { showPredictionInfo = true }) {
                     Icon(
                         imageVector = Icons.Outlined.Info,
-                        contentDescription = stringResource(R.string.trio_graph_prediction_info),
+                        contentDescription = androidStringResource(R.string.trio_graph_prediction_info),
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -229,32 +230,32 @@ private fun PredictionLegendBottomSheet(onDismiss: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
         ) {
             Text(
-                text = stringResource(R.string.trio_graph_prediction_info),
+                text = androidStringResource(R.string.trio_graph_prediction_info),
                 style = MaterialTheme.typography.titleLarge
             )
             PredictionLegendItem(
-                title = stringResource(R.string.trio_graph_prediction_iob_title),
-                description = stringResource(R.string.trio_graph_prediction_iob_description),
+                title = androidStringResource(R.string.trio_graph_prediction_iob_title),
+                description = androidStringResource(R.string.trio_graph_prediction_iob_description),
                 color = AapsTheme.generalColors.iobPrediction
             )
             PredictionLegendItem(
-                title = stringResource(R.string.trio_graph_prediction_cob_title),
-                description = stringResource(R.string.trio_graph_prediction_cob_description),
+                title = androidStringResource(R.string.trio_graph_prediction_cob_title),
+                description = androidStringResource(R.string.trio_graph_prediction_cob_description),
                 color = AapsTheme.generalColors.cobPrediction
             )
             PredictionLegendItem(
-                title = stringResource(R.string.trio_graph_prediction_acob_title),
-                description = stringResource(R.string.trio_graph_prediction_acob_description),
+                title = androidStringResource(R.string.trio_graph_prediction_acob_title),
+                description = androidStringResource(R.string.trio_graph_prediction_acob_description),
                 color = AapsTheme.generalColors.aCobPrediction
             )
             PredictionLegendItem(
-                title = stringResource(R.string.trio_graph_prediction_uam_title),
-                description = stringResource(R.string.trio_graph_prediction_uam_description),
+                title = androidStringResource(R.string.trio_graph_prediction_uam_title),
+                description = androidStringResource(R.string.trio_graph_prediction_uam_description),
                 color = AapsTheme.generalColors.uamPrediction
             )
             PredictionLegendItem(
-                title = stringResource(R.string.trio_graph_prediction_zt_title),
-                description = stringResource(R.string.trio_graph_prediction_zt_description),
+                title = androidStringResource(R.string.trio_graph_prediction_zt_title),
+                description = androidStringResource(R.string.trio_graph_prediction_zt_description),
                 color = AapsTheme.generalColors.ztPrediction
             )
         }
