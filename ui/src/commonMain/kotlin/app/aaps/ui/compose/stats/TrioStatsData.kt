@@ -113,7 +113,7 @@ internal fun calculateTrioStatsData(
 
     return TrioStatsData(
         readingCount = valid.size,
-        availableDays = calculateAvailableDays(valid),
+        availableDays = calculateEstimatedDataSpanDays(valid),
         coveragePercent = calculateCoverage(valid, effectiveStart, endTime),
         averageMgdl = summary.average,
         medianMgdl = summary.median,
@@ -193,7 +193,7 @@ private fun calculateCoverage(readings: List<GV>, startTime: Long, endTime: Long
     return (readings.size * 100.0 / expected).coerceIn(0.0, 100.0)
 }
 
-private fun calculateAvailableDays(readings: List<GV>): Double =
+private fun calculateEstimatedDataSpanDays(readings: List<GV>): Double =
     if (readings.isEmpty()) 0.0 else readings.size * medianCadence(readings).toDouble() / DAY_MS
 
 private fun medianCadence(readings: List<GV>): Long {

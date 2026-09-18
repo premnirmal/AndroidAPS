@@ -24,7 +24,7 @@ fun CobInfo.generateCOBString(decimalFormatter: DecimalFormatter): String {
 
 fun CobInfo.displayText(rh: TextResolver, decimalFormatter: DecimalFormatter): String? =
     displayCob?.let { displayCob ->
-        var cobText = rh.gs(InterfacesStrings.format_carbs_compact, displayCob.toInt())
+        var cobText = rh.gs(InterfacesStrings.format_carbs_no_space, displayCob.toInt())
         if (futureCarbs > 0) cobText += "(" + decimalFormatter.to0Decimal(futureCarbs) + ")"
         cobText
     }
