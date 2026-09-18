@@ -357,7 +357,8 @@ private fun TrioOverviewContent(
                                         )
                                     }
                                     .clickable(onClick = onBgSourceClick),
-                                useGradientRing = true
+                                    useGradientRing = true,
+                                    elevation = AapsSpacing.extraSmall
                             )
                             LoopStatusAndPrediction(
                                 runningMode = runningMode,
@@ -691,7 +692,8 @@ private fun TrioProfileCard(
             width = 1.dp,
             color = MaterialTheme.colorScheme.outlineVariant
         ),
-        tonalElevation = AapsSpacing.extraSmall
+        tonalElevation = AapsSpacing.extraSmall,
+        shadowElevation = AapsSpacing.extraSmall
     ) {
         Box {
             Row(
@@ -761,6 +763,7 @@ private fun TrioBolusingCard(
             color = MaterialTheme.colorScheme.outlineVariant
         ),
         tonalElevation = AapsSpacing.extraSmall,
+        shadowElevation = AapsSpacing.extraSmall,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
@@ -833,6 +836,7 @@ private fun TimeInRangeTodayCard(
             color = MaterialTheme.colorScheme.outlineVariant
         ),
         tonalElevation = AapsSpacing.extraSmall,
+        shadowElevation = AapsSpacing.extraSmall,
         modifier = modifier.fillMaxWidth()
     ) {
         Column(

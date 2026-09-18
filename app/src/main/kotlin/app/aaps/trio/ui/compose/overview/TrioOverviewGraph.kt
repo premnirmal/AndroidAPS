@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -69,7 +70,7 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 
-private const val DEFAULT_WINDOW_MS = 3L * 60L * 60L * 1000L
+private const val DEFAULT_WINDOW_MS = 6L * 60L * 60L * 1000L
 private const val MIN_WINDOW_MS = 10L * 60L * 1000L
 private const val MAX_WINDOW_MS = 72L * 60L * 60L * 1000L
 private const val LIVE_EDGE_TOLERANCE_MS = 10L * 60L * 1000L
@@ -138,26 +139,48 @@ fun TrioOverviewGraph(
     )
     val range = derivedTimeRange?.first?.let { it to liveEnd }
         ?: (liveEnd - 24L * 60L * 60L * 1000L to liveEnd)
+    var selectedRangeHours by rememberSaveable { mutableStateOf<Int?>(6) }
 
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(height),
-        shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
-        color = Color.Transparent,
-        shadowElevation = 0.dp
-    ) {
-        InteractiveTrioGlucoseChart(
-            history = history,
-            predictions = visiblePredictions,
-            boluses = treatments.boluses,
-            fullRange = range,
-            nowTimestamp = nowTimestamp,
-            lowMark = chartConfig.lowMark,
-            highMark = chartConfig.highMark,
-            onInteraction = graphViewModel::onGraphInteraction,
-            modifier = Modifier.fillMaxSize()
-        )
+    Column(modifier = modifier.fillMaxWidth()) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(height),
+            shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
+            color = Color.Transparent,
+            shadowElevation = 0.dp
+        ) {
+            InteractiveTrioGlucoseChart(
+                history = history,
+                predictions = visiblePredictions,
+                boluses = treatments.boluses,
+                fullRange = range,
+                nowTimestamp = nowTimestamp,
+                lowMark = chartConfig.lowMark,
+                highMark = chartConfig.highMark,
+                selectedRangeHours = selectedRangeHours,
+                onRangeSelected = { selectedRangeHours = it },
+                onInteraction = graphViewModel::onGraphInteraction,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = AapsSpacing.small),
+            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small)
+        ) {
+            listOf(4, 6, 12, 24).forEach { hours ->
+                FilterChip(
+                    selected = selectedRangeHours == hours,
+                    onClick = { selectedRangeHours = hours },
+                    label = {
+                        Text(stringResource(CoreUiStrings.units_format_hours, hours))
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
     }
 }
 
@@ -170,6 +193,8 @@ private fun InteractiveTrioGlucoseChart(
     nowTimestamp: Long,
     lowMark: Double,
     highMark: Double,
+    selectedRangeHours: Int?,
+    onRangeSelected: (Int?) -> Unit,
     onInteraction: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -200,6 +225,16 @@ private fun InteractiveTrioGlucoseChart(
     var selectedBolus by remember { mutableStateOf<BolusGraphPoint?>(null) }
     var lastTapTime by remember { mutableLongStateOf(0L) }
     val inertia = remember { Animatable(0f) }
+
+    LaunchedEffect(selectedRangeHours, maxDuration) {
+        val hours = selectedRangeHours ?: return@LaunchedEffect
+        val duration = (hours * 60L * 60L * 1000L)
+            .coerceIn(MIN_WINDOW_MS, maxDuration)
+        visibleDuration = duration
+        centerTime = clampCenter(nowCenteredViewport(nowTimestamp, duration), duration)
+        selectedPoint = null
+        selectedBolus = null
+    }
 
     fun clampCenter(value: Long, duration: Long = visibleDuration): Long {
         val half = duration / 2L
@@ -295,6 +330,7 @@ private fun InteractiveTrioGlucoseChart(
                                     .coerceIn(MIN_WINDOW_MS, maxDuration)
                                 visibleDuration = newDuration
                                 centerTime = clampCenter(centerTime, newDuration)
+                                onRangeSelected(null)
                                 zoomGesture = true
                                 event.changes.forEach { it.consume() }
                             }
@@ -330,9 +366,11 @@ private fun InteractiveTrioGlucoseChart(
                             }
                             visibleDuration = targetDuration
                             centerTime = clampCenter(centerTime, targetDuration)
+                            onRangeSelected(null)
                             selectedPoint = null
                             selectedBolus = null
                             lastTapTime = 0L
+                            onRangeSelected(null)
                             onInteraction()
                         }
 
@@ -376,6 +414,7 @@ private fun InteractiveTrioGlucoseChart(
 
                         horizontalGesture -> {
                             lastTapTime = 0L
+                            onRangeSelected(null)
                             onInteraction()
                             val velocityX = velocityTracker.calculateVelocity().x
                             if (abs(velocityX) > 1_000f) {
