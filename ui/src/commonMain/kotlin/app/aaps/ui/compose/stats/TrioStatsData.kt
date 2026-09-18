@@ -3,6 +3,7 @@ package app.aaps.ui.compose.stats
 import app.aaps.core.data.model.GV
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.utils.MidnightTime
+import kotlin.math.abs
 import kotlin.math.sqrt
 import kotlin.time.Instant
 import kotlinx.datetime.DayOfWeek
@@ -64,6 +65,7 @@ data class TrioHourlyPercentile(
 
 data class TrioStatsData(
     val readingCount: Int = 0,
+    val availableDays: Double = 0.0,
     val coveragePercent: Double = 0.0,
     val averageMgdl: Double = 0.0,
     val medianMgdl: Double = 0.0,
@@ -111,6 +113,7 @@ internal fun calculateTrioStatsData(
 
     return TrioStatsData(
         readingCount = valid.size,
+        availableDays = calculateAvailableDays(valid),
         coveragePercent = calculateCoverage(valid, effectiveStart, endTime),
         averageMgdl = summary.average,
         medianMgdl = summary.median,
@@ -185,12 +188,19 @@ private fun calculateTir(values: List<Double>, lowMgdl: Double, highMgdl: Double
 
 private fun calculateCoverage(readings: List<GV>, startTime: Long, endTime: Long): Double {
     if (readings.size < 2 || endTime <= startTime) return 0.0
+    val cadence = medianCadence(readings)
+    val expected = ((endTime - startTime) / cadence + 1L).coerceAtLeast(1L)
+    return (readings.size * 100.0 / expected).coerceIn(0.0, 100.0)
+}
+
+private fun calculateAvailableDays(readings: List<GV>): Double =
+    if (readings.isEmpty()) 0.0 else readings.size * medianCadence(readings).toDouble() / DAY_MS
+
+private fun medianCadence(readings: List<GV>): Long {
     val gaps = readings.zipWithNext { first, second -> second.timestamp - first.timestamp }
         .filter { it in MIN_CADENCE_MS..MAX_CADENCE_MS }
         .sorted()
-    val cadence = gaps.getOrNull(gaps.size / 2) ?: DEFAULT_CADENCE_MS
-    val expected = ((endTime - startTime) / cadence + 1L).coerceAtLeast(1L)
-    return (readings.size * 100.0 / expected).coerceIn(0.0, 100.0)
+    return gaps.getOrNull(gaps.size / 2) ?: DEFAULT_CADENCE_MS
 }
 
 private fun calculateGvi(readings: List<GV>, average: Double, standardDeviation: Double): Double {
@@ -199,7 +209,7 @@ private fun calculateGvi(readings: List<GV>, average: Double, standardDeviation:
     var rateOfChange = 0.0
     var rateSamples = 0
     readings.zipWithNext { first, second ->
-        val delta = kotlin.math.abs(second.value - first.value)
+        val delta = abs(second.value - first.value)
         val elapsedMinutes = (second.timestamp - first.timestamp).toDouble() / MINUTE_MS
         totalDelta += delta
         if (elapsedMinutes in 0.1..30.0) {
@@ -236,7 +246,7 @@ private fun calculateMage(readings: List<GV>): Double {
         if ((current > previous && current >= next) || (current < previous && current <= next)) extrema += current
     }
     extrema += values.last()
-    val amplitudes = extrema.zipWithNext { first, second -> kotlin.math.abs(second - first) }
+    val amplitudes = extrema.zipWithNext { first, second -> abs(second - first) }
         .filter { it > standardDeviation }
     return amplitudes.takeIf { it.isNotEmpty() }?.average() ?: 0.0
 }
@@ -252,8 +262,8 @@ private fun calculateModd(readings: List<GV>): Double {
             candidateIndex++
         }
         val candidate = readings[candidateIndex]
-        if (kotlin.math.abs(candidate.timestamp - target) <= DEFAULT_CADENCE_MS) {
-            total += kotlin.math.abs(reading.value - candidate.value)
+        if (abs(candidate.timestamp - target) <= DEFAULT_CADENCE_MS) {
+            total += abs(reading.value - candidate.value)
             count++
         }
     }

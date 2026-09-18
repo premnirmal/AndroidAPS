@@ -137,6 +137,7 @@ fun TrioStatsScreen(
                     item {
                         TrioGlucosePercentileCard(
                             percentiles = data.hourlyPercentiles,
+                            availableDays = data.availableDays,
                             lowMgdl = viewModel.trioLowMgdl,
                             highMgdl = viewModel.trioHighMgdl
                         )
@@ -180,6 +181,7 @@ fun TrioStatsScreen(
 @Composable
 private fun TrioGlucosePercentileCard(
     percentiles: List<TrioHourlyPercentile>,
+    availableDays: Double,
     lowMgdl: Double,
     highMgdl: Double
 ) {
@@ -369,6 +371,13 @@ private fun TrioGlucosePercentileCard(
                 }
             }
         }
+
+        Text(
+            text = stringResource(UiStrings.trio_stats_days_decimal, availableDays),
+            modifier = Modifier.align(Alignment.End),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

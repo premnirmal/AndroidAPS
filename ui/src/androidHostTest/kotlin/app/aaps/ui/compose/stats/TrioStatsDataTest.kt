@@ -62,6 +62,28 @@ internal class TrioStatsDataTest {
         }
     }
 
+    @Test
+    fun `available days uses filtered reading cadence`() {
+        val start = MidnightTime.calc(1_700_000_000_000L)
+        val readings = List(144) { index ->
+            glucose(
+                timestamp = start + T.mins(index * 5L).msecs(),
+                value = 100.0
+            )
+        }
+
+        val data = calculateTrioStatsData(
+            readings = readings,
+            previousReadings = emptyList(),
+            startTime = start,
+            endTime = start + T.days(1).msecs(),
+            lowMgdl = 70.0,
+            highMgdl = 180.0
+        )
+
+        assertThat(data.availableDays).isWithin(0.01).of(0.5)
+    }
+
     private fun glucose(timestamp: Long, value: Double) = GV(
         timestamp = timestamp,
         raw = null,
