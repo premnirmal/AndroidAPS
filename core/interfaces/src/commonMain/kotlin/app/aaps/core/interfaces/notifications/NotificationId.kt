@@ -19,8 +19,8 @@ import app.aaps.core.interfaces.notifications.NotificationLevel.URGENT
  * Identity + intrinsic severity of every AAPS notification.
  *
  * [defaultLevel] is the single source of truth for severity — a caller should not normally
- * override it at the post site. [NotificationLevel.URGENT] is the alarm tier (sound + ramp +
- * full-screen) and is reserved for acute insulin-delivery failures, critical BG, and
+ * override it at the post site. [NotificationLevel.URGENT] is the full-screen alarm tier and is
+ * reserved for acute insulin-delivery failures, critical BG, and
  * user-configured alarms.
  *
  * The system-notification id is derived from [Enum.ordinal] (see [fromOrdinal]); there is no

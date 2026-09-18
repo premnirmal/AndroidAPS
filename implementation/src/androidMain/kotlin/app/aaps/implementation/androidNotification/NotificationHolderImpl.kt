@@ -28,7 +28,7 @@ class NotificationHolderImpl(
     private val uiInteraction: UiInteraction
 ) : NotificationHolder {
 
-    override val channelID = "Trio-Ongoing"
+    override val channelID = "Trio-Ongoing-Silent"
     override val notificationID = 4711
     private var _notification: Notification? = null
     override var notification: Notification
@@ -63,7 +63,10 @@ class NotificationHolderImpl(
 
     override fun createNotificationChannel() {
         val mNotificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val channel = NotificationChannel(channelID, channelID as CharSequence, NotificationManager.IMPORTANCE_HIGH)
+        mNotificationManager.deleteNotificationChannel("Trio-Ongoing")
+        val channel = NotificationChannel(channelID, channelID as CharSequence, NotificationManager.IMPORTANCE_HIGH).apply {
+            setSound(null, null)
+        }
         mNotificationManager.createNotificationChannel(channel)
     }
 }

@@ -11,7 +11,6 @@ import app.aaps.core.interfaces.clientcontrol.PendingAction
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.nsclient.NSClientRepository
@@ -190,7 +189,7 @@ class ClientControlRoundTrip(
                     NotificationId.BOLUS_DELIVERY_FAILED,
                     // payload is the master-authored full text ("title\n<pump detail>"); show it as-is, don't re-prefix the title.
                     ack.payload ?: rh.gs(CoreUiStrings.treatmentdeliveryerror),
-                    validMinutes = 0, sound = AlarmSound.BOLUS_ERROR
+                    validMinutes = 0
                 )
             return
         }

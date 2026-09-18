@@ -3,7 +3,6 @@ package app.aaps.plugins.sync.nsclientV3.ws
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
@@ -275,14 +274,12 @@ class NsFrameHandler(
             1    -> notificationManager.post(
                 id = NotificationId.NS_ALARM,
                 text = alarm.title,
-                sound = AlarmSound.ALARM,
                 actions = snoozeActions(alarm)
             )
 
             2    -> notificationManager.post(
                 id = NotificationId.NS_URGENT_ALARM,
                 text = alarm.title,
-                sound = AlarmSound.URGENT_ALARM,
                 actions = snoozeActions(alarm)
             )
 

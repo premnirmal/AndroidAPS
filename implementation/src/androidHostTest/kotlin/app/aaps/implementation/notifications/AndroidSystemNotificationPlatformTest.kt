@@ -5,8 +5,6 @@ import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.notifications.AapsNotification
-import app.aaps.core.interfaces.notifications.AlarmSound
-import app.aaps.core.interfaces.notifications.AlarmSoundPlayer
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationHolder
 import app.aaps.core.interfaces.notifications.NotificationId
@@ -44,7 +42,6 @@ class AndroidSystemNotificationPlatformTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val preferences: Preferences = mock()
     private val alarmNotificationManager: AlarmNotificationManager = mock()
-    private val alarmSoundPlayer: AlarmSoundPlayer = mock()
     private val notificationHolder: NotificationHolder = mock()
     private val iconsProvider: IconsProvider = mock()
 
@@ -60,31 +57,26 @@ class AndroidSystemNotificationPlatformTest {
             preferences = preferences,
             iconsProvider = iconsProvider,
             notificationHolder = { notificationHolder },
-            alarmNotificationManager = { alarmNotificationManager },
-            alarmSoundPlayer = { alarmSoundPlayer }
+            alarmNotificationManager = { alarmNotificationManager }
         )
     }
 
     private fun notification(
         level: NotificationLevel,
-        sound: AlarmSound? = null,
         actions: List<NotificationAction> = emptyList()
     ) = AapsNotification(
         id = NotificationId.NEW_VERSION_DETECTED,
         instanceKey = 42,
         text = "text",
         level = level,
-        sound = sound,
         actions = actions
     )
 
     @Test
-    fun `an urgent alarm carrying a sound is posted silently`() {
-        // The ramping audio belongs to AlarmSoundPlayer, so the tray entry must not make noise of its
-        // own. It also must not consult the preference: this path is not the optional visual one.
-        sut.show(notification(NotificationLevel.URGENT, sound = AlarmSound.URGENT_ALARM), "Urgent")
+    fun `an urgent alarm is posted as a visual alert`() {
+        sut.show(notification(NotificationLevel.URGENT), "Urgent")
 
-        verify(alarmNotificationManager).postSilentAlarmNotification(
+        verify(alarmNotificationManager).postAlarmNotification(
             notificationKey = eq(42), title = eq("Urgent"), body = eq("text"), urgent = eq(true)
         )
         verify(preferences, never()).get(any<BooleanKey>())
@@ -96,7 +88,7 @@ class AndroidSystemNotificationPlatformTest {
 
         sut.show(notification(NotificationLevel.NORMAL), "Info")
 
-        verify(alarmNotificationManager, never()).postSilentAlarmNotification(any(), any(), any(), any())
+        verify(alarmNotificationManager, never()).postAlarmNotification(any(), any(), any(), any())
     }
 
     @Test
@@ -106,46 +98,11 @@ class AndroidSystemNotificationPlatformTest {
 
         sut.show(notification(NotificationLevel.NORMAL, actions = listOf(mock())), "Info")
 
-        verify(alarmNotificationManager, never()).postSilentAlarmNotification(any(), any(), any(), any())
+        verify(alarmNotificationManager, never()).postAlarmNotification(any(), any(), any(), any())
     }
 
     @Test
-    fun `an urgent notification without a sound takes the ordinary path when asked for`() {
-        // URGENT alone is not the alarm tier - only URGENT *with a sound* is. This one is the plain
-        // visual notification, so it is gated on the preference like any other.
-        whenever(preferences.get(BooleanKey.AlertUrgentAsAndroidNotification)).thenReturn(true)
-
-        sut.show(notification(NotificationLevel.URGENT), "Urgent")
-
-        verify(alarmNotificationManager, never()).postSilentAlarmNotification(any(), any(), any(), any())
-    }
-
-    @Test
-    fun `the audible alarm starts, holds and stops`() {
-        sut.setAudibleAlarm(1, AlarmSound.ALARM)
-        verify(alarmSoundPlayer).play(AlarmSound.ALARM, AlarmSoundPlayer.OWNER_INTERNAL)
-
-        // Called again with the same key means "keep playing" - a second play() would restart the ramp.
-        sut.setAudibleAlarm(1, AlarmSound.ALARM)
-        verify(alarmSoundPlayer).play(AlarmSound.ALARM, AlarmSoundPlayer.OWNER_INTERNAL)
-
-        // A different alarm takes over.
-        sut.setAudibleAlarm(2, AlarmSound.URGENT_ALARM)
-        verify(alarmSoundPlayer).play(AlarmSound.URGENT_ALARM, AlarmSoundPlayer.OWNER_INTERNAL)
-
-        sut.setAudibleAlarm(null, null)
-        verify(alarmSoundPlayer).stop(AlarmSoundPlayer.OWNER_INTERNAL)
-    }
-
-    @Test
-    fun `silence is not repeated when nothing is sounding`() {
-        sut.setAudibleAlarm(null, null)
-
-        verify(alarmSoundPlayer, never()).stop(any())
-    }
-
-    @Test
-    fun `mute all clears the alarms but leaves the ongoing notification alone`() {
+    fun `cancel all clears the alarms but leaves the ongoing notification alone`() {
         // cancelAll() deliberately does not call NotificationManager.cancelAll(): that would also take
         // down the foreground service notification carrying the loop status.
         sut.cancelAll()
@@ -154,10 +111,10 @@ class AndroidSystemNotificationPlatformTest {
     }
 
     @Test
-    fun `cancelling one notification also clears any sound it owned`() {
+    fun `cancelling one notification clears its alarm notification`() {
         sut.cancel(7)
 
-        verify(alarmNotificationManager).cancelSoundAlarm(7)
+        verify(alarmNotificationManager).cancelAlarmNotification(7)
     }
 
     @Test

@@ -1050,8 +1050,4 @@ class LoopPlugin(
         icon = pluginDescription.icon
     )
 
-    companion object {
-
-        private const val CHANNEL_ID = "AAPS-OpenLoop"
-    }
 }

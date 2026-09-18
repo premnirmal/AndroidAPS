@@ -19,7 +19,6 @@ import app.aaps.core.data.time.T.Companion.msecs
 import app.aaps.core.data.ue.Sources
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.plugin.OwnDatabasePlugin
@@ -294,9 +293,6 @@ class OmnipodErosPumpPlugin(
             preferences.observe(RileylinkBooleanPreferenceKey.ShowReportedBatteryLevel).drop(1).map {},
             preferences.observe(ErosBooleanPreferenceKey.BatteryChangeLogging).drop(1).map {},
             preferences.observe(ErosBooleanPreferenceKey.TimeChangeEnabled).drop(1).map {},
-            preferences.observe(OmnipodBooleanPreferenceKey.SoundUncertainBolusNotification).drop(1).map {},
-            preferences.observe(OmnipodBooleanPreferenceKey.SoundUncertainSmbNotification).drop(1).map {},
-            preferences.observe(OmnipodBooleanPreferenceKey.SoundUncertainTbrNotification).drop(1).map {},
             preferences.observe(OmnipodBooleanPreferenceKey.AutomaticallyAcknowledgeAlerts).drop(1).map {},
         ).collectResilient(newScope, aapsLogger, LTag.PUMP) { aapsOmnipodErosManager.reloadSettings() }
         merge(
@@ -363,7 +359,7 @@ class OmnipodErosPumpPlugin(
             } else {
                 // Not sure what's going on. Notify the user
                 aapsLogger.error(LTag.PUMP, "Unknown TBR in both Pod state and AAPS")
-                notificationManager.post(NotificationId.OMNIPOD_UNKNOWN_TBR, TextRef.AndroidRes(R.string.omnipod_eros_error_tbr_running_but_aaps_not_aware), sound = AlarmSound.BOLUS_ERROR)
+                notificationManager.post(NotificationId.OMNIPOD_UNKNOWN_TBR, TextRef.AndroidRes(R.string.omnipod_eros_error_tbr_running_but_aaps_not_aware))
             }
         } else if (!podStateManager.isTempBasalRunning && tempBasal != null) {
             aapsLogger.warn(LTag.PUMP, "Removing AAPS TBR that actually hadn't succeeded")
@@ -653,7 +649,7 @@ class OmnipodErosPumpPlugin(
             return pumpEnactResultProvider().success(false).enacted(false).comment(aapsOmnipodErosManager.translateException(ex))
         }
 
-        uiInteraction.runAlarm(rh.gs(R.string.omnipod_eros_pod_management_pulse_log_value) + ":\n" + result.toString(), rh.gs(R.string.omnipod_eros_pod_management_pulse_log), null)
+        uiInteraction.runAlarm(rh.gs(R.string.omnipod_eros_pod_management_pulse_log_value) + ":\n" + result.toString(), rh.gs(R.string.omnipod_eros_pod_management_pulse_log))
         return pumpEnactResultProvider().success(true).enacted(false)
     }
 
@@ -941,15 +937,6 @@ class OmnipodErosPumpPlugin(
                 )
             ),
             // Notifications subscreen
-            PreferenceSubScreenDef(
-                key = "omnipod_eros_notifications",
-                titleResId = app.aaps.pump.omnipod.common.R.string.omnipod_common_preferences_category_notifications,
-                items = listOf(
-                    OmnipodBooleanPreferenceKey.SoundUncertainTbrNotification,
-                    OmnipodBooleanPreferenceKey.SoundUncertainSmbNotification,
-                    OmnipodBooleanPreferenceKey.SoundUncertainBolusNotification
-                )
-            ),
             // Other subscreen
             PreferenceSubScreenDef(
                 key = "omnipod_eros_other",

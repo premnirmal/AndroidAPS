@@ -190,9 +190,7 @@ class BuiltInSearchables(
             BooleanKey.AlertPumpUnreachable,
             IntKey.AlertsPumpUnreachableThreshold,
             BooleanKey.AlertCarbsRequired,
-            BooleanKey.AlertUrgentAsAndroidNotification,
-            BooleanKey.AlertIncreaseVolume,
-            BooleanKey.AlertOverrideDoNotDisturb
+            BooleanKey.AlertUrgentAsAndroidNotification
         ),
         icon = Icons.Default.Notifications
     )

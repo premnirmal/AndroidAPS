@@ -61,7 +61,6 @@ class GraphScopeStabilityTest {
             "activeSceneManager",
             "activeSceneSync",
             "activityMonitor",
-            "alarmSoundPlayer",
             "appRepository",
             "appScope",
             "authFlowOut",

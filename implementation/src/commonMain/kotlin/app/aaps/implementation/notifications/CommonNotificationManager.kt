@@ -5,7 +5,6 @@ import app.aaps.core.interfaces.concurrent.withLock
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.AapsNotification
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationHandle
 import app.aaps.core.interfaces.notifications.NotificationId
@@ -28,8 +27,8 @@ import kotlin.time.Duration.Companion.minutes
  * The notification registry, with nothing platform specific in it.
  *
  * This is the half of notification handling that is the same everywhere: which notifications are
- * live, which replaces which, when they expire, and which alarm owns the sound. The system tray and
- * the audio are reached through [SystemNotificationPlatform].
+ * live, which replaces which, and when they expire. The system tray is reached through
+ * [SystemNotificationPlatform].
  *
  * Both platforms use this now. `NotificationManagerImpl` is gone: Android keeps its channel,
  * receiver and `NotificationCompat` code in `AndroidSystemNotificationPlatform`, and iOS in
@@ -54,9 +53,6 @@ class CommonNotificationManager(
      */
     private val lock = AapsLock()
 
-    /** instanceKey of the URGENT alarm currently owning the audio, or null when silent. */
-    private var soundingKey: Int? = null
-
     /** Only ever touched under [lock], so a plain Int is enough. */
     private var nextInstanceKey = 10_000
 
@@ -79,7 +75,6 @@ class CommonNotificationManager(
         text: String,
         level: NotificationLevel,
         validMinutes: Int,
-        sound: AlarmSound?,
         actions: List<NotificationAction>,
         validityCheck: (() -> Boolean)?
     ): NotificationHandle {
@@ -88,7 +83,7 @@ class CommonNotificationManager(
             id = id, text = text, level = level,
             date = now,
             validTo = if (validMinutes > 0) now + validMinutes.toLong().minutes.inWholeMilliseconds else 0L,
-            sound = sound, actions = actions, validityCheck = validityCheck
+            actions = actions, validityCheck = validityCheck
         )
     }
 
@@ -98,14 +93,13 @@ class CommonNotificationManager(
         level: NotificationLevel,
         date: Long,
         validTo: Long,
-        sound: AlarmSound?,
         actions: List<NotificationAction>,
         validityCheck: (() -> Boolean)?
     ): NotificationHandle =
         postInternal(
             id = id, text = text, level = level,
             date = date, validTo = validTo,
-            sound = sound, actions = actions, validityCheck = validityCheck
+            actions = actions, validityCheck = validityCheck
         )
 
     override fun post(
@@ -115,7 +109,6 @@ class CommonNotificationManager(
         validMinutes: Int,
         date: Long,
         validTo: Long,
-        sound: AlarmSound?,
         actions: List<NotificationAction>,
         validityCheck: (() -> Boolean)?
     ): NotificationHandle =
@@ -123,7 +116,7 @@ class CommonNotificationManager(
             id = id, text = rh.gs(textRef), level = level,
             date = date,
             validTo = if (validMinutes > 0) date + validMinutes.toLong().minutes.inWholeMilliseconds else validTo,
-            sound = sound, actions = actions, validityCheck = validityCheck
+            actions = actions, validityCheck = validityCheck
         )
 
     private fun postInternal(
@@ -132,7 +125,6 @@ class CommonNotificationManager(
         level: NotificationLevel,
         date: Long,
         validTo: Long,
-        sound: AlarmSound?,
         actions: List<NotificationAction>,
         validityCheck: (() -> Boolean)?
     ): NotificationHandle = lock.withLock {
@@ -145,7 +137,7 @@ class CommonNotificationManager(
             instanceKey = nextInstanceKey++
         } else {
             instanceKey = id.ordinal
-            // Cancel just the replaced notification's own sound, not any other concurrent alarm.
+            // Cancel the replaced notification before showing its replacement.
             current.filter { it.id == id }.forEach { cancelSystemNotification(it) }
             current.removeAll { it.id == id }
         }
@@ -157,7 +149,6 @@ class CommonNotificationManager(
             level = level,
             date = date,
             validTo = validTo,
-            sound = sound,
             actions = actions,
             validityCheck = validityCheck
         )
@@ -170,8 +161,6 @@ class CommonNotificationManager(
             notification = notification,
             title = rh.gs(if (level == NotificationLevel.URGENT) CoreUiStrings.urgent_alarm else CoreUiStrings.info)
         )
-        refreshAlarmSound()
-
         aapsLogger.debug(LTag.NOTIFICATION, "Notification posted: [${id.name}] $text")
         NotificationHandle(instanceKey)
     }
@@ -184,22 +173,16 @@ class CommonNotificationManager(
         removeMatching("Notification dismissed by handle: ${handle.instanceKey}") { it.instanceKey == handle.instanceKey }
     }
 
-    /**
-     * Silence and dismiss every active audible alarm - the global "mute all" path.
-     *
-     * Drops every audible URGENT notification so [refreshAlarmSound] falls to silence, then clears
-     * whatever the platform is still showing for them. Non-audible notifications are left alone.
-     */
-    override fun muteAllAlarms() = lock.withLock {
+    /** Dismiss every active urgent alarm and clear its platform notification. */
+    override fun dismissAllAlarms() = lock.withLock {
         val current = _notifications.value
-        val audible = current.filter { it.level == NotificationLevel.URGENT && it.sound != null }
-        if (audible.isNotEmpty()) {
-            audible.forEach { cancelSystemNotification(it) }
-            _notifications.value = current - audible.toSet()
+        val alarms = current.filter { it.level == NotificationLevel.URGENT }
+        if (alarms.isNotEmpty()) {
+            alarms.forEach { cancelSystemNotification(it) }
+            _notifications.value = current - alarms.toSet()
         }
-        refreshAlarmSound()
         platform.cancelAll()
-        aapsLogger.debug(LTag.NOTIFICATION, "Muted all alarms")
+        aapsLogger.debug(LTag.NOTIFICATION, "Dismissed all alarms")
     }
 
     /** Caller must hold [lock]. */
@@ -209,7 +192,6 @@ class CommonNotificationManager(
         if (removed.isEmpty()) return
         removed.forEach { cancelSystemNotification(it) }
         _notifications.value = current - removed.toSet()
-        refreshAlarmSound()
         aapsLogger.debug(LTag.NOTIFICATION, logLine)
     }
 
@@ -226,38 +208,9 @@ class CommonNotificationManager(
             aapsLogger.debug(LTag.NOTIFICATION, "Notification expired: ${n.text}")
         }
         _notifications.value = current - expired.toSet()
-        refreshAlarmSound()
     }
 
     private fun cancelSystemNotification(n: AapsNotification) = platform.cancel(n.instanceKey)
-
-    /**
-     * Re-evaluate which alarm owns the sound.
-     *
-     * The newest active URGENT notification carrying a sound owns it. Replacing a single "currently
-     * sounding" slot is what makes concurrent alarms hand off correctly: dismissing the audible one
-     * promotes the next remaining one instead of going silent.
-     *
-     * Caller must hold [lock].
-     */
-    private fun refreshAlarmSound() {
-        val top = _notifications.value
-            .filter { it.level == NotificationLevel.URGENT && it.sound != null }
-            .maxByOrNull { it.date }
-        when {
-            top == null                    ->
-                if (soundingKey != null) {
-                    soundingKey = null
-                    platform.setAudibleAlarm(null, null)
-                }
-
-            top.instanceKey != soundingKey -> {
-                soundingKey = top.instanceKey
-                platform.setAudibleAlarm(top.instanceKey, top.sound)
-            }
-            // else: already playing the top alarm - leave the ramp running.
-        }
-    }
 
     private fun now(): Long = Clock.System.now().toEpochMilliseconds()
 }

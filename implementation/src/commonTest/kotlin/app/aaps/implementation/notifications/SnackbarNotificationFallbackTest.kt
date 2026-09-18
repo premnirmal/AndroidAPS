@@ -1,7 +1,6 @@
 package app.aaps.implementation.notifications
 
 import app.aaps.core.interfaces.notifications.AapsNotification
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationHandle
 import app.aaps.core.interfaces.notifications.NotificationId
@@ -139,7 +138,6 @@ class SnackbarNotificationFallbackTest {
             text: String,
             level: NotificationLevel,
             validMinutes: Int,
-            sound: AlarmSound?,
             actions: List<NotificationAction>,
             validityCheck: (() -> Boolean)?
         ): NotificationHandle {
@@ -154,7 +152,6 @@ class SnackbarNotificationFallbackTest {
             level: NotificationLevel,
             date: Long,
             validTo: Long,
-            sound: AlarmSound?,
             actions: List<NotificationAction>,
             validityCheck: (() -> Boolean)?
         ): NotificationHandle = error("the fallback posts with validMinutes, not with a date range")
@@ -166,7 +163,6 @@ class SnackbarNotificationFallbackTest {
             validMinutes: Int,
             date: Long,
             validTo: Long,
-            sound: AlarmSound?,
             actions: List<NotificationAction>,
             validityCheck: (() -> Boolean)?
         ): NotificationHandle = error("the message is already localized, so the fallback posts a String")
@@ -175,6 +171,6 @@ class SnackbarNotificationFallbackTest {
 
         override fun dismiss(handle: NotificationHandle) {}
 
-        override fun muteAllAlarms() {}
+        override fun dismissAllAlarms() {}
     }
 }

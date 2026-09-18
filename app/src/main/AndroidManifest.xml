@@ -73,11 +73,6 @@
             android:name="app.aaps.implementation.androidNotification.AlarmScreenWakeReceiver"
             android:exported="false" />
 
-        <!-- "Mute" action on the background alarm notification → silences the looping alarm. -->
-        <receiver
-            android:name="app.aaps.implementation.androidNotification.AlarmMuteReceiver"
-            android:exported="false" />
-
         <!-- Receive new BG readings from other local apps -->
         <receiver
             android:name="app.aaps.receivers.DataReceiver"

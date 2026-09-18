@@ -6,7 +6,6 @@ import app.aaps.core.data.pump.defs.PumpType
 import app.aaps.core.interfaces.insulin.ConcentrationHelper
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.pump.BolusProgressData
@@ -764,7 +763,7 @@ class EquilManager(
         val parm = data[27].toInt() and 0xff
         val errorTips = getEquilError(port, level, parm)
         if (!TextUtils.isEmpty(errorTips) && currentIndex != historyIndex) {
-            notificationManager.post(NotificationId.PUMP_ERROR, errorTips, sound = AlarmSound.ALARM)
+            notificationManager.post(NotificationId.PUMP_ERROR, errorTips)
             if (saveData) {
                 val time = System.currentTimeMillis()
                 val equilHistoryRecord = EquilHistoryRecord(EquilHistoryRecord.EventType.EQUIL_ALARM, time, getSerialNumber())
