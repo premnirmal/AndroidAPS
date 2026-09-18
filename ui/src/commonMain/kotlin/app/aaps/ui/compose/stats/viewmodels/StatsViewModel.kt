@@ -202,21 +202,8 @@ class StatsViewModel(
                 val endTime = dateUtil.now()
                 val startTime = range.startTime(endTime)
                 val readings = persistenceLayer.getBgReadingsDataFromTimeToTime(startTime, endTime, true)
-                val previousReadings = if (range == TrioStatsRange.ALL) {
-                    emptyList()
-                } else {
-                    val duration = endTime - startTime
-                    persistenceLayer.getBgReadingsDataFromTimeToTime(
-                        (startTime - duration).coerceAtLeast(0L),
-                        startTime,
-                        true
-                    )
-                }
                 calculateTrioStatsData(
                     readings = readings,
-                    previousReadings = previousReadings,
-                    startTime = startTime,
-                    endTime = endTime,
                     lowMgdl = trioLowMgdl,
                     highMgdl = trioHighMgdl
                 )

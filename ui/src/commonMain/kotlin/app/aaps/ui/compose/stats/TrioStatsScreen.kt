@@ -57,18 +57,13 @@ import app.aaps.core.ui.compose.LocalProfileUtil
 import app.aaps.core.ui.compose.stringResource
 import app.aaps.ui.UiStrings
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
-import kotlin.math.abs
 import kotlin.math.ceil
-import kotlinx.datetime.DayOfWeek
 
 private val trioStatsRanges = listOf(
     TrioStatsRange.TODAY,
-    TrioStatsRange.HOURS_12,
     TrioStatsRange.DAYS_7,
-    TrioStatsRange.DAYS_14,
     TrioStatsRange.DAYS_30,
-    TrioStatsRange.DAYS_90,
-    TrioStatsRange.ALL
+    TrioStatsRange.DAYS_90
 )
 
 @Composable
@@ -135,42 +130,11 @@ fun TrioStatsScreen(
 
                 else -> state.trioStatsData?.let { data ->
                     item {
-                        TrioGlucosePercentileCard(
-                            percentiles = data.hourlyPercentiles,
-                            availableDays = data.availableDays,
+                        TrioGlucoseProfileCard(
+                            data = data,
                             lowMgdl = viewModel.trioLowMgdl,
                             highMgdl = viewModel.trioHighMgdl
                         )
-                    }
-                    item { TrioGlycemicOverviewCard(data) }
-                    item { TrioMetricsCard(data) }
-                    data.comparison?.let { comparison ->
-                        item { TrioComparisonCard(comparison) }
-                    }
-                    item {
-                        TrioPatternCard(
-                            title = stringResource(UiStrings.trio_stats_hourly_patterns),
-                            rows = data.hourly
-                        )
-                    }
-                    item {
-                        TrioPatternCard(
-                            title = stringResource(UiStrings.trio_stats_weekday_patterns),
-                            rows = data.weekdays
-                        )
-                    }
-                    item {
-                        Text(
-                            text = stringResource(UiStrings.trio_stats_day_by_day),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    items(
-                        items = data.daily.asReversed(),
-                        key = { it.key }
-                    ) { day ->
-                        TrioPatternRow(day)
                     }
                 }
             }
@@ -179,12 +143,12 @@ fun TrioStatsScreen(
 }
 
 @Composable
-private fun TrioGlucosePercentileCard(
-    percentiles: List<TrioHourlyPercentile>,
-    availableDays: Double,
+private fun TrioGlucoseProfileCard(
+    data: TrioStatsData,
     lowMgdl: Double,
     highMgdl: Double
 ) {
+    val percentiles = data.hourlyPercentiles
     val profileUtil = LocalProfileUtil.current
     val density = LocalDensity.current
     val colors = AapsTheme.generalColors
@@ -373,11 +337,14 @@ private fun TrioGlucosePercentileCard(
         }
 
         Text(
-            text = stringResource(UiStrings.trio_stats_days_decimal, availableDays),
+            text = stringResource(UiStrings.trio_stats_days_decimal, data.availableDays),
             modifier = Modifier.align(Alignment.End),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        TrioGlycemicOverview(data)
+        TrioMetrics(data)
     }
 }
 
@@ -418,17 +385,14 @@ private fun TrioStatsRangeSelector(
 
 @Composable
 private fun TrioStatsRange.label(): String = when (this) {
-    TrioStatsRange.TODAY    -> stringResource(UiStrings.trio_stats_today)
-    TrioStatsRange.HOURS_12 -> stringResource(UiStrings.trio_stats_12_hours)
-    TrioStatsRange.DAYS_7   -> stringResource(UiStrings.trio_stats_short_days, 7)
-    TrioStatsRange.DAYS_14  -> stringResource(UiStrings.trio_stats_short_days, 14)
-    TrioStatsRange.DAYS_30  -> stringResource(UiStrings.trio_stats_short_days, 30)
-    TrioStatsRange.DAYS_90  -> stringResource(UiStrings.trio_stats_short_days, 90)
-    TrioStatsRange.ALL      -> stringResource(UiStrings.trio_stats_all_history)
+    TrioStatsRange.TODAY   -> stringResource(UiStrings.trio_stats_today)
+    TrioStatsRange.DAYS_7  -> stringResource(UiStrings.trio_stats_short_days, 7)
+    TrioStatsRange.DAYS_30 -> stringResource(UiStrings.trio_stats_short_days, 30)
+    TrioStatsRange.DAYS_90 -> stringResource(UiStrings.trio_stats_short_days, 90)
 }
 
 @Composable
-private fun TrioGlycemicOverviewCard(data: TrioStatsData) {
+private fun TrioGlycemicOverview(data: TrioStatsData) {
     var selectedBand by remember(data) { mutableIntStateOf(2) }
     val colors = AapsTheme.generalColors
     val bands = listOf(
@@ -439,44 +403,28 @@ private fun TrioGlycemicOverviewCard(data: TrioStatsData) {
         TrioTirBand(stringResource(CoreUiStrings.veryHigh), data.tir.veryHigh, colors.bgVeryHigh)
     )
 
-    TrioStatsCard {
-        Text(
-            text = stringResource(UiStrings.trio_stats_overview),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(AapsSpacing.extraLarge),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        TrioTirRing(
+            bands = bands,
+            selectedBand = selectedBand,
+            onSelect = { selectedBand = it }
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.extraLarge),
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
         ) {
-            TrioTirRing(
-                bands = bands,
-                selectedBand = selectedBand,
-                onSelect = { selectedBand = it }
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
-            ) {
-                bands.forEachIndexed { index, band ->
-                    TrioTirBandRow(
-                        band = band,
-                        selected = selectedBand == index,
-                        onClick = { selectedBand = index }
-                    )
-                }
+            bands.forEachIndexed { index, band ->
+                TrioTirBandRow(
+                    band = band,
+                    selected = selectedBand == index,
+                    onClick = { selectedBand = index }
+                )
             }
         }
-        Text(
-            text = stringResource(
-                UiStrings.trio_stats_readings_and_coverage,
-                data.readingCount,
-                data.coveragePercent
-            ),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
@@ -559,58 +507,32 @@ private fun TrioTirBandRow(
 }
 
 @Composable
-private fun TrioMetricsCard(data: TrioStatsData) {
+private fun TrioMetrics(data: TrioStatsData) {
     val profileUtil = LocalProfileUtil.current
     val metrics = listOf(
         TrioMetric(stringResource(UiStrings.trio_stats_average), profileUtil.fromMgdlToStringWithUnits(data.averageMgdl)),
-        TrioMetric(stringResource(UiStrings.trio_stats_gmi), stringResource(UiStrings.trio_stats_percent, data.gmiPercent)),
         TrioMetric(stringResource(UiStrings.trio_stats_median), profileUtil.fromMgdlToStringWithUnits(data.medianMgdl)),
-        TrioMetric(
-            stringResource(UiStrings.trio_stats_iqr),
-            stringResource(
-                UiStrings.trio_stats_glucose_range,
-                profileUtil.fromMgdlToStringWithUnits(data.p25Mgdl),
-                profileUtil.fromMgdlToStringWithUnits(data.p75Mgdl)
-            )
-        ),
+        TrioMetric(stringResource(UiStrings.trio_stats_gmi), stringResource(UiStrings.trio_stats_percent, data.gmiPercent)),
         TrioMetric(stringResource(UiStrings.trio_stats_standard_deviation), profileUtil.fromMgdlToStringWithUnits(data.standardDeviationMgdl)),
         TrioMetric(stringResource(UiStrings.trio_stats_cv), stringResource(UiStrings.trio_stats_percent, data.coefficientOfVariation)),
-        TrioMetric(stringResource(UiStrings.trio_stats_gvi), stringResource(UiStrings.trio_stats_decimal, data.gvi)),
-        TrioMetric(
-            stringResource(UiStrings.trio_stats_psg),
-            stringResource(UiStrings.trio_stats_psg_value, data.psgConfidencePercent, data.psgTrendPercent)
-        ),
-        TrioMetric(stringResource(UiStrings.trio_stats_tight_range), stringResource(UiStrings.trio_stats_percent, data.tightRangePercent)),
-        TrioMetric(stringResource(UiStrings.trio_stats_dawn_rise), profileUtil.fromMgdlToStringWithUnits(data.dawnRiseMgdl)),
-        TrioMetric(stringResource(UiStrings.trio_stats_mage), profileUtil.fromMgdlToStringWithUnits(data.mageMgdl)),
-        TrioMetric(stringResource(UiStrings.trio_stats_modd), profileUtil.fromMgdlToStringWithUnits(data.moddMgdl)),
-        TrioMetric(stringResource(UiStrings.trio_stats_best_streak), stringResource(UiStrings.trio_stats_streak_days, data.bestStreakDays)),
-        TrioMetric(stringResource(UiStrings.trio_stats_minimum), profileUtil.fromMgdlToStringWithUnits(data.minimumMgdl)),
-        TrioMetric(stringResource(UiStrings.trio_stats_maximum), profileUtil.fromMgdlToStringWithUnits(data.maximumMgdl))
+        TrioMetric(stringResource(UiStrings.trio_stats_tight_range), stringResource(UiStrings.trio_stats_percent, data.tightRangePercent))
     )
 
-    TrioStatsCard {
-        Text(
-            text = stringResource(UiStrings.trio_stats_metrics),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
-            verticalAlignment = Alignment.Top
-        ) {
-            listOf(
-                metrics.filterIndexed { index, _ -> index % 2 == 0 },
-                metrics.filterIndexed { index, _ -> index % 2 == 1 }
-            ).forEach { columnMetrics ->
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
-                ) {
-                    columnMetrics.forEach { metric ->
-                        TrioMetricTile(metric, Modifier.fillMaxWidth())
-                    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
+        verticalAlignment = Alignment.Top
+    ) {
+        listOf(
+            metrics.filterIndexed { index, _ -> index % 2 == 0 },
+            metrics.filterIndexed { index, _ -> index % 2 == 1 }
+        ).forEach { columnMetrics ->
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
+            ) {
+                columnMetrics.forEach { metric ->
+                    TrioMetricTile(metric, Modifier.fillMaxWidth())
                 }
             }
         }
@@ -630,113 +552,6 @@ private fun TrioMetricTile(metric: TrioMetric, modifier: Modifier = Modifier) {
         ) {
             Text(metric.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Text(metric.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-private fun TrioComparisonCard(comparison: TrioStatsComparison) {
-    TrioStatsCard {
-        Text(
-            text = stringResource(UiStrings.trio_stats_previous_period),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        ComparisonRow(stringResource(CoreUiStrings.in_range), comparison.tirDelta, isPercent = true)
-        ComparisonRow(stringResource(UiStrings.trio_stats_average), comparison.averageDeltaMgdl, isPercent = false)
-        ComparisonRow(stringResource(UiStrings.trio_stats_cv), comparison.cvDelta, isPercent = true)
-    }
-}
-
-@Composable
-private fun ComparisonRow(label: String, delta: Double, isPercent: Boolean) {
-    val profileUtil = LocalProfileUtil.current
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label)
-        Text(
-            text = if (isPercent) {
-                stringResource(UiStrings.trio_stats_signed_percent, delta)
-            } else {
-                stringResource(
-                    UiStrings.trio_stats_signed_value,
-                    if (delta >= 0.0) "+" else "-",
-                    profileUtil.fromMgdlToStringWithUnits(abs(delta))
-                )
-            },
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
-@Composable
-private fun TrioPatternCard(title: String, rows: List<TrioPatternRow>) {
-    TrioStatsCard {
-        Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        rows.forEach { row -> TrioPatternRow(row) }
-    }
-}
-
-@Composable
-private fun TrioPatternRow(row: TrioPatternRow) {
-    val profileUtil = LocalProfileUtil.current
-    val label = row.dayOfWeek?.label() ?: row.label
-    Surface(
-        shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
-        color = MaterialTheme.colorScheme.surfaceVariant
-    ) {
-        Column(
-            modifier = Modifier.padding(AapsSpacing.medium),
-            verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
-        ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(label, fontWeight = FontWeight.SemiBold)
-                Text(
-                    stringResource(
-                        UiStrings.trio_stats_pattern_value,
-                        profileUtil.fromMgdlToStringWithUnits(row.averageMgdl),
-                        row.tir.inRange
-                    ),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-            TrioTirStackedBar(row.tir)
-        }
-    }
-}
-
-@Composable
-private fun DayOfWeek.label(): String = stringResource(
-    when (this) {
-        DayOfWeek.MONDAY    -> CoreUiStrings.weekday_monday_short
-        DayOfWeek.TUESDAY   -> CoreUiStrings.weekday_tuesday_short
-        DayOfWeek.WEDNESDAY -> CoreUiStrings.weekday_wednesday_short
-        DayOfWeek.THURSDAY  -> CoreUiStrings.weekday_thursday_short
-        DayOfWeek.FRIDAY    -> CoreUiStrings.weekday_friday_short
-        DayOfWeek.SATURDAY  -> CoreUiStrings.weekday_saturday_short
-        DayOfWeek.SUNDAY    -> CoreUiStrings.weekday_sunday_short
-    }
-)
-
-@Composable
-private fun TrioTirStackedBar(tir: TrioTirBreakdown) {
-    val colors = AapsTheme.generalColors
-    val segments = listOf(
-        tir.veryLow to colors.bgVeryLow,
-        tir.low to colors.bgLow,
-        tir.inRange to colors.bgInRange,
-        tir.high to colors.bgHigh,
-        tir.veryHigh to colors.bgVeryHigh
-    )
-    Canvas(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(AapsSpacing.small)
-    ) {
-        var x = 0f
-        segments.forEach { (percentage, color) ->
-            val width = size.width * (percentage / 100.0).toFloat()
-            drawRect(color = color, topLeft = Offset(x, 0f), size = Size(width, size.height))
-            x += width
         }
     }
 }
