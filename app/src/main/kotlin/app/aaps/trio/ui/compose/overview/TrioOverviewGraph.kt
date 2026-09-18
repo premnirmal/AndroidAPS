@@ -17,9 +17,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,6 +71,7 @@ import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.LocalDateUtil
 import app.aaps.core.ui.compose.stringResource
+import app.aaps.ui.R
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -141,29 +149,50 @@ fun TrioOverviewGraph(
     val range = derivedTimeRange?.first?.let { it to liveEnd }
         ?: (liveEnd - 24L * 60L * 60L * 1000L to liveEnd)
     var selectedRangeHours by rememberSaveable { mutableStateOf<Int?>(6) }
+    var showPredictionInfo by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Surface(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(height),
-            shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
-            color = Color.Transparent,
-            shadowElevation = 0.dp
+                .height(height)
         ) {
-            InteractiveTrioGlucoseChart(
-                history = history,
-                predictions = visiblePredictions,
-                boluses = treatments.boluses,
-                fullRange = range,
-                nowTimestamp = nowTimestamp,
-                lowMark = chartConfig.lowMark,
-                highMark = chartConfig.highMark,
-                selectedRangeHours = selectedRangeHours,
-                onRangeSelected = { selectedRangeHours = it },
-                onInteraction = graphViewModel::onGraphInteraction,
-                modifier = Modifier.fillMaxSize()
-            )
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
+                color = Color.Transparent,
+                shadowElevation = 0.dp
+            ) {
+                InteractiveTrioGlucoseChart(
+                    history = history,
+                    predictions = visiblePredictions,
+                    boluses = treatments.boluses,
+                    fullRange = range,
+                    nowTimestamp = nowTimestamp,
+                    lowMark = chartConfig.lowMark,
+                    highMark = chartConfig.highMark,
+                    selectedRangeHours = selectedRangeHours,
+                    onRangeSelected = { selectedRangeHours = it },
+                    onInteraction = graphViewModel::onGraphInteraction,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(AapsSpacing.medium),
+                shape = RoundedCornerShape(AapsSpacing.chipHeight),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = AapsSpacing.extraSmall
+            ) {
+                IconButton(onClick = { showPredictionInfo = true }) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = stringResource(R.string.trio_graph_prediction_info),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
         }
         Row(
             modifier = Modifier
@@ -181,6 +210,87 @@ fun TrioOverviewGraph(
                     modifier = Modifier.weight(1f)
                 )
             }
+        }
+    }
+
+    if (showPredictionInfo) {
+        PredictionLegendBottomSheet(onDismiss = { showPredictionInfo = false })
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun PredictionLegendBottomSheet(onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AapsSpacing.extraLarge),
+            verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
+        ) {
+            Text(
+                text = stringResource(R.string.trio_graph_prediction_info),
+                style = MaterialTheme.typography.titleLarge
+            )
+            PredictionLegendItem(
+                title = stringResource(R.string.trio_graph_prediction_iob_title),
+                description = stringResource(R.string.trio_graph_prediction_iob_description),
+                color = AapsTheme.generalColors.iobPrediction
+            )
+            PredictionLegendItem(
+                title = stringResource(R.string.trio_graph_prediction_cob_title),
+                description = stringResource(R.string.trio_graph_prediction_cob_description),
+                color = AapsTheme.generalColors.cobPrediction
+            )
+            PredictionLegendItem(
+                title = stringResource(R.string.trio_graph_prediction_acob_title),
+                description = stringResource(R.string.trio_graph_prediction_acob_description),
+                color = AapsTheme.generalColors.aCobPrediction
+            )
+            PredictionLegendItem(
+                title = stringResource(R.string.trio_graph_prediction_uam_title),
+                description = stringResource(R.string.trio_graph_prediction_uam_description),
+                color = AapsTheme.generalColors.uamPrediction
+            )
+            PredictionLegendItem(
+                title = stringResource(R.string.trio_graph_prediction_zt_title),
+                description = stringResource(R.string.trio_graph_prediction_zt_description),
+                color = AapsTheme.generalColors.ztPrediction
+            )
+        }
+    }
+}
+
+@Composable
+private fun PredictionLegendItem(
+    title: String,
+    description: String,
+    color: Color
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
+        verticalAlignment = Alignment.Top
+    ) {
+        Canvas(
+            modifier = Modifier
+                .padding(top = AapsSpacing.medium)
+                .size(AapsSpacing.xxLarge)
+        ) {
+            drawLine(
+                color = color,
+                start = Offset.Zero,
+                end = Offset(size.width, 0f),
+                strokeWidth = 2.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 8.dp.toPx()))
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
