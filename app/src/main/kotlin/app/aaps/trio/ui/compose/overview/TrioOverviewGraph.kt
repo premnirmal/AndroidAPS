@@ -227,6 +227,13 @@ private fun InteractiveTrioGlucoseChart(
     var lastTapTime by remember { mutableLongStateOf(0L) }
     val inertia = remember { Animatable(0f) }
 
+    fun clampCenter(value: Long, duration: Long = visibleDuration): Long {
+        val half = duration / 2L
+        val minCenter = fullStart + half
+        val maxCenter = (fullEnd - half).coerceAtLeast(minCenter)
+        return value.coerceIn(minCenter, maxCenter)
+    }
+
     LaunchedEffect(selectedRangeHours, maxDuration) {
         val hours = selectedRangeHours ?: return@LaunchedEffect
         val duration = (hours * 60L * 60L * 1000L)
@@ -235,13 +242,6 @@ private fun InteractiveTrioGlucoseChart(
         centerTime = clampCenter(nowCenteredViewport(nowTimestamp, duration), duration)
         selectedPoint = null
         selectedBolus = null
-    }
-
-    fun clampCenter(value: Long, duration: Long = visibleDuration): Long {
-        val half = duration / 2L
-        val minCenter = fullStart + half
-        val maxCenter = (fullEnd - half).coerceAtLeast(minCenter)
-        return value.coerceIn(minCenter, maxCenter)
     }
 
     LaunchedEffect(maxDuration) {
