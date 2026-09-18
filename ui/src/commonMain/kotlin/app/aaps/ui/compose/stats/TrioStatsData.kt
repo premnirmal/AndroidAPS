@@ -193,9 +193,17 @@ private fun calculateCoverage(readings: List<GV>, startTime: Long, endTime: Long
     return (readings.size * 100.0 / expected).coerceIn(0.0, 100.0)
 }
 
-private fun calculateAvailableSampleDays(readings: List<GV>): Double =
-    // Count stored samples as data time. Missing gaps do not add available days.
-    if (readings.isEmpty()) 0.0 else readings.size * medianCadence(readings).toDouble() / DAY_MS
+private fun calculateAvailableSampleDays(readings: List<GV>): Double {
+    if (readings.isEmpty()) return 0.0
+    val cadence = medianCadence(readings)
+    val sampleDays = readings.size * cadence.toDouble() / DAY_MS
+    val spanDays = if (readings.size < 2) {
+        sampleDays
+    } else {
+        (readings.last().timestamp - readings.first().timestamp + cadence).coerceAtLeast(0L).toDouble() / DAY_MS
+    }
+    return minOf(sampleDays, spanDays)
+}
 
 private fun medianCadence(readings: List<GV>): Long {
     val gaps = readings.zipWithNext { first, second -> second.timestamp - first.timestamp }
