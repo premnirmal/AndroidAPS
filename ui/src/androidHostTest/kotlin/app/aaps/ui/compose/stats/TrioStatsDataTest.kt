@@ -20,9 +20,6 @@ internal class TrioStatsDataTest {
 
         val data = calculateTrioStatsData(
             readings = readings,
-            previousReadings = emptyList(),
-            startTime = 0L,
-            endTime = 4_000L,
             lowMgdl = 72.0,
             highMgdl = 180.0
         )
@@ -44,9 +41,6 @@ internal class TrioStatsDataTest {
 
         val data = calculateTrioStatsData(
             readings = readings,
-            previousReadings = emptyList(),
-            startTime = start,
-            endTime = start + T.days(1).msecs(),
             lowMgdl = 70.0,
             highMgdl = 180.0
         )
@@ -74,9 +68,6 @@ internal class TrioStatsDataTest {
 
         val data = calculateTrioStatsData(
             readings = readings,
-            previousReadings = emptyList(),
-            startTime = start,
-            endTime = start + T.days(1).msecs(),
             lowMgdl = 70.0,
             highMgdl = 180.0
         )
