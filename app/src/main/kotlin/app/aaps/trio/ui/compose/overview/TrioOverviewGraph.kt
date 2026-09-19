@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -57,7 +56,6 @@ import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.res.stringResource as androidStringResource
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -152,6 +150,7 @@ fun TrioOverviewGraph(
         ?: (liveEnd - 24L * 60L * 60L * 1000L to liveEnd)
     var selectedRangeHours by rememberSaveable { mutableStateOf<Int?>(6) }
     var showPredictionInfo by rememberSaveable { mutableStateOf(false) }
+    var isInteracting by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
@@ -176,44 +175,27 @@ fun TrioOverviewGraph(
                     selectedRangeHours = selectedRangeHours,
                     onRangeSelected = { selectedRangeHours = it },
                     onInteraction = graphViewModel::onGraphInteraction,
+                    onInteractingChanged = { isInteracting = it },
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(AapsSpacing.medium),
-                shape = RoundedCornerShape(AapsSpacing.chipHeight),
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = AapsSpacing.extraSmall
-            ) {
-                IconButton(onClick = { showPredictionInfo = true }) {
-                    Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = androidStringResource(R.string.trio_graph_prediction_info),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-            }
-        }
-        Row(
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally),
-            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.extraSmall)
-        ) {
-            listOf(4, 6, 12, 24).forEach { hours ->
-                FilterChip(
-                    selected = selectedRangeHours == hours,
-                    onClick = { selectedRangeHours = hours },
-                    label = {
-                        Text(
-                            text = hours.toString(),
-                            style = MaterialTheme.typography.labelSmall,
-                            textAlign = TextAlign.Center,
+            if (!isInteracting) {
+                Surface(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(AapsSpacing.medium),
+                    shape = RoundedCornerShape(AapsSpacing.chipHeight),
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = AapsSpacing.extraSmall
+                ) {
+                    IconButton(onClick = { showPredictionInfo = true }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = androidStringResource(R.string.trio_graph_prediction_info),
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
-                    },
-                    border = null,
-                )
+                    }
+                }
             }
         }
     }
@@ -262,7 +244,36 @@ private fun PredictionLegendBottomSheet(onDismiss: () -> Unit) {
                 description = androidStringResource(R.string.trio_graph_prediction_zt_description),
                 color = AapsTheme.generalColors.ztPrediction
             )
+            Text(
+                text = androidStringResource(R.string.trio_graph_gesture_help_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+            GestureHelpItem(text = androidStringResource(R.string.trio_graph_gesture_pinch))
+            GestureHelpItem(text = androidStringResource(R.string.trio_graph_gesture_double_tap))
+            GestureHelpItem(text = androidStringResource(R.string.trio_graph_gesture_scroll))
         }
+    }
+}
+
+@Composable
+private fun GestureHelpItem(text: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
+        verticalAlignment = Alignment.Top
+    ) {
+        val bulletColor = MaterialTheme.colorScheme.onSurfaceVariant
+        Canvas(
+            modifier = Modifier
+                .padding(top = AapsSpacing.small)
+                .size(AapsSpacing.small)
+        ) {
+            drawCircle(color = bulletColor)
+        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -312,6 +323,7 @@ private fun InteractiveTrioGlucoseChart(
     selectedRangeHours: Int?,
     onRangeSelected: (Int?) -> Unit,
     onInteraction: () -> Unit,
+    onInteractingChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = AapsTheme.generalColors
@@ -411,6 +423,7 @@ private fun InteractiveTrioGlucoseChart(
             .pointerInput(history, predictions, boluses, fullStart, fullEnd, maxDuration) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
+                    onInteractingChanged(true)
                     coroutineScope.launch { inertia.stop() }
                     val velocityTracker = VelocityTracker()
                     velocityTracker.addPointerInputChange(down)
@@ -555,6 +568,7 @@ private fun InteractiveTrioGlucoseChart(
                             onInteraction()
                         }
                     }
+                    onInteractingChanged(false)
                 }
             }
     ) {
