@@ -114,7 +114,6 @@ fun BgInfoSection(
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .padding(AapsSpacing.small)
             .semantics { contentDescription = a11yDescription }
     ) {
         Surface(
