@@ -27,7 +27,6 @@
     <string name="setupwizard_sensitivity_description">Følsomhedsplugin bruges til detektering af følsomhed og COB beregning. For mere info besøg:</string>
     <string name="setupwizard_pump_waiting_for_riley_link_connection">Konfigurer venligst din RileyLink nedenfor. Når du har valgt en RileyLink, vil det være muligt at fortsætte opsætningen, når RileyLink-status er \"Tilsluttet\". Dette kan tage et minut.\n</string>
     <string name="setupwizard_pump_pump_not_initialized"><b>Bemærk:</b> Du kan fortsætte opsætningen, når pumpen er konfigureret.\n</string>
-    <string name="startobjective">Start dit første mål</string>
     <string name="setupwizard_pump_riley_link_status">RileyLink Status:</string>
     <string name="readstatus">Læs status</string>
     <!-- Provider-agnostic cloud export/import strings -->

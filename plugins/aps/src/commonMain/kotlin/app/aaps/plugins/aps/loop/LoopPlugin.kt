@@ -58,7 +58,6 @@ import app.aaps.core.interfaces.utils.HardLimits
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
-import app.aaps.core.keys.IntNonKey
 import app.aaps.core.keys.LongNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.objects.constraints.ConstraintObject
@@ -141,8 +140,7 @@ class LoopPlugin(
                 rh = rh,
                 dateUtil = dateUtil,
                 decimalFormatter = decimalFormatter,
-                aapsLogger = aapsLogger,
-                preferences = preferences
+                aapsLogger = aapsLogger
             )
         }
         .icon(IcLoopClosed)
@@ -831,7 +829,6 @@ class LoopPlugin(
                         lastRun.lastTBREnact = dateUtil.now()
                         lastRun.lastOpenModeAccept = dateUtil.now()
                         scheduleBuildAndStoreDeviceStatus("acceptChangeRequest")
-                        preferences.inc(IntNonKey.ObjectivesManualEnacts)
                     }
                     rxBus.send(EventAcceptOpenLoopChange())
                 }

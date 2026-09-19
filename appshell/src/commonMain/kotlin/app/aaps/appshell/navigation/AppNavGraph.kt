@@ -49,7 +49,6 @@ import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventShowSnackbar
-import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.interfaces.Preferences
@@ -444,7 +443,6 @@ fun NavGraphBuilder.appNavGraph(
             currentPercentage = reuseValues?.first ?: 100,
             currentTimeshiftHours = reuseValues?.second ?: 0,
             hasReuseValues = reuseValues != null,
-            showNotesField = preferences.get(BooleanKey.OverviewShowNotesInDialogs),
             initialTimestamp = profileManagementViewModel.dateUtil.nowWithoutMilliseconds(),
             rh = rh,
             onNavigateBack = { navController.safePopBackStack() },

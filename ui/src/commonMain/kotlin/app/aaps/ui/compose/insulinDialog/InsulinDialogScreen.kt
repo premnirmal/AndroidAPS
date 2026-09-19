@@ -420,22 +420,20 @@ internal fun InsulinDialogContent(
             }
 
             // --- Notes ---
-            if (uiState.showNotesFromPreferences) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    TextField(
-                        value = uiState.notes,
-                        onValueChange = onNotesChange,
-                        label = { Text(stringResource(CoreUiStrings.notes_label)) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        singleLine = false,
-                        maxLines = 3
-                    )
-                }
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            ) {
+                TextField(
+                    value = uiState.notes,
+                    onValueChange = onNotesChange,
+                    label = { Text(stringResource(CoreUiStrings.notes_label)) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    singleLine = false,
+                    maxLines = 3
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))

@@ -290,8 +290,7 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                     // iOS gives an app no way to quit itself, and Apple treats that as a crash.
                     onExit = { reportNotAvailable("exit from the menu") },
                     // Needs a UIDocumentPicker, which nothing on iOS has yet.
-                    onRequestDirectoryAccess = { reportNotReady("directory access") },
-                    onOpenUrl = { url -> graph.urlOpener.open(url) }
+                    onRequestDirectoryAccess = { reportNotReady("directory access") }
                 )
                 val chips: ChipsViewModel = viewModel(
                     factory = viewModelFactory {

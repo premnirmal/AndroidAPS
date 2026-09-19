@@ -3,12 +3,11 @@ package app.aaps.ui.compose.overview
 import androidx.compose.foundation.layout.PaddingValues
 import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.RM
-import app.aaps.core.data.model.TT
 import app.aaps.core.interfaces.notifications.AapsNotification
 import app.aaps.core.interfaces.overview.graph.TbrState
 import app.aaps.core.interfaces.pump.BolusProgressState
 import app.aaps.core.ui.compose.navigation.NavigationRequest
-import app.aaps.ui.compose.main.TempTargetChipState
+import app.aaps.ui.compose.main.TempTargetUiState
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import kotlinx.coroutines.flow.StateFlow
@@ -20,11 +19,6 @@ data class TrioOverviewModel(
     val profileSceneManaged: Boolean,
     val profilePercentage: Int,
     val profileTargetRangeText: String,
-    val tempTargetText: String,
-    val tempTargetState: TempTargetChipState,
-    val tempTargetProgress: Float,
-    val tempTargetReason: TT.Reason?,
-    val tempTargetSceneManaged: Boolean,
     val runningMode: RM.Mode,
     val runningModeText: String,
     val runningModeRemaining: String,
@@ -33,6 +27,7 @@ data class TrioOverviewModel(
     val lastLoopAgeMillis: Long?,
     val smbEnabled: Boolean,
     val tbrState: TbrState,
+    val profileCardTempTargetStateFlow: StateFlow<TempTargetUiState>,
     val calcProgressFlow: StateFlow<Int>,
     val graphViewModel: GraphViewModel,
     val chipsViewModel: ChipsViewModel,

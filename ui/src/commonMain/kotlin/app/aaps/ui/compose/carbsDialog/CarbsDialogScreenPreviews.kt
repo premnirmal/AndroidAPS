@@ -18,7 +18,6 @@ internal fun CarbsDialogScreenPreview() {
                 carbsButtonIncrement1 = 5,
                 carbsButtonIncrement2 = 10,
                 carbsButtonIncrement3 = 20,
-                showNotesFromPreferences = true,
                 showBolusReminder = true
             ),
             bgInfo = BgInfoUiState(bgInfo = null, timeAgoText = ""),

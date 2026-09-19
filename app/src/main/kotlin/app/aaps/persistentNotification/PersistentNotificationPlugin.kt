@@ -49,6 +49,7 @@ import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.objects.extensions.apsAdjustedTargetMgdl
 import app.aaps.core.objects.extensions.round
 import app.aaps.core.ui.extensions.generateCOBString
+import app.aaps.core.ui.extensions.round
 import app.aaps.core.ui.extensions.toStringShort
 import app.aaps.core.utils.DeferredForegroundStart
 import app.aaps.plugins.main.R
@@ -350,11 +351,5 @@ class PersistentNotificationPlugin(
                     .setCriticalMetric(0)
             )
         }
-    }
-
-    private fun Double.round(decimals: Int): Double {
-        var multiplier = 1.0
-        repeat(decimals) { multiplier *= 10 }
-        return round(this * multiplier) / multiplier
     }
 }

@@ -7,12 +7,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.RM
-import app.aaps.core.data.model.TT
 import app.aaps.core.interfaces.notifications.AapsNotification
 import app.aaps.core.interfaces.overview.graph.TbrState
 import app.aaps.core.interfaces.pump.BolusProgressState
 import app.aaps.core.ui.compose.navigation.NavigationRequest
-import app.aaps.ui.compose.main.TempTargetChipState
+import app.aaps.ui.compose.main.TempTargetUiState
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import kotlinx.coroutines.flow.StateFlow
@@ -25,11 +24,6 @@ fun OverviewScreen(
     profileProgress: Float,
     profilePercentage: Int = 100,
     profileTargetRangeText: String = "",
-    tempTargetText: String,
-    tempTargetState: TempTargetChipState,
-    tempTargetProgress: Float,
-    tempTargetReason: TT.Reason?,
-    tempTargetRecordId: Long = 0,
     runningMode: RM.Mode,
     runningModeText: String,
     runningModeRemaining: String,
@@ -38,6 +32,7 @@ fun OverviewScreen(
     lastLoopAgeMillis: Long? = null,
     tbrState: TbrState,
     smbEnabled: Boolean,
+    profileCardTempTargetStateFlow: StateFlow<TempTargetUiState>,
     calcProgressFlow: StateFlow<Int>,
     graphViewModel: GraphViewModel,
     chipsViewModel: ChipsViewModel,
@@ -70,8 +65,6 @@ fun OverviewScreen(
 ) {
     val runningModeSceneManaged = activeSceneState?.scopedRecords?.rmId
         ?.let { it == runningModeRecordId && it > 0 } == true
-    val tempTargetSceneManaged = activeSceneState?.scopedRecords?.ttId
-        ?.let { it == tempTargetRecordId && it > 0 } == true
     val profileSceneManaged = activeSceneState?.scopedRecords?.psId
         ?.let { it == profilePsId && it > 0 } == true
 
@@ -84,11 +77,6 @@ fun OverviewScreen(
                     profileSceneManaged = profileSceneManaged,
                     profilePercentage = profilePercentage,
                     profileTargetRangeText = profileTargetRangeText,
-                    tempTargetText = tempTargetText,
-                    tempTargetState = tempTargetState,
-                    tempTargetProgress = tempTargetProgress,
-                    tempTargetReason = tempTargetReason,
-                    tempTargetSceneManaged = tempTargetSceneManaged,
                     runningMode = runningMode,
                     runningModeText = runningModeText,
                     runningModeRemaining = runningModeRemaining,
@@ -97,6 +85,7 @@ fun OverviewScreen(
                     lastLoopAgeMillis = lastLoopAgeMillis,
                     smbEnabled = smbEnabled,
                     tbrState = tbrState,
+                    profileCardTempTargetStateFlow = profileCardTempTargetStateFlow,
                     calcProgressFlow = calcProgressFlow,
                     graphViewModel = graphViewModel,
                     chipsViewModel = chipsViewModel,

@@ -691,8 +691,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 accessTree?.launch(null)
             } catch (_: Exception) {
             }
-        },
-        onOpenUrl = { url -> startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) }
+        }
     )
 
     private fun handleNavigationRequest(request: NavigationRequest, navController: NavController) {

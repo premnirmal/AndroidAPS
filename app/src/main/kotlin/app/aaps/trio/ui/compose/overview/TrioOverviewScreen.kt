@@ -99,6 +99,7 @@ import app.aaps.core.ui.compose.navigation.icon
 import app.aaps.ui.compose.notificationsSheet.toColor
 import app.aaps.ui.R
 import app.aaps.ui.compose.main.TempTargetChipState
+import app.aaps.ui.compose.main.TempTargetUiState
 import app.aaps.ui.compose.notificationsSheet.NotificationBottomSheet
 import app.aaps.ui.compose.overview.BgInfoSection
 import app.aaps.ui.compose.overview.OverviewChipsColumn
@@ -127,6 +128,7 @@ fun TrioOverviewScreen(
     val bolusState by bolusStateFlow.collectAsStateWithLifecycle()
     val timeInRangeTodayPercent by timeInRangeTodayPercentFlow.collectAsStateWithLifecycle()
     val calcProgress by calcProgressFlow.collectAsStateWithLifecycle()
+    val profileCardTempTargetState by profileCardTempTargetStateFlow.collectAsStateWithLifecycle()
     var dismissedNotifications by remember { mutableStateOf(emptySet<Pair<Int, Long>>()) }
     var showNotificationSheet by remember { mutableStateOf(false) }
     val visibleNotifications = notifications.filterNot {
@@ -162,11 +164,7 @@ fun TrioOverviewScreen(
         profileSceneManaged = profileSceneManaged,
         profilePercentage = profilePercentage,
         profileTargetRangeText = profileTargetRangeText,
-        tempTargetText = tempTargetText,
-        tempTargetState = tempTargetState,
-        tempTargetProgress = tempTargetProgress,
-        tempTargetReason = tempTargetReason,
-        tempTargetSceneManaged = tempTargetSceneManaged,
+        profileCardTempTargetState = profileCardTempTargetState,
         runningMode = runningMode,
         runningModeText = runningModeText,
         runningModeRemaining = runningModeRemaining,
@@ -234,11 +232,7 @@ private fun TrioOverviewContent(
     profileSceneManaged: Boolean,
     profilePercentage: Int,
     profileTargetRangeText: String,
-    tempTargetText: String,
-    tempTargetState: TempTargetChipState,
-    tempTargetProgress: Float,
-    tempTargetReason: TT.Reason?,
-    tempTargetSceneManaged: Boolean,
+    profileCardTempTargetState: TempTargetUiState,
     runningMode: RM.Mode,
     runningModeText: String,
     runningModeRemaining: String,
@@ -281,6 +275,8 @@ private fun TrioOverviewContent(
     var showPredictionInfo by remember { mutableStateOf(false) }
     var bgGlowCenter by remember { mutableStateOf<Offset?>(null) }
     val animatedCalcProgress = remember { Animatable(calcProgress.coerceIn(0, 100) / 100f) }
+    val tempTargetSceneManaged = activeSceneState?.scopedRecords?.ttId
+        ?.let { it == profileCardTempTargetState.recordId && it > 0 } == true
 
     LaunchedEffect(calcProgress) {
         val targetProgress = calcProgress.coerceIn(0, 100) / 100f
@@ -454,15 +450,23 @@ private fun TrioOverviewContent(
                     onStopBolus = onStopBolus
                 )
             } else {
+                val profileCardTarget = if (profileCardTempTargetState.state == TempTargetChipState.Active) {
+                    ElementType.TEMP_TARGET_MANAGEMENT
+                } else {
+                    ElementType.PROFILE_MANAGEMENT
+                }
                 TrioProfileCard(
                     profileName = profileName,
                     profilePercentage = profilePercentage,
                     profileTargetRangeText = profileTargetRangeText,
-                    tempTargetText = tempTargetText,
-                    tempTargetState = tempTargetState,
+                    tempTargetRangeText = profileCardTempTargetState.rangeText,
+                    tempTargetRemainingText = profileCardTempTargetState.remainingText,
+                    tempTargetState = profileCardTempTargetState.state,
+                    tempTargetReason = profileCardTempTargetState.reason,
+                    tempTargetProgress = profileCardTempTargetState.progress,
                     progress = profileProgress,
                     sceneManaged = profileSceneManaged,
-                    onClick = { onNavigate(NavigationRequest.Element(ElementType.PROFILE_MANAGEMENT)) }
+                    onClick = { onNavigate(NavigationRequest.Element(profileCardTarget)) }
                 )
             }
 
@@ -481,10 +485,10 @@ private fun TrioOverviewContent(
             isProfileModified = isProfileModified,
             profileProgress = profileProgress,
             profileSceneManaged = profileSceneManaged,
-            tempTargetText = tempTargetText,
-            tempTargetState = tempTargetState,
-            tempTargetProgress = tempTargetProgress,
-            tempTargetReason = tempTargetReason,
+            tempTargetText = profileCardTempTargetState.text,
+            tempTargetState = profileCardTempTargetState.state,
+            tempTargetProgress = profileCardTempTargetState.progress,
+            tempTargetReason = profileCardTempTargetState.reason,
             tempTargetSceneManaged = tempTargetSceneManaged,
             runningMode = runningMode,
             runningModeText = runningModeText,
@@ -578,11 +582,14 @@ private fun TrioOverviewScreenPreview() {
             profileSceneManaged = false,
             profilePercentage = 100,
             profileTargetRangeText = "90–110 mg/dL",
-            tempTargetText = "110 mg/dL",
-            tempTargetState = TempTargetChipState.Active,
-            tempTargetProgress = 0.5f,
-            tempTargetReason = TT.Reason.ACTIVITY,
-            tempTargetSceneManaged = false,
+            profileCardTempTargetState = TempTargetUiState(
+                text = "110 mg/dL",
+                rangeText = "110 mg/dL",
+                remainingText = "(30 min)",
+                state = TempTargetChipState.Active,
+                progress = 0.5f,
+                reason = TT.Reason.ACTIVITY
+            ),
             runningMode = RM.Mode.CLOSED_LOOP,
             runningModeText = "Closed loop",
             runningModeRemaining = "",
@@ -665,8 +672,11 @@ private fun TrioProfileCard(
     profileName: String,
     profilePercentage: Int,
     profileTargetRangeText: String,
-    tempTargetText: String,
+    tempTargetRangeText: String,
+    tempTargetRemainingText: String,
     tempTargetState: TempTargetChipState,
+    tempTargetReason: TT.Reason?,
+    tempTargetProgress: Float,
     progress: Float,
     sceneManaged: Boolean,
     onClick: () -> Unit,
@@ -677,8 +687,11 @@ private fun TrioProfileCard(
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
     }
+    val hasActiveAdjustment = tempTargetState == TempTargetChipState.Active
     val subtitle = if (profileName.isEmpty()) {
         stringResource(app.aaps.core.ui.R.string.no_profile_set)
+    } else if (hasActiveAdjustment && tempTargetRemainingText.isNotEmpty()) {
+        tempTargetRemainingText
     } else {
         stringResource(
             R.string.trio_profile_summary,
@@ -686,8 +699,12 @@ private fun TrioProfileCard(
             profileTargetRangeText
         )
     }
-    val title = if (tempTargetState == TempTargetChipState.Active && tempTargetText.isNotEmpty()) {
-        stringResource(R.string.trio_profile_with_temp_target, profileName, tempTargetText)
+    val title = if (hasActiveAdjustment) {
+        stringResource(
+            R.string.trio_active_adjustment,
+            tempTargetReason?.text ?: stringResource(app.aaps.core.ui.R.string.temporary_target),
+            tempTargetRangeText
+        )
     } else {
         profileName
     }
@@ -745,9 +762,15 @@ private fun TrioProfileCard(
                     SceneBadge()
                 }
             }
-            if (progress > 0f) {
+            // tempTargetProgress is elapsed time; the card shows the time still remaining.
+            val displayProgress = if (hasActiveAdjustment) {
+                (1f - tempTargetProgress).coerceIn(0f, 1f)
+            } else {
+                progress
+            }
+            if (displayProgress > 0f) {
                 LinearProgressIndicator(
-                    progress = { progress },
+                    progress = { displayProgress },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(AapsSpacing.small),

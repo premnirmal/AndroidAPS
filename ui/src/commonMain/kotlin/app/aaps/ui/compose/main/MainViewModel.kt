@@ -113,6 +113,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
@@ -275,8 +276,14 @@ class MainViewModel(
         buildChipState(ttData, profileData, rmData, tbrData, runtime.now, runtime.lastLoopTimestamp, runtime.isOverviewHydrated)
     }
 
+    private val chipState: StateFlow<ChipState> = chipStateFlow.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        initialUiState.toInitialChipState()
+    )
+
     /** Derived UI state. Starts immediately so the first overview frame has current values. */
-    val uiState: StateFlow<MainUiState> = combine(_eventState, chipStateFlow) { ev, chip ->
+    val uiState: StateFlow<MainUiState> = combine(_eventState, chipState) { ev, chip ->
         MainUiState(
             isSimpleMode = ev.isSimpleMode,
             showAboutDialog = ev.showAboutDialog,
@@ -289,11 +296,6 @@ class MainViewModel(
             profileProgress = chip.profileProgress,
             profilePercentage = chip.profilePercentage,
             profileTargetRangeText = chip.profileTargetRangeText,
-            tempTargetText = chip.tempTargetText,
-            tempTargetState = chip.tempTargetState,
-            tempTargetProgress = chip.tempTargetProgress,
-            tempTargetReason = chip.tempTargetReason,
-            tempTargetRecordId = chip.tempTargetRecordId,
             runningMode = chip.runningMode,
             runningModeText = chip.runningModeText,
             runningModeRemaining = chip.runningModeRemaining,
@@ -307,6 +309,21 @@ class MainViewModel(
             quickWizardItems = chip.quickWizardItems
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, initialUiState)
+
+    val profileCardTempTargetStateFlow: StateFlow<TempTargetUiState> = chipState
+        .map { state ->
+            TempTargetUiState(
+                text = state.tempTargetText,
+                rangeText = state.tempTargetRangeText,
+                remainingText = state.tempTargetRemainingText,
+                state = state.tempTargetState,
+                progress = state.tempTargetProgress,
+                reason = state.tempTargetReason,
+                recordId = state.tempTargetRecordId
+            )
+        }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TempTargetUiState())
 
     init {
         refreshOverviewState()
@@ -447,6 +464,9 @@ class MainViewModel(
                 ttData.targetRangeText
             }
         } else ""
+        val ttRemainingText = if (ttIsFinite && !ttExpired) {
+            dateUtil.untilString(ttData.timestamp + ttData.duration, rh)
+        } else ""
 
         // Profile progress and display text
         val profileProgress = if (profileData != null && profileData.duration > 0 && !profileExpired) {
@@ -498,6 +518,8 @@ class MainViewModel(
             profilePercentage = profileData?.percentage ?: cachedOverviewStatus.profilePercentage,
             profileTargetRangeText = ttData?.targetRangeText ?: cachedOverviewStatus.profileTargetRangeText,
             tempTargetText = ttText,
+            tempTargetRangeText = if (ttExpired) "" else ttData?.targetRangeText.orEmpty(),
+            tempTargetRemainingText = ttRemainingText,
             tempTargetState = if (ttExpired) TempTargetChipState.None
             else ttData?.state?.toChipState() ?: TempTargetChipState.None,
             tempTargetProgress = ttProgress,
@@ -1104,6 +1126,8 @@ private data class ChipState(
     val profilePercentage: Int = 100,
     val profileTargetRangeText: String = "",
     val tempTargetText: String = "",
+    val tempTargetRangeText: String = "",
+    val tempTargetRemainingText: String = "",
     val tempTargetState: TempTargetChipState = TempTargetChipState.None,
     val tempTargetProgress: Float = 0f,
     val tempTargetReason: TT.Reason? = null,
@@ -1118,6 +1142,19 @@ private data class ChipState(
     val pumpEndTimeMillis: Long? = null,
     val reservoirUnits: Double? = null,
     val quickWizardItems: List<QuickWizardItem> = emptyList()
+)
+
+private fun MainUiState.toInitialChipState() = ChipState(
+    isProfileLoaded = isProfileLoaded,
+    profileName = profileName,
+    isProfileModified = isProfileModified,
+    profilePercentage = profilePercentage,
+    profileTargetRangeText = profileTargetRangeText,
+    runningMode = runningMode,
+    runningModeText = runningModeText,
+    lastLoopAgeMillis = lastLoopAgeMillis,
+    pumpEndTimeMillis = pumpEndTimeMillis,
+    reservoirUnits = reservoirUnits
 )
 
 private data class RuntimeState(

@@ -34,12 +34,6 @@ data class MainUiState(
     val profileProgress: Float = 0f, // 0-1 progress for temporary profile switch
     val profilePercentage: Int = 100,
     val profileTargetRangeText: String = "",
-    // TempTarget state for chip
-    val tempTargetText: String = "",
-    val tempTargetState: TempTargetChipState = TempTargetChipState.None,
-    val tempTargetProgress: Float = 0f, // 0-1 progress for active temp target
-    val tempTargetReason: TT.Reason? = null, // TT reason for icon coloring
-    val tempTargetRecordId: Long = 0, // DB record ID (for scene override detection)
     // Running mode state for chip
     val runningMode: RM.Mode = RM.Mode.DISABLED_LOOP,
     val runningModeText: String = "",
@@ -57,6 +51,17 @@ data class MainUiState(
     val quickWizardItems: List<QuickWizardItem> = emptyList(),
     // Navigation-triggered dialogs
     val showAuthFailedDialog: Boolean = false
+)
+
+@Immutable
+data class TempTargetUiState(
+    val text: String = "",
+    val rangeText: String = "",
+    val remainingText: String = "",
+    val state: TempTargetChipState = TempTargetChipState.None,
+    val progress: Float = 0f,
+    val reason: TT.Reason? = null,
+    val recordId: Long = 0
 )
 
 @Immutable

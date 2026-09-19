@@ -2,6 +2,7 @@
 <resources>
     <!-- General preferences -->
     <string name="pref_title_simple_mode">Simple mode</string>
+    <string name="pref_title_trio_glycemic_metric_units">eA1c and GMI units</string>
     <string name="pref_title_insulin_concentration">Insulin concentration support</string>
     <string name="pref_summary_insulin_concentration">Enable support for different insulin concentrations (U50, U200, etc.)</string>
 
@@ -16,7 +17,6 @@
     <string name="pref_summary_show_cgm_button">Opens xDrip+ or Dexcom App (you can use back button to return to AAPS).</string>
     <string name="pref_title_show_calibration_button">Show calibration button</string>
     <string name="pref_summary_show_calibration_button">Sends a calibration to xDrip+ (ensure \'Accept Calibrations\' is enabled in xDrip+ under Inter-App settings).</string>
-    <string name="pref_title_show_notes_in_dialogs">Show notes in dialogs</string>
     <string name="pref_title_use_bolus_advisor">Use bolus advisor</string>
     <string name="pref_summary_use_bolus_advisor">Enable bolus advisor which assists with bolus calculations during higher glycemias.</string>
     <string name="pref_title_use_bolus_reminder">Use bolus reminder</string>

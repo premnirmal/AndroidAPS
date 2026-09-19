@@ -63,7 +63,6 @@
     <string name="goingtodeliver">%1$.2f Ü gönderilecek</string>
     <string name="androidaps_start">AAPS başladı</string>
     <string name="format_hours">%1$.2f s</string>
-    <string name="objectives">Görevler</string>
     <string name="please_wait">Lütfen bekleyin…</string>
     <string name="stop">Dur</string>
     <string name="invalid_profile">Geçersiz profil!</string>
@@ -562,8 +561,6 @@
     <string name="ic_dynamic_label_warning">Algoritmanız IC\'nizi dinamik olarak hesaplayabilir. Aşağıdaki değerler yalnızca eksik veri olması durumunda bir geri dönüş olarak veya yalnızca bir referans değeri olarak kullanılabilir</string>
     <string name="isf_dynamic_label_warning">Algoritmanız İDF\'nizi dinamik olarak hesaplayabilir. Aşağıdaki değerler yalnızca eksik veri olması durumunda bir geri dönüş olarak veya yalnızca bir referans değeri olarak kullanılabilir</string>
     <!--    Search-->
-    <string name="search_category_plugins">Eklentiler</string>
-    <string name="search_category_wiki">Dökümantasyon</string>
     <!--    Food Management -->
     <string name="food_management">Yiyecek</string>
     <string name="category">Kategori</string>

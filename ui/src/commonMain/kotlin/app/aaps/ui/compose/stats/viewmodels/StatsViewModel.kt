@@ -28,6 +28,7 @@ import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.IntNonKey
 import app.aaps.core.keys.UnitDoubleKey
+import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.interfaces.AppPlatform
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.ui.activityMonitor.ActivityStatsProvider
@@ -106,6 +107,8 @@ class StatsViewModel(
         get() = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewLowMark))
     val trioHighMgdl: Double
         get() = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewHighMark))
+    val trioGlycemicMetricUnits: String
+        get() = preferences.get(StringKey.TrioGlycemicMetricUnits)
 
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()

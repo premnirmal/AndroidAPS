@@ -9,7 +9,6 @@ import app.aaps.core.interfaces.source.DexcomBoyda
 import app.aaps.core.interfaces.queue.CommandQueue
 import app.aaps.core.interfaces.pump.BolusProgressData
 import app.aaps.core.interfaces.notifications.NotificationManager
-import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.bgQualityCheck.BgQualityCheck
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.configuration.ConfigBuilder
@@ -162,9 +161,8 @@ interface IosAppGraph : MetroViewModelMultibindings {
     val chipsViewModelFactory: ChipsViewModel.Factory
     val overviewDataCache: OverviewDataCache
 
-    // What the overview needs beyond the above. `Objectives` and `PumpCommunicationStatus` became
-    // available when ObjectivesPlugin and the pump status moved to commonMain.
-    val objectives: Objectives
+    // What the overview needs beyond the above. `PumpCommunicationStatus` became available when the
+    // pump status moved to commonMain.
     val bgQualityCheck: BgQualityCheck
     val uiInteraction: UiInteraction
     val bolusProgressData: BolusProgressData

@@ -62,7 +62,6 @@
     <string name="goingtodeliver">%1$.2f U을 주입합니다.</string>
     <string name="androidaps_start">AAPS 시작</string>
     <string name="format_hours">%1$.2f 시간</string>
-    <string name="objectives">목표</string>
     <string name="please_wait">잠시 기다려 주세요...</string>
     <string name="stop">정지</string>
     <string name="invalid_profile">유효하지 않은 프로파일!</string>

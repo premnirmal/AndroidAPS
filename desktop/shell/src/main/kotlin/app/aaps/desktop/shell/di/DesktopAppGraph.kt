@@ -3,7 +3,6 @@ package app.aaps.desktop.shell.di
 import app.aaps.core.interfaces.bgQualityCheck.BgQualityCheck
 import app.aaps.core.interfaces.ui.SnackbarHostPresence
 import app.aaps.core.interfaces.ui.UiRestart
-import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.pump.BolusProgressData
 import app.aaps.core.interfaces.queue.CommandQueue
@@ -135,7 +134,6 @@ interface DesktopAppGraph : MetroViewModelMultibindings {
     val builtInSearchables: BuiltInSearchables
 
     // What OverviewScreen needs beyond the above.
-    val objectives: Objectives
     val bgQualityCheck: BgQualityCheck
     val notificationManager: NotificationManager
     val uiInteraction: UiInteraction

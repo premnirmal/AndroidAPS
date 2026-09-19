@@ -12,9 +12,7 @@ import app.aaps.ui.compose.careDialog.CareportalEventType
 import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.keys.StringKey
-import app.aaps.core.ui.search.SearchableItem
 import app.aaps.ui.compose.quickLaunch.QuickLaunchAction
-import app.aaps.ui.search.SearchIndexEntry
 import app.aaps.core.ui.compose.ScreenMode
 import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.ui.compose.main.MainViewModel
@@ -46,11 +44,10 @@ class ElementNavigator(
     private val dexcomBoyda: DexcomBoyda,
     private val onOpenCgmApp: (packageName: String) -> Unit,
     private val onExit: () -> Unit,
-    val onRequestDirectoryAccess: () -> Unit,
-    val onOpenUrl: (url: String) -> Unit
+    val onRequestDirectoryAccess: () -> Unit
 ) {
 
-    /** Where a tap in the drawer, a search result or a quick launch tile goes. */
+    /** Where a tap in the drawer or a quick launch tile goes. */
     fun handleNavigationRequest(request: NavigationRequest) {
         when (request) {
             is NavigationRequest.Element           -> navigateProtected(request.type)
@@ -253,28 +250,5 @@ fun ElementNavigator.handleNotificationAction(notificationId: NotificationId) {
         NotificationId.AAPS_DIR_NOT_SELECTED   -> onRequestDirectoryAccess()
 
         else                                   -> Unit
-    }
-}
-
-/**
- * A search result.
- *
- * The search stays active on purpose, so back returns to the results rather than to the overview.
- */
-fun ElementNavigator.handleSearchResultClick(entry: SearchIndexEntry) {
-    when (val item = entry.item) {
-        is SearchableItem.Category   -> guarded(ProtectionCheck.Protection.PREFERENCES) {
-            navController.navigate(AppRoute.PreferenceScreen.createRoute(item.screenDef.key))
-        }
-
-        is SearchableItem.Preference -> guarded(ProtectionCheck.Protection.PREFERENCES) {
-            val screenKey = item.parentScreenKey
-            if (screenKey != null) navController.navigate(AppRoute.PreferenceScreen.createRoute(screenKey, item.preferenceKey.key))
-            else navController.navigate(AppRoute.Preferences.route)
-        }
-
-        is SearchableItem.Dialog     -> handleNavigationRequest(NavigationRequest.Element(item.elementType))
-        is SearchableItem.Plugin     -> openPlugin(item.pluginRef, navController, activePlugin)
-        is SearchableItem.Wiki       -> onOpenUrl(item.url)
     }
 }

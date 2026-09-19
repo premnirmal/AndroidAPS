@@ -45,7 +45,6 @@
     <string name="goingtodeliver">Werde %1$.2f IE abgeben</string>
     <string name="androidaps_start">AAPS gestartet</string>
     <string name="format_hours">%1$.2f h</string>
-    <string name="objectives">Objectives (Ziele)</string>
     <string name="please_wait">Bitte warten…</string>
     <string name="stop">Stopp</string>
     <string name="invalid_profile">Ungültiges Profil!</string>

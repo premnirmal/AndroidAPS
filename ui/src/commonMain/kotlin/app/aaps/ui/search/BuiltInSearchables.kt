@@ -41,7 +41,7 @@ import dev.zacsweers.metro.binding
 
 /**
  * Single source of truth for built-in (non-plugin) preference screens.
- * These are used by both AllPreferencesScreen for display and SearchIndexBuilder for search.
+ * These are used by AllPreferencesScreen for display and by navigation to resolve a screen key.
  *
  * To add a new built-in screen:
  * 1. Define it as a property in this class
@@ -72,6 +72,7 @@ class BuiltInSearchables(
             title = CoreUiStrings.configbuilder_general,
             items = listOf(
                 StringKey.GeneralUnits,
+                StringKey.TrioGlycemicMetricUnits,
                 StringKey.GeneralLanguage,
                 BooleanKey.GeneralSimpleMode.withChangeGuard { newValue ->
                     if (newValue && hasNonU100Insulin())
@@ -103,8 +104,6 @@ class BuiltInSearchables(
                     UnitDoubleKey.OverviewHighMark
                 )
             ),
-            BooleanKey.OverviewShowNotesInDialogs,
-            BooleanKey.OverviewShowNotesInDialogs,
             StringKey.GeneralDarkMode
         ),
         icon = Icons.Outlined.Palette

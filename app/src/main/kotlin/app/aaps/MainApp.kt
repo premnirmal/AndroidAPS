@@ -64,7 +64,6 @@ import app.aaps.implementation.receivers.ChargingStateReceiver
 import app.aaps.implementation.receivers.KeepAliveWorker
 import app.aaps.implementation.receivers.NetworkChangeReceiver
 import app.aaps.implementation.receivers.TimeDateOrTZChangeReceiver
-import app.aaps.plugins.constraints.objectives.keys.ObjectivesLongComposedKey
 import app.aaps.ui.activityMonitor.ActivityMonitor
 import app.aaps.utils.configureLeakCanary
 import com.google.firebase.Firebase
@@ -566,25 +565,6 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
                     preferences.put(LongComposedKey.ActivityMonitorStart, activity, value = SafeParse.stringToLong(value))
                 else
                     preferences.put(LongComposedKey.ActivityMonitorStart, activity, value = value as Long)
-                sp.remove(key)
-            }
-        }
-        // Migrate Objectives
-        for ((key, value) in keys) {
-            if (key.startsWith("Objectives_") && key.endsWith("_started")) {
-                val objective = key.split("_")[1]
-                if (value is String)
-                    preferences.put(ObjectivesLongComposedKey.Started, objective, value = SafeParse.stringToLong(value))
-                else
-                    preferences.put(ObjectivesLongComposedKey.Started, objective, value = value as Long)
-                sp.remove(key)
-            }
-            if (key.startsWith("Objectives_") && key.endsWith("_accomplished")) {
-                val objective = key.split("_")[1]
-                if (value is String)
-                    preferences.put(ObjectivesLongComposedKey.Accomplished, objective, value = SafeParse.stringToLong(value))
-                else
-                    preferences.put(ObjectivesLongComposedKey.Accomplished, objective, value = value as Long)
                 sp.remove(key)
             }
         }
