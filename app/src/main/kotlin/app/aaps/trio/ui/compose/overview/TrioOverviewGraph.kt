@@ -1,6 +1,6 @@
 package app.aaps.trio.ui.compose.overview
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedVisibility as AnimatedVisibilityComposable
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Animatable
@@ -206,7 +206,7 @@ fun TrioOverviewGraph(
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            AnimatedVisibility(
+            AnimatedVisibilityComposable(
                 visible = showInfoButton,
                 enter = fadeIn(),
                 exit = fadeOut()
