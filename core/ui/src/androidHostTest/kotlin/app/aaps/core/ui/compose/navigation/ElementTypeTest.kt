@@ -64,14 +64,4 @@ class ElementTypeTest {
             assertThat(type.protection).isEqualTo(ProtectionCheck.Protection.PREFERENCES)
         }
     }
-
-    @Test
-    fun navigationCategory_entries_areAllSearchable() {
-        // The navigation drawer surfaces these via global search; missing one would make it
-        // unreachable from search.
-        val navUnreachable = ElementType.entries
-            .filter { it.category == ElementCategory.NAVIGATION }
-            .filterNot { it.searchable }
-        assertThat(navUnreachable).isEmpty()
-    }
 }

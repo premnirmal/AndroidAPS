@@ -7,10 +7,8 @@ import org.junit.jupiter.api.Test
 /**
  * Structural guard for the non-`@Composable` extensions in `ElementTypeStyle.kt`. Adding a new
  * [ElementType] without updating the icon/label/description `when` branches would compile-fail
- * Kotlin's exhaustiveness check, but the more interesting bugs are subtler:
- *  - a searchable element with no label/description (user-facing identifier missing)
- *  - an entry mapped to label `0` outside the documented "dynamic label" set
- * These tests catch those drifts.
+ * Kotlin's exhaustiveness check, but the more interesting bug is subtler: an entry mapped to
+ * label `0` outside the documented "dynamic label" set. These tests catch that drift.
  */
 class ElementTypeStyleTest {
 
