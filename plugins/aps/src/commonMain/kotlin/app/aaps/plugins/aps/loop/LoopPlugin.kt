@@ -767,6 +767,18 @@ class LoopPlugin(
         dismissSuggestion()
     }
 
+    private fun postMealNotification(contentText: String) {
+        notificationManager.post(
+            id = NotificationId.MEAL_TIME_TO_EAT,
+            text = contentText,
+            actions = listOf(
+                NotificationAction(CoreUiStrings.dismiss) {
+                    notificationManager.dismiss(NotificationId.MEAL_TIME_TO_EAT)
+                }
+            )
+        )
+    }
+
     private fun presentSuggestion(contentText: String) {
         notificationManager.post(
             id = NotificationId.LOW_GLUCOSE_SUSPEND,
