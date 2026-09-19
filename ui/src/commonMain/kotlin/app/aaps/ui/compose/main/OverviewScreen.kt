@@ -13,7 +13,6 @@ import app.aaps.core.interfaces.clientcontrol.ClientControlActionDispatcher
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.notifications.AapsNotification
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
@@ -159,7 +158,7 @@ fun OverviewScreen(
         isSimpleMode = state.isSimpleMode,
         onNavigate = onNavigate,
         onActionsError = { comment, title ->
-            uiInteraction.runAlarm(comment, title, AlarmSound.BOLUS_ERROR)
+            uiInteraction.runAlarm(comment, title)
         },
     )
 

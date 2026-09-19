@@ -21,7 +21,6 @@ import app.aaps.core.interfaces.bolus.WizardBolusExecutor
 import app.aaps.core.interfaces.constraints.Constraint
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.UserEntryLogger
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
@@ -895,7 +894,7 @@ class WizardBolusExecutorImplTest : TestBaseWithProfile() {
         // The async delivery failure raises the single URGENT alarm from the executor (not the now-gone dialog).
         verify(notificationManager).post(
             eq(NotificationId.BOLUS_DELIVERY_FAILED), any<String>(), any<NotificationLevel>(), any<Int>(),
-            anyOrNull<AlarmSound>(), any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
+            any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
         )
     }
 
@@ -914,7 +913,7 @@ class WizardBolusExecutorImplTest : TestBaseWithProfile() {
         // A user-initiated cancel is not a failure: no URGENT alarm even though the command result is unsuccessful.
         verify(notificationManager, never()).post(
             eq(NotificationId.BOLUS_DELIVERY_FAILED), any<String>(), any<NotificationLevel>(), any<Int>(),
-            anyOrNull<AlarmSound>(), any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
+            any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
         )
     }
 

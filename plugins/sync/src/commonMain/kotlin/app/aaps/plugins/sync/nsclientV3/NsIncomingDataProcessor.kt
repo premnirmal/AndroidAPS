@@ -11,7 +11,6 @@ import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.insulin.InsulinType
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
@@ -217,7 +216,6 @@ class NsIncomingDataProcessor(
                                         id = NotificationId.NS_ANNOUNCEMENT,
                                         text = therapyEvent.note ?: "",
                                         validTo = dateUtil.now() + T.mins(60).msecs(),
-                                        sound = AlarmSound.ALARM,
                                         actions = listOf(NotificationAction(CoreUiStrings.snooze) { })
                                     )
                             }

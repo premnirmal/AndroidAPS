@@ -41,7 +41,6 @@ import app.aaps.core.interfaces.maintenance.CloudStorageProvider
 import app.aaps.core.interfaces.maintenance.FileListProvider
 import app.aaps.core.interfaces.maintenance.ImportExportPrefs
 import app.aaps.core.interfaces.maintenance.Maintenance
-import app.aaps.core.interfaces.notifications.AlarmSoundPlayer
 import app.aaps.core.interfaces.notifications.NotificationHolder
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.nsclient.NSClientRepository
@@ -374,7 +373,6 @@ interface AppRootGraph : MetroViewModelMultibindings, PumpAccessors {
     val notificationHolder: NotificationHolder
     val userEntryPresentationHelper: UserEntryPresentationHelper
     val profiler: Profiler
-    val alarmSoundPlayer: AlarmSoundPlayer
     val wizardExecutor: WizardExecutor
     val configBuilder: ConfigBuilder
 

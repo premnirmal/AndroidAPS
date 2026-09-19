@@ -346,6 +346,7 @@ class DataHandlerWear(
     private fun createNotificationChannel(vibratePattern: LongArray, channelID: String, name: CharSequence, description: String, importance: Int) {
         val channel = NotificationChannel(channelID, name, importance)
         channel.description = description
+        channel.setSound(null, null)
         channel.enableVibration(true)
         channel.vibrationPattern = vibratePattern
 
@@ -362,6 +363,7 @@ class DataHandlerWear(
         val description = "Open Loop request notification"
         val channel = NotificationChannel(DataLayerListenerServiceWear.AAPS_NOTIFY_CHANNEL_ID_OPEN_LOOP, name, NotificationManager.IMPORTANCE_HIGH)
         channel.description = description
+        channel.setSound(null, null)
         channel.enableVibration(true)
 
         // Register the channel with the system; you can't change the importance

@@ -47,7 +47,11 @@ class AndroidLoopNotifier(
             CHANNEL_ID,
             CHANNEL_ID,
             AndroidNotificationManager.IMPORTANCE_HIGH
-        )
+        ).apply {
+            setSound(null, null)
+            enableVibration(true)
+        }
+        notificationManager.deleteNotificationChannel("AAPS-OpenLoop")
         notificationManager.createNotificationChannel(channel)
     }
 
@@ -108,7 +112,7 @@ class AndroidLoopNotifier(
 
     private companion object {
 
-        const val CHANNEL_ID = "AAPS-OpenLoop"
+        const val CHANNEL_ID = "AAPS-OpenLoop-Silent"
         val VIBRATE_PATTERN = longArrayOf(1000, 1000, 1000, 1000, 1000)
     }
 }

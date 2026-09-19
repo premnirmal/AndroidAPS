@@ -277,7 +277,7 @@ class NsFrameHandlerTest : TestBaseWithProfile() {
         val actions = argumentCaptor<List<NotificationAction>>()
         verify(notificationManager).post(
             id = eq(NotificationId.NS_ALARM), text = any(), level = any(),
-            validMinutes = any(), sound = any(), actions = actions.capture(), validityCheck = anyOrNull()
+            validMinutes = any(), actions = actions.capture(), validityCheck = anyOrNull()
         )
         assertThat(actions.firstValue).hasSize(3)
     }
@@ -321,7 +321,7 @@ class NsFrameHandlerTest : TestBaseWithProfile() {
         val actions = argumentCaptor<List<NotificationAction>>()
         verify(notificationManager).post(
             id = any(), text = any(), level = any(),
-            validMinutes = any(), sound = any(), actions = actions.capture(), validityCheck = anyOrNull()
+            validMinutes = any(), actions = actions.capture(), validityCheck = anyOrNull()
         )
         return actions.firstValue
     }

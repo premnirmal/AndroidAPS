@@ -28,7 +28,6 @@ import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.logging.UserEntryLogger
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.plugin.ActivePlugin
@@ -1292,7 +1291,7 @@ class WizardBolusExecutorImpl(
                 // SMB stays silent (the loop self-corrects next cycle). onError still fires so the initiating
                 // transport relays too (the watch's sendError today; a client's late ack in phase 1b).
                 if (detailedBolusInfo.bolusType != BS.Type.SMB)
-                    notificationManager.post(NotificationId.BOLUS_DELIVERY_FAILED, errorText, validMinutes = 0, sound = AlarmSound.BOLUS_ERROR)
+                    notificationManager.post(NotificationId.BOLUS_DELIVERY_FAILED, errorText, validMinutes = 0)
                 onError(errorText)
             } else
                 onSuccess()

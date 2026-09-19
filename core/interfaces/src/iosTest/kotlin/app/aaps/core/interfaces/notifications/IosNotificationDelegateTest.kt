@@ -8,7 +8,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import platform.UserNotifications.UNNotificationPresentationOptionBanner
 import platform.UserNotifications.UNNotificationPresentationOptionList
-import platform.UserNotifications.UNNotificationPresentationOptionSound
 
 /**
  * Routing between the handlers that share iOS's one delegate slot.
@@ -73,7 +72,7 @@ class IosNotificationDelegateTest {
      * showing nothing while AAPS is frontmost; these three are what it should show.
      */
     @Test
-    fun `a notification arriving while the app is in front is shown and listed and keeps its sound`() {
+    fun `a notification arriving while the app is in front is shown and listed`() {
         val options = IosNotificationDelegate.PRESENTATION_OPTIONS
 
         assertEquals(
@@ -85,11 +84,6 @@ class IosNotificationDelegateTest {
             UNNotificationPresentationOptionList,
             options and UNNotificationPresentationOptionList,
             "not kept in Notification Centre"
-        )
-        assertEquals(
-            UNNotificationPresentationOptionSound,
-            options and UNNotificationPresentationOptionSound,
-            "the notification's own sound is suppressed"
         )
     }
 

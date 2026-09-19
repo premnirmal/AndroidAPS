@@ -15,8 +15,6 @@ import androidx.core.app.NotificationCompat
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.AapsNotification
-import app.aaps.core.interfaces.notifications.AlarmSound
-import app.aaps.core.interfaces.notifications.AlarmSoundPlayer
 import app.aaps.core.interfaces.notifications.NotificationHolder
 import app.aaps.core.interfaces.notifications.NotificationLevel
 import app.aaps.core.interfaces.notifications.NotificationManager
@@ -32,7 +30,7 @@ import dev.zacsweers.metro.SingleIn
 import android.app.NotificationManager as AndroidNotificationManager
 
 /**
- * The Android half of notification handling: the channel, the system tray and the alarm audio.
+ * The Android half of notification handling: system channels, the system tray, and vibration.
  * The registry that decides *which* notifications exist is shared - see `CommonNotificationManager`.
  * This class only answers "given this notification, what does Android actually do", which is the
  * question `NotificationManagerImpl` used to answer inline.
@@ -45,16 +43,10 @@ class AndroidSystemNotificationPlatform(
     private val context: Context,
     private val preferences: Preferences,
     private val iconsProvider: IconsProvider,
-    // Providers, not instances: AlarmNotificationManager creates its channels in its own constructor,
-    // so injecting it directly would reach Android while the graph is being built. They are resolved
-    // when a notification is actually shown or silenced.
+    // Providers avoid touching Android while the graph is built.
     private val notificationHolder: () -> NotificationHolder,
-    private val alarmNotificationManager: () -> AlarmNotificationManager,
-    private val alarmSoundPlayer: () -> AlarmSoundPlayer
+    private val alarmNotificationManager: () -> AlarmNotificationManager
 ) : SystemNotificationPlatform {
-
-    /** instanceKey of the alarm currently owning [AlarmSoundPlayer.OWNER_INTERNAL], null when silent. */
-    private var soundingKey: Int? = null
 
     private var dismissCallback: ((Int) -> Unit)? = null
 
@@ -72,20 +64,14 @@ class AndroidSystemNotificationPlatform(
     }
 
     /**
-     * Three outcomes, and the whole reason this method takes the notification rather than a few
-     * chosen fields:
-     * 1. an URGENT notification **carrying a sound** is posted **silently**, because the ramping
-     *    audio belongs to [AlarmSoundPlayer] through [setAudibleAlarm]. Posting it normally would
-     *    alert the user twice for one alarm.
-     * 2. anything else is shown only when the user asked for it with
+     * Urgent alarms are shown as heads-up notifications. Anything else is shown only when the user asked for it with
      *    [BooleanKey.AlertUrgentAsAndroidNotification] **and** it carries no actions - a notification
      *    with actions is answered in the app, not from the tray.
-     * 3. otherwise nothing is shown at all, which is a legitimate outcome here.
      */
     override fun show(notification: AapsNotification, title: String) {
         ensureStarted()
-        if (notification.level == NotificationLevel.URGENT && notification.sound != null) {
-            alarmNotificationManager().postSilentAlarmNotification(
+        if (notification.level == NotificationLevel.URGENT) {
+            alarmNotificationManager().postAlarmNotification(
                 notificationKey = notification.instanceKey,
                 title = title,
                 body = notification.text,
@@ -97,34 +83,18 @@ class AndroidSystemNotificationPlatform(
     }
 
     override fun cancel(instanceKey: Int) {
-        // Harmless when this key never carried a sound - the alarm manager only tracks the ones it posted.
-        alarmNotificationManager().cancelSoundAlarm(instanceKey)
+        alarmNotificationManager().cancelAlarmNotification(instanceKey)
         notificationManager.cancel(instanceKey)
     }
 
     /**
      * Every **alarm** this app posted, not literally every notification.
      * `AndroidNotificationManager.cancelAll()` would also take down the ongoing foreground service
-     * notification that shows the loop status, which is not what "mute all alarms" means. This is the
+     * notification that shows the loop status, which is not what "dismiss all alarms" means. This is the
      * same set `NotificationManagerImpl` cleared on that path.
      */
     override fun cancelAll() {
         alarmNotificationManager().cancelAlarm()
-    }
-
-    override fun setAudibleAlarm(instanceKey: Int?, sound: AlarmSound?) {
-        if (instanceKey == null || sound == null) {
-            if (soundingKey != null) {
-                soundingKey = null
-                alarmSoundPlayer().stop(AlarmSoundPlayer.OWNER_INTERNAL)
-            }
-            return
-        }
-        // Called again with the same key means "keep playing" - restarting would reset the ramp.
-        if (instanceKey != soundingKey) {
-            soundingKey = instanceKey
-            alarmSoundPlayer().play(sound, AlarmSoundPlayer.OWNER_INTERNAL)
-        }
     }
 
     /** Just remembers the callback. The receiver it feeds is registered by [ensureStarted]. */
@@ -145,8 +115,15 @@ class AndroidSystemNotificationPlatform(
         if (started) return
         started = true
 
+        notificationManager.deleteNotificationChannel("AndroidAPS-Overview-Silent")
         notificationManager.createNotificationChannel(
-            NotificationChannel(NotificationManager.CHANNEL_ID, NotificationManager.CHANNEL_ID, AndroidNotificationManager.IMPORTANCE_HIGH)
+            NotificationChannel(
+                NotificationManager.CHANNEL_ID,
+                NotificationManager.CHANNEL_ID,
+                AndroidNotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                enableVibration(true)
+            }
         )
 
         val filter = IntentFilter(NotificationManager.DISMISS_ACTION)

@@ -7,7 +7,6 @@ import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.sharedPreferences.KeyValueStore
-import app.aaps.core.interfaces.notifications.AlarmSoundPlayer
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.notifications.SystemNotificationPlatform
 import app.aaps.core.interfaces.pump.BolusProgressData
@@ -104,7 +103,6 @@ interface IosProbeGraph {
     val repository: AppRepository
     val notificationManager: NotificationManager
     val logger: AAPSLogger
-    val alarmSoundPlayer: AlarmSoundPlayer
     val preferences: Preferences
 
 

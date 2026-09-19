@@ -3,9 +3,7 @@ package app.aaps.implementation.notifications
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.AapsNotification
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.IosNotificationDelegate
-import app.aaps.core.interfaces.notifications.AlarmSoundPlayer
 import app.aaps.core.interfaces.notifications.NotificationLevel
 import app.aaps.core.interfaces.notifications.SystemNotificationPlatform
 import platform.UserNotifications.UNAuthorizationOptionAlert
@@ -19,35 +17,22 @@ import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotificationInterruptionLevel.UNNotificationInterruptionLevelActive
 import platform.UserNotifications.UNNotificationInterruptionLevel.UNNotificationInterruptionLevelTimeSensitive
 import platform.UserNotifications.UNNotificationRequest
+import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
 
 /**
  * The system tray half of notifications on iOS.
  *
- * iOS keeps far more of this than Android does. There is no channel to create, no `PendingIntent`
- * to build, and no volume ramp to drive: a delivered notification carries its own sound, and the
- * system decides how to present it. So the interesting part here is what is *absent* compared with
- * the Android side.
+ * iOS keeps far more of this than Android does. There is no channel to create and no `PendingIntent`
+ * to build. The system decides how to present the notification.
  *
  * Permission is requested once, lazily, on the first notification. Asking in the constructor would
  * put the system prompt in front of the user during start up, before anything has explained why the
  * app wants it.
  */
 class IosSystemNotificationPlatform(
-    private val aapsLogger: AAPSLogger,
-    private val alarmSoundPlayer: AlarmSoundPlayer,
-    /**
-     * `AlertOverrideDoNotDisturb`, read fresh each time so a change takes effect without a restart.
-     *
-     * A supplier rather than `Preferences` itself: this needs one boolean, while `Preferences` has 76
-     * members and no test binary here can fake it - `iosTest` has no Mockito. Narrowing it is what
-     * lets [breaksThroughFocus] be checked at all.
-     */
-    private val overrideDoNotDisturb: () -> Boolean
+    private val aapsLogger: AAPSLogger
 ) : SystemNotificationPlatform {
-
-    /** The alarm currently owning the audio, so an unchanged owner does not restart the sound. */
-    private var soundingKey: Int? = null
 
     /**
      * Instance keys whose notification carries actions and has not been answered yet.
@@ -76,12 +61,6 @@ class IosSystemNotificationPlatform(
      * AAPS raises an OS notification at all, and on iOS that choice belongs to the user in Settings.
      * The key says so itself now - it is marked Android only.
      *
-     * `sound` is not read either, because every notification here is posted silently and the audio is
-     * handed to [AlarmSoundPlayer] through [setAudibleAlarm] - the same split Android uses, so a
-     * replaced alarm does not restart the sound. (An earlier version of this comment claimed there
-     * was no ramping player to hand it to. There is: `IosAlarmSoundPlayer`, which ramps exactly as
-     * the Android one does.)
-     *
      * `actions` **is** still ignored, and that one is a real gap rather than a decision - a
      * notification carrying actions reaches the tray here with none of them attached, where Android
      * suppresses it so it can be answered in the app.
@@ -89,16 +68,14 @@ class IosSystemNotificationPlatform(
     override fun show(notification: AapsNotification, title: String) {
         ensureAuthorization()
         rememberIfUnanswered(notification)
-        val breakThroughFocus = breaksThroughFocus(notification.level)
         val content = UNMutableNotificationContent().apply {
             setTitle(title)
             setBody(notification.text)
-            // The sound stays off here on purpose: audible alarms are driven by setAudibleAlarm, the
-            // same split the Android side uses so a replaced alarm does not restart the sound.
+            setSound(UNNotificationSound.defaultSound)
             // Without the category the dismiss callback never fires - see onDismissed.
             setCategoryIdentifier(CATEGORY)
             setInterruptionLevel(
-                if (breakThroughFocus) UNNotificationInterruptionLevelTimeSensitive
+                if (notification.level == NotificationLevel.URGENT) UNNotificationInterruptionLevelTimeSensitive
                 else UNNotificationInterruptionLevelActive
             )
         }
@@ -115,25 +92,6 @@ class IosSystemNotificationPlatform(
     }
 
     /**
-     * Whether this notification is allowed past a Focus mode.
-     *
-     * The Focus half of `AlertOverrideDoNotDisturb`. On iOS that one setting splits across two
-     * mechanisms, because Focus suppresses **notifications** while the Ring/Silent switch silences
-     * **audio**, and neither lever reaches the other:
-     *
-     * - the silent switch is answered by the audio session category, in `IosAlarmSoundPlayer`;
-     * - Focus is answered here, and only `timeSensitive` gets through it.
-     *
-     * This used to read the urgency alone, so half of what the switch promised - "when disabled,
-     * alarms respect silent/DND" - was not true whatever the user set.
-     *
-     * Non-urgent notifications never break through, exactly as before: the override widens what an
-     * alarm may do, it does not promote ordinary notifications into alarms.
-     */
-    internal fun breaksThroughFocus(level: NotificationLevel): Boolean =
-        level == NotificationLevel.URGENT && overrideDoNotDisturb()
-
-    /**
      * Notes, before posting, that this notification must survive a swipe.
      *
      * Split from [show] only so it can be exercised: [show] reaches `UNUserNotificationCenter`,
@@ -148,7 +106,7 @@ class IosSystemNotificationPlatform(
         unanswered -= instanceKey
     }
 
-    /** Same, for the "mute all alarms" path. */
+    /** Same, for the "dismiss all alarms" path. */
     internal fun forgetAll() {
         unanswered.clear()
     }
@@ -172,12 +130,12 @@ class IosSystemNotificationPlatform(
      * up the loop's `aaps-loop` notification for the same reason.
      *
      * Android draws exactly this line and says why in `AndroidSystemNotificationPlatform.cancelAll`:
-     * "mute all alarms" means take *my* alarms out of the tray, not empty the tray. [instanceKeyOf]
+     * "Dismiss all alarms" means take *my* alarms out of the tray, not empty the tray. [instanceKeyOf]
      * is what decides ownership here, so a `aaps-reminder-3` or an `aaps-loop` is left alone because
      * neither tail parses to a key.
      */
     override fun cancelAll() {
-        // "Mute all alarms" is an answer, given deliberately, so these are finished with.
+        // "Dismiss all alarms" is an answer, given deliberately, so these are finished with.
         forgetAll()
         center.getDeliveredNotificationsWithCompletionHandler { delivered ->
             val posted = delivered.orEmpty().mapNotNull { (it as? UNNotification)?.request?.identifier }
@@ -194,25 +152,6 @@ class IosSystemNotificationPlatform(
      */
     internal fun ownIdentifiers(identifiers: List<String>): List<String> =
         identifiers.filter { instanceKeyOf(it) != null }
-
-    /**
-     * Hands the ramping alarm to [AlarmSoundPlayer], or silences it.
-     *
-     * The registry calls this after every change with whichever alarm owns the sound, so calling it
-     * again with the same key must not restart the audio - that is what stops a second alarm
-     * cutting the first one off, and why the owner key is compared here rather than in the player.
-     */
-    override fun setAudibleAlarm(instanceKey: Int?, sound: AlarmSound?) {
-        if (instanceKey == soundingKey) return
-        soundingKey = instanceKey
-        if (instanceKey == null || sound == null) {
-            alarmSoundPlayer.stop(AlarmSoundPlayer.OWNER_INTERNAL)
-            aapsLogger.debug(LTag.NOTIFICATION, "Alarm audio stopped")
-        } else {
-            alarmSoundPlayer.play(sound, AlarmSoundPlayer.OWNER_INTERNAL)
-            aapsLogger.debug(LTag.NOTIFICATION, "Alarm audio owner is now $instanceKey ($sound)")
-        }
-    }
 
     /**
      * Learn about notifications the user swiped away outside the app.
@@ -244,9 +183,8 @@ class IosSystemNotificationPlatform(
      *
      * Every notification posted here is swipeable, because the category has to carry
      * `customDismissAction` for dismissals to be reported at all. The registry turns a reported
-     * dismissal into `dismiss(handle)`, which drops the notification, and `refreshAlarmSound` then
-     * finds no audible alarm and **stops the sound**. So on an urgent Nightscout alarm the swipe -
-     * the first gesture anyone reaches for - silenced it, threw away the card holding the three
+     * dismissal into `dismiss(handle)`, which drops the notification. On an urgent Nightscout alarm
+     * the swipe - the first gesture anyone reaches for - threw away the card holding the three
      * snooze buttons, never acknowledged Nightscout and never recorded a snooze, so the same alarm
      * returned on the next push.
      *
@@ -275,7 +213,7 @@ class IosSystemNotificationPlatform(
     private fun ensureAuthorization() {
         if (authorizationAsked) return
         authorizationAsked = true
-        val options = UNAuthorizationOptionAlert or UNAuthorizationOptionSound or UNAuthorizationOptionBadge
+        val options = UNAuthorizationOptionAlert or UNAuthorizationOptionBadge or UNAuthorizationOptionSound
         center.requestAuthorizationWithOptions(options) { granted, error ->
             if (error != null) aapsLogger.error(LTag.NOTIFICATION, "Notification permission failed: $error")
             else aapsLogger.debug(LTag.NOTIFICATION, "Notification permission granted=$granted")

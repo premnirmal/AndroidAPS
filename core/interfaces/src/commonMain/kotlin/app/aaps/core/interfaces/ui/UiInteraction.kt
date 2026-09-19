@@ -1,6 +1,5 @@
 package app.aaps.core.interfaces.ui
 
-import app.aaps.core.interfaces.notifications.AlarmSound
 import kotlin.reflect.KClass
 
 /**
@@ -16,15 +15,14 @@ interface UiInteraction {
     val errorHelperActivity: KClass<*>
 
     /**
-     * Show ErrorHelperActivity and start alarm.
+     * Show ErrorHelperActivity.
      * @param status message inside dialog
      * @param title title of dialog
-     * @param sound alarm sound, or null for a silent alarm
      */
-    fun runAlarm(status: String, title: String, sound: AlarmSound? = null)
+    fun runAlarm(status: String, title: String)
 
     /**
-     * Stops any currently playing alarm (cancels FSI + all sound notifications).
+     * Dismisses the current alarm UI and notifications.
      * Per-AAPS-notification cancellation happens internally inside the implementation module.
      * @param reason A string describing why the alarm is being stopped.
      */

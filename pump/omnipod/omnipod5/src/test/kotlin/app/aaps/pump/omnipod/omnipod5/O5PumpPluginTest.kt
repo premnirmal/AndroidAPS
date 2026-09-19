@@ -471,7 +471,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
             verify(notificationManager).post(
                 eq(NotificationId.OMNIPOD_POD_FAULT), any<String>(), level = any(), validMinutes = any(),
-                sound = anyOrNull(), actions = any(), validityCheck = anyOrNull()
+                actions = any(), validityCheck = anyOrNull()
             )
             verify(pumpSync).insertAnnouncement(any<String>(), any<Long>(), eq(PumpType.OMNIPOD_5), eq("9999"))
         }
@@ -488,7 +488,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
         verify(notificationManager, never()).post(
             any(), any<String>(), level = any(), validMinutes = any(),
-            sound = anyOrNull(), actions = any(), validityCheck = anyOrNull()
+            actions = any(), validityCheck = anyOrNull()
         )
         verify(podStateManager, never()).alarmSynced = true
     }
@@ -505,7 +505,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
             verify(notificationManager).post(
                 eq(NotificationId.OMNIPOD_POD_FAULT), any<String>(), level = any(), validMinutes = any(),
-                sound = anyOrNull(), actions = any(), validityCheck = anyOrNull()
+                actions = any(), validityCheck = anyOrNull()
             )
             verify(pumpSync).insertAnnouncement(any<String>(), any<Long>(), eq(PumpType.OMNIPOD_5), eq("9999"))
         }
@@ -520,7 +520,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
         verify(notificationManager, never()).post(
             any(), any<String>(), level = any(), validMinutes = any(),
-            sound = anyOrNull(), actions = any(), validityCheck = anyOrNull()
+            actions = any(), validityCheck = anyOrNull()
         )
     }
 
@@ -533,7 +533,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
         verify(notificationManager, never()).post(
             any(), any<String>(), level = any(), validMinutes = any(),
-            sound = anyOrNull(), actions = any(), validityCheck = anyOrNull()
+            actions = any(), validityCheck = anyOrNull()
         )
         verify(podStateManager, never()).alarmSynced = any()
     }
@@ -550,7 +550,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
             verify(notificationManager, never()).post(
                 any(), any<String>(), level = any(), validMinutes = any(),
-                sound = anyOrNull(), actions = any(), validityCheck = anyOrNull()
+                actions = any(), validityCheck = anyOrNull()
             )
             verify(pumpSync).insertAnnouncement(any<String>(), any<Long>(), eq(PumpType.OMNIPOD_5), eq("9999"))
         }
