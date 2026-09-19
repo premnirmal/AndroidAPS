@@ -71,19 +71,13 @@ class AndroidSystemNotificationPlatform(
     override fun show(notification: AapsNotification, title: String) {
         ensureStarted()
         if (notification.level == NotificationLevel.URGENT) {
-            alarmNotificationManager().postAlarmNotification(
-                notificationKey = notification.instanceKey,
-                title = title,
-                body = notification.text,
-                urgent = true
-            )
+            raiseSystemNotification(notification, title)
         } else if (preferences.get(BooleanKey.AlertUrgentAsAndroidNotification) && notification.actions.isEmpty()) {
             raiseSystemNotification(notification, title)
         }
     }
 
     override fun cancel(instanceKey: Int) {
-        alarmNotificationManager().cancelAlarmNotification(instanceKey)
         notificationManager.cancel(instanceKey)
     }
 
