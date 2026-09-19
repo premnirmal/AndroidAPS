@@ -21,6 +21,8 @@ data class TrioOverviewModel(
     val profilePercentage: Int,
     val profileTargetRangeText: String,
     val tempTargetText: String,
+    val tempTargetRangeText: String,
+    val tempTargetRemainingText: String,
     val tempTargetState: TempTargetChipState,
     val tempTargetProgress: Float,
     val tempTargetReason: TT.Reason?,

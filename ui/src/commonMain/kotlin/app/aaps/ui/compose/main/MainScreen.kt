@@ -160,6 +160,8 @@ fun MainScreen(
                         profilePercentage = uiState.profilePercentage,
                         profileTargetRangeText = uiState.profileTargetRangeText,
                         tempTargetText = uiState.tempTargetText,
+                        tempTargetRangeText = uiState.tempTargetRangeText,
+                        tempTargetRemainingText = uiState.tempTargetRemainingText,
                         tempTargetState = uiState.tempTargetState,
                         tempTargetProgress = uiState.tempTargetProgress,
                         tempTargetReason = uiState.tempTargetReason,

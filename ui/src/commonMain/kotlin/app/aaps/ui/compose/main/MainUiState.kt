@@ -36,6 +36,8 @@ data class MainUiState(
     val profileTargetRangeText: String = "",
     // TempTarget state for chip
     val tempTargetText: String = "",
+    val tempTargetRangeText: String = "",
+    val tempTargetRemainingText: String = "",
     val tempTargetState: TempTargetChipState = TempTargetChipState.None,
     val tempTargetProgress: Float = 0f, // 0-1 progress for active temp target
     val tempTargetReason: TT.Reason? = null, // TT reason for icon coloring

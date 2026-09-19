@@ -163,6 +163,8 @@ fun TrioOverviewScreen(
         profilePercentage = profilePercentage,
         profileTargetRangeText = profileTargetRangeText,
         tempTargetText = tempTargetText,
+        tempTargetRangeText = tempTargetRangeText,
+        tempTargetRemainingText = tempTargetRemainingText,
         tempTargetState = tempTargetState,
         tempTargetProgress = tempTargetProgress,
         tempTargetReason = tempTargetReason,
@@ -235,6 +237,8 @@ private fun TrioOverviewContent(
     profilePercentage: Int,
     profileTargetRangeText: String,
     tempTargetText: String,
+    tempTargetRangeText: String,
+    tempTargetRemainingText: String,
     tempTargetState: TempTargetChipState,
     tempTargetProgress: Float,
     tempTargetReason: TT.Reason?,
@@ -458,8 +462,11 @@ private fun TrioOverviewContent(
                     profileName = profileName,
                     profilePercentage = profilePercentage,
                     profileTargetRangeText = profileTargetRangeText,
-                    tempTargetText = tempTargetText,
+                    tempTargetRangeText = tempTargetRangeText,
+                    tempTargetRemainingText = tempTargetRemainingText,
                     tempTargetState = tempTargetState,
+                    tempTargetReason = tempTargetReason,
+                    tempTargetProgress = tempTargetProgress,
                     progress = profileProgress,
                     sceneManaged = profileSceneManaged,
                     onClick = { onNavigate(NavigationRequest.Element(ElementType.PROFILE_MANAGEMENT)) }
@@ -579,6 +586,8 @@ private fun TrioOverviewScreenPreview() {
             profilePercentage = 100,
             profileTargetRangeText = "90–110 mg/dL",
             tempTargetText = "110 mg/dL",
+            tempTargetRangeText = "110 mg/dL",
+            tempTargetRemainingText = "(30 min)",
             tempTargetState = TempTargetChipState.Active,
             tempTargetProgress = 0.5f,
             tempTargetReason = TT.Reason.ACTIVITY,
@@ -665,8 +674,11 @@ private fun TrioProfileCard(
     profileName: String,
     profilePercentage: Int,
     profileTargetRangeText: String,
-    tempTargetText: String,
+    tempTargetRangeText: String,
+    tempTargetRemainingText: String,
     tempTargetState: TempTargetChipState,
+    tempTargetReason: TT.Reason?,
+    tempTargetProgress: Float,
     progress: Float,
     sceneManaged: Boolean,
     onClick: () -> Unit,
@@ -677,8 +689,11 @@ private fun TrioProfileCard(
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
     }
+    val hasActiveAdjustment = tempTargetState == TempTargetChipState.Active
     val subtitle = if (profileName.isEmpty()) {
         stringResource(app.aaps.core.ui.R.string.no_profile_set)
+    } else if (hasActiveAdjustment && tempTargetRemainingText.isNotEmpty()) {
+        tempTargetRemainingText
     } else {
         stringResource(
             R.string.trio_profile_summary,
@@ -686,8 +701,12 @@ private fun TrioProfileCard(
             profileTargetRangeText
         )
     }
-    val title = if (tempTargetState == TempTargetChipState.Active && tempTargetText.isNotEmpty()) {
-        stringResource(R.string.trio_profile_with_temp_target, profileName, tempTargetText)
+    val title = if (hasActiveAdjustment) {
+        stringResource(
+            R.string.trio_active_adjustment,
+            tempTargetReason?.text ?: stringResource(app.aaps.core.ui.R.string.temporary_target),
+            tempTargetRangeText
+        )
     } else {
         profileName
     }
@@ -745,9 +764,15 @@ private fun TrioProfileCard(
                     SceneBadge()
                 }
             }
-            if (progress > 0f) {
+            // tempTargetProgress is elapsed time; the card shows the time still remaining.
+            val displayProgress = if (hasActiveAdjustment) {
+                (1f - tempTargetProgress).coerceIn(0f, 1f)
+            } else {
+                progress
+            }
+            if (displayProgress > 0f) {
                 LinearProgressIndicator(
-                    progress = { progress },
+                    progress = { displayProgress },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(AapsSpacing.small),
