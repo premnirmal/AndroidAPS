@@ -57,6 +57,7 @@ import androidx.compose.ui.input.pointer.util.addPointerInputChange
 import androidx.compose.ui.res.stringResource as androidStringResource
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -180,7 +181,7 @@ fun TrioOverviewGraph(
             }
             Surface(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
+                    .align(Alignment.TopEnd)
                     .padding(AapsSpacing.medium),
                 shape = RoundedCornerShape(AapsSpacing.chipHeight),
                 color = MaterialTheme.colorScheme.surface,
@@ -197,18 +198,21 @@ fun TrioOverviewGraph(
         }
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = AapsSpacing.small),
-            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small)
+                .align(Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.extraSmall)
         ) {
             listOf(4, 6, 12, 24).forEach { hours ->
                 FilterChip(
                     selected = selectedRangeHours == hours,
                     onClick = { selectedRangeHours = hours },
                     label = {
-                        Text(stringResource(CoreUiStrings.units_format_hours, hours))
+                        Text(
+                            text = hours.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            textAlign = TextAlign.Center,
+                        )
                     },
-                    modifier = Modifier.weight(1f)
+                    border = null,
                 )
             }
         }

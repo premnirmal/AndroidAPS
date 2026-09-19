@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -76,6 +77,8 @@ import app.aaps.core.interfaces.overview.graph.BgInfoData
 import app.aaps.core.interfaces.overview.graph.BgRange
 import app.aaps.core.interfaces.overview.graph.TbrState
 import app.aaps.core.interfaces.pump.BolusProgressState
+import app.aaps.core.interfaces.pump.PumpInsulin
+import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.ui.UiMode
 import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
@@ -296,7 +299,7 @@ private fun TrioOverviewContent(
             .fillMaxSize()
             .padding(paddingValues)
     ) {
-        val chartHeight = maxHeight * 0.48f
+        val chartHeight = maxHeight * 0.45f
 
         TrioBgGlow(
             visible = bgInfo != null,
@@ -441,28 +444,30 @@ private fun TrioOverviewContent(
 
             graphContent(chartHeight)
 
-            bolusState?.let { state ->
+            if (bolusState != null) {
                 TrioBolusingCard(
-                    state = state,
+                    state = bolusState,
                     onStopBolus = onStopBolus
                 )
+            } else {
+                TrioProfileCard(
+                    profileName = profileName,
+                    profilePercentage = profilePercentage,
+                    profileTargetRangeText = profileTargetRangeText,
+                    tempTargetText = tempTargetText,
+                    tempTargetState = tempTargetState,
+                    progress = profileProgress,
+                    sceneManaged = profileSceneManaged,
+                    onClick = { onNavigate(NavigationRequest.Element(ElementType.PROFILE_MANAGEMENT)) }
+                )
             }
-
-            TrioProfileCard(
-                profileName = profileName,
-                profilePercentage = profilePercentage,
-                profileTargetRangeText = profileTargetRangeText,
-                tempTargetText = tempTargetText,
-                tempTargetState = tempTargetState,
-                progress = profileProgress,
-                sceneManaged = profileSceneManaged,
-                onClick = { onNavigate(NavigationRequest.Element(ElementType.PROFILE_MANAGEMENT)) }
-            )
 
             TimeInRangeTodayCard(
                 timeInRangeTodayPercent = timeInRangeTodayPercent,
                 onClick = { onNavigate(NavigationRequest.TrioStatistics) }
             )
+
+            Spacer(modifier = Modifier.size(width = 200.dp, height = 20.dp))
         }
     }
 
@@ -556,7 +561,7 @@ private fun TrioBgGlow(
     }
 }
 
-@Preview(showBackground = true, widthDp = 400, heightDp = 900)
+@Preview(showBackground = true, widthDp = 400, heightDp = 750)
 @Composable
 private fun TrioOverviewScreenPreview() {
     AapsTheme(
@@ -698,8 +703,8 @@ private fun TrioProfileCard(
         Box {
             Row(
                 modifier = Modifier.padding(
-                    horizontal = AapsSpacing.extraLarge,
-                    vertical = AapsSpacing.large
+                    horizontal = AapsSpacing.large,
+                    vertical = AapsSpacing.medium
                 ),
                 horizontalArrangement = Arrangement.spacedBy(AapsSpacing.large),
                 verticalAlignment = Alignment.CenterVertically
@@ -768,8 +773,8 @@ private fun TrioBolusingCard(
     ) {
         Column(
             modifier = Modifier.padding(
-                horizontal = AapsSpacing.extraLarge,
-                vertical = AapsSpacing.large
+                horizontal = AapsSpacing.large,
+                vertical = AapsSpacing.medium
             ),
             verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
         ) {
@@ -778,12 +783,18 @@ private fun TrioBolusingCard(
                 horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Vaccines,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(AapsSpacing.xxLarge)
-                )
+                if (state.percent == 0 && state.delivered.cU == 0.0) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(AapsSpacing.xxLarge),
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Vaccines,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(AapsSpacing.xxLarge)
+                    )
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.trio_bolusing_title),
@@ -841,8 +852,8 @@ private fun TimeInRangeTodayCard(
     ) {
         Column(
             modifier = Modifier.padding(
-                horizontal = AapsSpacing.extraLarge,
-                vertical = AapsSpacing.large
+                horizontal = AapsSpacing.large,
+                vertical = AapsSpacing.medium
             ),
             verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
         ) {
@@ -1202,6 +1213,31 @@ private fun MetricRow(
                 maxLines = 2
             )
             trailingContent()
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400)
+@Composable
+private fun TrioBolusingCardPreview() {
+    AapsTheme(
+        uiMode = UiMode.SYSTEM,
+    ) {
+        Column {
+            TrioBolusingCard(
+                state = BolusProgressState(
+                    2.0, false, false, 20, TextRef.Literal(""), TextRef.Literal(""),
+                    PumpInsulin(0.5), false, false, false,
+                ),
+                {},
+            )
+            TrioBolusingCard(
+                state = BolusProgressState(
+                    2.0, false, false, 0, TextRef.Literal(""), TextRef.Literal(""),
+                    PumpInsulin(0.0), false, false, false,
+                ),
+                {},
+            )
         }
     }
 }
