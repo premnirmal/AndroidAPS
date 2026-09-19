@@ -26,6 +26,7 @@ import app.aaps.core.interfaces.insulin.ConcentrationHelper
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.logging.UserEntryLogger
+import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.nsclient.ProcessedDeviceStatusData
@@ -639,9 +640,8 @@ class LoopPlugin(
                     if (allowNotification) {
                         if (resultAfterConstraints.isCarbsRequired && carbsSuggestionsSuspendedUntil < dateUtil.now() && !treatmentTimeThreshold(-15)
                         ) {
-                            if (preferences.get(BooleanKey.AlertCarbsRequired) && !preferences.get(BooleanKey.AlertUrgentAsAndroidNotification)
-                            ) {
-                                notificationManager.post(NotificationId.CARBS_REQUIRED, resultAfterConstraints.carbsRequiredText)
+                            if (preferences.get(BooleanKey.AlertCarbsRequired)) {
+                                postMealNotification(resultAfterConstraints.carbsRequiredText)
                             }
                             if (preferences.get(BooleanKey.NsClientCreateAnnouncementsFromCarbsReq) && config.APS) {
                                 persistenceLayer.insertPumpTherapyEventIfNewByTimestamp(
@@ -677,7 +677,7 @@ class LoopPlugin(
                             //If carbs were required previously, but are no longer needed, dismiss notifications
                             if (prevCarbsreq > 0) {
                                 dismissSuggestion()
-                                notificationManager.dismiss(NotificationId.CARBS_REQUIRED)
+                                notificationManager.dismiss(NotificationId.MEAL_TIME_TO_EAT)
                             }
                         }
                     }
@@ -768,12 +768,22 @@ class LoopPlugin(
     }
 
     private fun presentSuggestion(contentText: String) {
+        notificationManager.post(
+            id = NotificationId.LOW_GLUCOSE_SUSPEND,
+            text = contentText,
+            actions = listOf(
+                NotificationAction(CoreUiStrings.dismiss) {
+                    notificationManager.dismiss(NotificationId.LOW_GLUCOSE_SUSPEND)
+                }
+            )
+        )
         loopNotifier.openLoopSuggestion(contentText, localOnly = preferences.get(BooleanKey.WearControl))
         rxBus.send(EventNewOpenLoopNotification())
         sendToWear(contentText)
     }
 
     private fun dismissSuggestion() {
+        notificationManager.dismiss(NotificationId.LOW_GLUCOSE_SUSPEND)
         loopNotifier.dismiss()
         rxBus.send(EventMobileToWear(EventData.CancelNotification(dateUtil.now())))
     }
