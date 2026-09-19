@@ -358,13 +358,6 @@ private fun TrioOverviewContent(
                                     )
                                 }
                             ) {
-                                BgInfoSection(
-                                    bgInfo = bgInfo,
-                                    timeAgoText = bgTimeAgoText,
-                                    modifier = Modifier.clickable(onClick = onBgSourceClick),
-                                    useGradientRing = true,
-                                    elevation = AapsSpacing.small
-                                )
                                 if (calcProgress < 100) {
                                     CircularProgressIndicator(
                                         progress = { animatedCalcProgress.value },
@@ -376,6 +369,13 @@ private fun TrioOverviewContent(
                                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                                     )
                                 }
+                                BgInfoSection(
+                                    bgInfo = bgInfo,
+                                    timeAgoText = bgTimeAgoText,
+                                    modifier = Modifier.clickable(onClick = onBgSourceClick),
+                                    useGradientRing = true,
+                                    elevation = AapsSpacing.small
+                                )
                             }
                             LoopStatusAndPrediction(
                                     runningMode = runningMode,
