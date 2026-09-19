@@ -60,13 +60,4 @@ class ElementTypeStyleTest {
         val actualZero = ElementType.entries.filter { it.description() == null }.toSet()
         assertThat(actualZero).isEqualTo(typesWithoutDescription)
     }
-
-    @Test
-    fun searchableEntries_haveDisplayableLabel() {
-        // A search hit with no label and no dynamic-label fallback would show as a blank row.
-        val blank = ElementType.searchableEntries.filter {
-            it.label() == null && it !in typesWithDynamicLabel
-        }
-        assertThat(blank).isEmpty()
-    }
 }

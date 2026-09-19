@@ -107,7 +107,6 @@
     <string name="format_hours">%1$.2f h</string>
     <string name="format_mins">%1$d min</string>
     <string name="value_with_unit" comment="A numeric value followed by its unit, when no dedicated value template exists. %1$s = value, %2$s = unit. Example: 120 mg/dl">%1$s %2$s</string>
-    <string name="objectives">Obiettivi</string>
     <string name="please_wait">Attendi…</string>
     <string name="stop">Stop</string>
     <string name="stop_pressed">STOP PREMUTO</string>
@@ -979,14 +978,6 @@
     <!--    Search-->
     <string name="search">Cerca</string>
     <string name="clear">Pulisci</string>
-    <string name="search_category_categories">Categorie di preferenze</string>
-    <string name="search_category_preferences">Preferenze</string>
-    <string name="search_category_dialogs">Finestre di dialogo</string>
-    <string name="search_category_plugins">Plugins</string>
-    <string name="search_category_wiki">Documentazione</string>
-    <string name="wiki_search_offline">La ricerca della documentazione richiede connessione internet</string>
-    <string name="no_search_results">Nessun risultato trovato</string>
-    <string name="search_plugin_disabled">Plugin %1$s disabilitato</string>
     <!--    Food Management -->
     <string name="food_management">Cibo</string>
     <string name="food_deleted">Cibo eliminato</string>

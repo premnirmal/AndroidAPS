@@ -45,7 +45,6 @@ class LoopTest : AapsInstrumentedTest() {
     private val rxHelper by lazy { newRxHelper() }
     private val l get() = testGraphs.l
     private val config get() = testGraphs.config
-    private val objectivesPlugin get() = testGraphs.objectivesPlugin
     private val persistenceLayer get() = testGraphs.persistenceLayer
     private val pumpSync get() = testGraphs.pumpSync
     private val iobCobCalculator get() = testGraphs.iobCobCalculator
@@ -68,7 +67,6 @@ class LoopTest : AapsInstrumentedTest() {
     fun tearDown() {
         rxHelper.clear()
         loop.lastRun = null
-        objectivesPlugin.objectives.forEach { it.startedOn = 0 }
         (profileFunction as ProfileFunctionImpl).cache.clear()
         runBlocking { persistenceLayer.clearDatabases() }
     }
@@ -91,7 +89,6 @@ class LoopTest : AapsInstrumentedTest() {
         rxHelper.listen(EventResetOpenAPSGui::class)
         rxHelper.listen(EventOpenAPSUpdateGui::class)
         rxHelper.listen(EventAPSCalculationFinished::class)
-        objectivesPlugin.onStart()
 
         // Enable event logging
         l.findByName(LTag.EVENTS.name).enabled = true
@@ -99,19 +96,10 @@ class LoopTest : AapsInstrumentedTest() {
         // Are we running full flavor?
         assertThat(config.APS).isTrue()
 
-        // Loop should be limited by unfinished objectives
-        loop.invoke("test1", allowNotification = false)
-        var loopStatusEvent = rxHelper.waitFor(EventLoopSetLastRunGui::class, comment = "step1")
-        assertThat(loopStatusEvent.first).isTrue()
-        assertThat((loopStatusEvent.second as EventLoopSetLastRunGui).text).contains("Loop disabled by user")
-
-        // So start objectives
-        objectivesPlugin.objectives[0].startedOn = 1
-
-        // Now there should be missing profile
+        // There should be missing profile
         (profileFunction as ProfileFunctionImpl).cache.clear()
         loop.invoke("test2", allowNotification = false)
-        loopStatusEvent = rxHelper.waitFor(EventLoopSetLastRunGui::class, comment = "step2")
+        var loopStatusEvent = rxHelper.waitFor(EventLoopSetLastRunGui::class, comment = "step2")
         assertThat(loopStatusEvent.first).isTrue()
         assertThat((loopStatusEvent.second as EventLoopSetLastRunGui).text).contains("NO PROFILE SET")
 

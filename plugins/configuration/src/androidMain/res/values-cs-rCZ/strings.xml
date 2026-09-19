@@ -30,8 +30,6 @@
     <string name="setupwizard_aps_description">Vyberte jeden z dostupných algoritmů. Jsou seřazeny od nejstaršího k nejnovějšímu. Novější algoritmus je obvykle výkonnější. Nezapomeňte si před použitím přečíst dokumentaci OpenAPS a vše nastavit.</string>
     <string name="setupwizard_pump_waiting_for_riley_link_connection">Prosím nakonfigurujte svůj RileyLink níže. Po výběru RileyLinku bude možné pokračovat v nastavení, jakmile stav RileyLinku je \"Připojeno\". Tato akce může chvilku trvat.\n</string>
     <string name="setupwizard_pump_pump_not_initialized"><b>Poznámka:</b> Po nastavení pumpy můžete pokračovat v nastavení.\n</string>
-    <string name="startobjective">Spusťte první cíl</string>
-    <string name="open_objectives">Otevřít Cíle</string>
     <string name="setupwizard_permissions">Oprávnění</string>
     <string name="setupwizard_profile_info">Vytvořte profil s vašimi bazálními dávkami, IC, ISF a cílovými hodnotami. Více profilů můžete přidat později.</string>
     <string name="setupwizard_permissions_info">AAPS potřebuje přístup k úložišti a oprávnění pro správnou funkci. Níže udělte požadovaná oprávnění.</string>

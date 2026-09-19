@@ -63,7 +63,6 @@
     <string name="goingtodeliver">Bus suleista %1$.2f vv</string>
     <string name="androidaps_start">AAPS paleista</string>
     <string name="format_hours">%1$.2f val.</string>
-    <string name="objectives">Tikslai</string>
     <string name="please_wait">Palaukite…</string>
     <string name="stop">Stop</string>
     <string name="invalid_profile">Netinkamas profilis!</string>

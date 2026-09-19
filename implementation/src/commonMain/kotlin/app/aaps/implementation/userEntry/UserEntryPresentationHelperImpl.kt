@@ -70,7 +70,6 @@ import app.aaps.core.ui.compose.icons.IcPluginMedtronic
 import app.aaps.core.ui.compose.icons.IcPluginMedtrum
 import app.aaps.core.ui.compose.icons.IcPluginNsClient
 import app.aaps.core.ui.compose.icons.IcPluginNsClientBg
-import app.aaps.core.ui.compose.icons.IcPluginObjectives
 import app.aaps.core.ui.compose.icons.IcPluginPocTec
 import app.aaps.core.ui.compose.icons.IcPluginRandomBg
 import app.aaps.core.ui.compose.icons.IcPluginSms
@@ -157,7 +156,7 @@ class UserEntryPresentationHelperImpl(
         Sources.NSProfile           -> IcPluginNsClient
         Sources.Note                -> IcNote
         Sources.NotificationReader  -> IcGenericCgm
-        Sources.Objectives          -> IcPluginObjectives
+        Sources.Objectives          -> IcGenericIcon          // plugin removed; only old history entries use it
         Sources.Omnipod             -> IcPatchPump
         Sources.OmnipodDash         -> IcPatchPump
         Sources.OmnipodEros         -> IcPatchPump

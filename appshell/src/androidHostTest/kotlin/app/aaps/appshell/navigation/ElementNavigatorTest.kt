@@ -62,8 +62,7 @@ class ElementNavigatorTest {
             dexcomBoyda = dexcomBoyda,
             onOpenCgmApp = { openedCgmApps += it },
             onExit = { exited = true },
-            onRequestDirectoryAccess = {},
-            onOpenUrl = {}
+            onRequestDirectoryAccess = {}
         )
     }
 

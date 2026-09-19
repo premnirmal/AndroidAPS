@@ -7,8 +7,8 @@ plugins {
  * The graph wiring the two non-Android shells share.
  *
  * `:app`, `:ios:shell` and `:desktop:shell` each have to state the same handful of bindings, because
- * the classes behind them carry no DI annotations: `IobCobCalculatorPlugin` is built twice on purpose,
- * `NSClientV3Plugin` breaks the annotation processor, `ObjectivesPlugin` carries `@APS`. Android says
+ * the classes behind them carry no DI annotations: `IobCobCalculatorPlugin` is built twice on purpose and
+ * `NSClientV3Plugin` breaks the annotation processor. Android says
  * them in `:app`; iOS and desktop each said them separately, and had begun to drift - the desktop
  * shell was missing the Nightscout plugin entirely, which showed up as "no sync plugins".
  *

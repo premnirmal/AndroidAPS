@@ -8,7 +8,6 @@ import app.aaps.core.interfaces.overview.OverviewData
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.workflow.CalculationWorkflow
-import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.nssdk.localmodel.devicestatus.NSDeviceStatus
 import app.aaps.plugins.sync.nsclientV3.NSClientV3Plugin
 import kotlinx.coroutines.CoroutineScope
@@ -24,7 +23,6 @@ import org.mockito.kotlin.whenever
 
 internal class NSDeviceStatusHandlerTest {
 
-    @Mock private lateinit var preferences: Preferences
     @Mock private lateinit var config: Config
     @Mock private lateinit var dateUtil: DateUtil
     @Mock private lateinit var processedDeviceStatusData: ProcessedDeviceStatusData
@@ -42,7 +40,7 @@ internal class NSDeviceStatusHandlerTest {
         MockitoAnnotations.openMocks(this)
         whenever(config.AAPSCLIENT).thenReturn(true)
         sut = NSDeviceStatusHandler(
-            preferences, config, dateUtil, processedDeviceStatusData, aapsLogger,
+            config, dateUtil, processedDeviceStatusData, aapsLogger,
             persistenceLayer, overviewData, calculationWorkflow, rxBus,
             CoroutineScope(Dispatchers.Unconfined), { nsClientV3Plugin }
         )

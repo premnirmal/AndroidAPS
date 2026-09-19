@@ -106,7 +106,6 @@
     <string name="format_hours">%1$.2f ч</string>
     <string name="format_mins">%1$d мин</string>
     <string name="value_with_unit" comment="A numeric value followed by its unit, when no dedicated value template exists. %1$s = value, %2$s = unit. Example: 120 mg/dl">%1$s %2$s</string>
-    <string name="objectives">Цели</string>
     <string name="please_wait">Моля изчакайте...</string>
     <string name="stop">Стоп</string>
     <string name="stop_pressed">Натиснат СТОП</string>
@@ -971,14 +970,6 @@
     <!--    Search-->
     <string name="search">Търси</string>
     <string name="clear">Изчисти</string>
-    <string name="search_category_categories">Категории</string>
-    <string name="search_category_preferences">Опции</string>
-    <string name="search_category_dialogs">Менюта</string>
-    <string name="search_category_plugins">Плъгини</string>
-    <string name="search_category_wiki">Документация</string>
-    <string name="wiki_search_offline">Търсенето в документацията изисква интернет</string>
-    <string name="no_search_results">Няма резултати</string>
-    <string name="search_plugin_disabled">Плъгин %1$s е изключен</string>
     <!--    Food Management -->
     <string name="food_management">Храна</string>
     <string name="food_deleted">Изтрита храна</string>
