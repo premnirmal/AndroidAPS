@@ -290,6 +290,8 @@ class MainViewModel(
             profilePercentage = chip.profilePercentage,
             profileTargetRangeText = chip.profileTargetRangeText,
             tempTargetText = chip.tempTargetText,
+            tempTargetRangeText = chip.tempTargetRangeText,
+            tempTargetRemainingText = chip.tempTargetRemainingText,
             tempTargetState = chip.tempTargetState,
             tempTargetProgress = chip.tempTargetProgress,
             tempTargetReason = chip.tempTargetReason,
@@ -447,6 +449,9 @@ class MainViewModel(
                 ttData.targetRangeText
             }
         } else ""
+        val ttRemainingText = if (ttIsFinite && !ttExpired) {
+            dateUtil.untilString(ttData.timestamp + ttData.duration, rh)
+        } else ""
 
         // Profile progress and display text
         val profileProgress = if (profileData != null && profileData.duration > 0 && !profileExpired) {
@@ -498,6 +503,8 @@ class MainViewModel(
             profilePercentage = profileData?.percentage ?: cachedOverviewStatus.profilePercentage,
             profileTargetRangeText = ttData?.targetRangeText ?: cachedOverviewStatus.profileTargetRangeText,
             tempTargetText = ttText,
+            tempTargetRangeText = if (ttExpired) "" else ttData?.targetRangeText.orEmpty(),
+            tempTargetRemainingText = ttRemainingText,
             tempTargetState = if (ttExpired) TempTargetChipState.None
             else ttData?.state?.toChipState() ?: TempTargetChipState.None,
             tempTargetProgress = ttProgress,
@@ -1104,6 +1111,8 @@ private data class ChipState(
     val profilePercentage: Int = 100,
     val profileTargetRangeText: String = "",
     val tempTargetText: String = "",
+    val tempTargetRangeText: String = "",
+    val tempTargetRemainingText: String = "",
     val tempTargetState: TempTargetChipState = TempTargetChipState.None,
     val tempTargetProgress: Float = 0f,
     val tempTargetReason: TT.Reason? = null,

@@ -39,7 +39,7 @@
     <string name="trio_loop_minutes" comment="%1$d=number of minutes since the last loop. Example: 4 m">%1$d m</string>
     <string name="trio_reservoir_over_50">50+ U</string>
     <string name="trio_reservoir_units" comment="%1$d=whole units of insulin left in the pump. Example: 24 U">%1$d U</string>
-    <string name="trio_profile_with_temp_target" comment="%1$s=current profile name, %2$s=active temporary target and remaining time. Example: Standard - 110 mg/dL (25 min)">%1$s - %2$s</string>
+    <string name="trio_active_adjustment" comment="%1$s=temporary target name, %2$s=target range. Example: Active adjustment Activity - 110 mg/dL">Active adjustment %1$s - %2$s</string>
     <string name="trio_profile_summary" comment="%1$d=profile percentage, %2$s=current profile target range. Example: Profile at 100% · 90–110 mg/dL">Profile at %1$d%% · %2$s</string>
     <string name="trio_stats_days" comment="%1$d=number of days included in the statistics. Example: 14 days">%1$d days</string>
     <string name="trio_stats_days_decimal" comment="%1$.1f=number of days of glucose data in the statistics filter. Example: 13.8 days">%1$.1f days</string>
