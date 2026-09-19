@@ -26,19 +26,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import app.aaps.appshell.AapsAppRoot
 import app.aaps.appshell.navigation.appNavGraph
-import app.aaps.ui.search.SearchViewModel
-import app.aaps.ui.compose.permissionsSheet.PermissionsViewModel
 import app.aaps.ui.compose.maintenance.MaintenanceViewModel
-import app.aaps.ui.compose.manageSheet.ManageViewModel
-import app.aaps.ui.compose.loopSheet.LoopActionViewModel
-import app.aaps.ui.compose.scenesSheet.ScenesViewModel
-import app.aaps.ui.compose.treatmentsSheet.TreatmentViewModel
-import app.aaps.ui.compose.overview.statusLights.StatusViewModel
 import app.aaps.ui.compose.main.MainViewModel
 import app.aaps.ui.compose.main.OverviewScreen
 import app.aaps.appshell.navigation.ElementNavigator
-import app.aaps.appshell.navigation.handleSearchResultClick
-import app.aaps.appshell.navigation.handleQuickLaunchAction
 import app.aaps.appshell.navigation.handleNotificationAction
 import app.aaps.appshell.navigation.AppRoute
 import app.aaps.core.interfaces.logging.AAPSLogger
@@ -331,10 +322,8 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                         siteRotationManagementViewModel = siteRotationManagement,
                         graphViewModel = graphs,
                         chipsViewModel = chips,
-                        swDefinition = graph.swDefinition,
                         rxBus = graph.rxBus,
                         activePlugin = graph.activePlugin,
-                        pluginPermissions = graph.pluginPermissions,
                         // Passed so the rules can be read and edited here. The runtime is deliberately
                         // NOT started on a client: `MainApp` calls `automationRuntime.start()`, this shell
                         // does not, and that is the design - a follower edits definitions and the master
@@ -366,38 +355,22 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                         },
                         onRefreshPermissions = { reportNotAvailable("permission refresh") },
                         onExecuteQuickWizard = { guid -> reportNotReady("quick wizard $guid") },
-                        onRequestDirectoryAccess = { reportNotReady("directory access - iOS needs a document picker") },
-                        onRequestPermission = { group -> reportNotAvailable("permission request $group") },
                         overview = {
                             OverviewScreen(
                                 mainViewModel = mainViewModel,
-                                manageViewModel = metroViewModel<ManageViewModel>(),
                                 maintenanceViewModel = metroViewModel<MaintenanceViewModel>(),
-                                statusViewModel = metroViewModel<StatusViewModel>(),
-                                treatmentViewModel = metroViewModel<TreatmentViewModel>(),
-                                scenesViewModel = metroViewModel<ScenesViewModel>(),
-                                loopActionViewModel = metroViewModel<LoopActionViewModel>(),
-                                searchViewModel = metroViewModel<SearchViewModel>(),
-                                permissionsViewModel = metroViewModel<PermissionsViewModel>(),
                                 graphViewModel = graphs,
                                 chipsViewModel = chips,
                                 activePlugin = graph.activePlugin,
                                 config = graph.config,
-                                objectives = graph.objectives,
-                                bgQualityCheck = graph.bgQualityCheck,
                                 notificationManager = graph.notificationManager,
-                                uiInteraction = graph.uiInteraction,
-                                builtInSearchables = graph.builtInSearchables,
                                 bolusProgressData = graph.bolusProgressData,
                                 clientControlActionDispatcher = graph.clientControlActionDispatcher,
                                 commandQueue = graph.commandQueue,
-                                pumpCommunicationStatus = graph.pumpCommunicationStatus,
                                 appName = appName,
                                 authorizationFailedMessage = "Authorization failed",
                                 onNavigate = { request -> navigator.handleNavigationRequest(request) },
-                                onSearchResultClick = { entry -> navigator.handleSearchResultClick(entry) },
                                 onNotificationActionClick = { n -> navigator.handleNotificationAction(n.id) },
-                                onQuickLaunchActionClick = { action -> navigator.handleQuickLaunchAction(action) },
                                 // The destination is already in the shared graph and the view model is
                                 // already handed to it above, so this is the same call the other two
                                 // shells make. It was a placeholder only while iOS had no importer.

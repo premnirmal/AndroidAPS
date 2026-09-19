@@ -39,8 +39,6 @@ import app.aaps.appshell.navigation.AppRoute
 import app.aaps.appshell.navigation.appNavGraph
 import app.aaps.appshell.navigation.ElementNavigator
 import app.aaps.appshell.navigation.handleNotificationAction
-import app.aaps.appshell.navigation.handleQuickLaunchAction
-import app.aaps.appshell.navigation.handleSearchResultClick
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.logging.LTag
@@ -53,16 +51,9 @@ import app.aaps.implementation.logging.AAPSLoggerDesktop
 import app.aaps.implementation.maintenance.DesktopFolders
 import app.aaps.shared.clientbindings.ClientViewModelFactory
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
-import app.aaps.ui.compose.loopSheet.LoopActionViewModel
 import app.aaps.ui.compose.main.MainViewModel
 import app.aaps.ui.compose.main.OverviewScreen
 import app.aaps.ui.compose.maintenance.MaintenanceViewModel
-import app.aaps.ui.compose.manageSheet.ManageViewModel
-import app.aaps.ui.compose.overview.statusLights.StatusViewModel
-import app.aaps.ui.compose.permissionsSheet.PermissionsViewModel
-import app.aaps.ui.compose.scenesSheet.ScenesViewModel
-import app.aaps.ui.compose.treatmentsSheet.TreatmentViewModel
-import app.aaps.ui.search.SearchViewModel
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import app.aaps.ui.compose.profileManagement.viewmodels.ProfileEditorViewModel
@@ -366,10 +357,8 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter, appName: St
                     siteRotationManagementViewModel = siteRotationManagement,
                     graphViewModel = graphs,
                     chipsViewModel = chips,
-                    swDefinition = graph.swDefinition,
                     rxBus = graph.rxBus,
                     activePlugin = graph.activePlugin,
-                    pluginPermissions = graph.pluginPermissions,
                     // Passed so the rules can be read and edited here. The runtime is deliberately
                     // NOT started on a client: `MainApp` calls `automationRuntime.start()`, this shell
                     // does not, and that is the design - a follower edits definitions and the master
@@ -404,38 +393,22 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter, appName: St
                     },
                     onRefreshPermissions = { logger.debug(LTag.CORE, "No runtime permissions to refresh on desktop") },
                     onExecuteQuickWizard = { guid -> mainViewModel.executeQuickWizard(guid) },
-                    onRequestDirectoryAccess = { logger.debug(LTag.CORE, "Desktop reads its own folder; no access to request") },
-                    onRequestPermission = { group -> logger.notWiredYet("permission request $group") },
                     overview = {
                         OverviewScreen(
                             mainViewModel = mainViewModel,
-                            manageViewModel = metroViewModel<ManageViewModel>(),
                             maintenanceViewModel = metroViewModel<MaintenanceViewModel>(),
-                            statusViewModel = metroViewModel<StatusViewModel>(),
-                            treatmentViewModel = metroViewModel<TreatmentViewModel>(),
-                            scenesViewModel = metroViewModel<ScenesViewModel>(),
-                            loopActionViewModel = metroViewModel<LoopActionViewModel>(),
-                            searchViewModel = metroViewModel<SearchViewModel>(),
-                            permissionsViewModel = metroViewModel<PermissionsViewModel>(),
                             graphViewModel = graphs,
                             chipsViewModel = chips,
                             activePlugin = graph.activePlugin,
                             config = graph.config,
-                            objectives = graph.objectives,
-                            bgQualityCheck = graph.bgQualityCheck,
                             notificationManager = graph.notificationManager,
-                            uiInteraction = graph.uiInteraction,
-                            builtInSearchables = graph.builtInSearchables,
                             bolusProgressData = graph.bolusProgressData,
                             clientControlActionDispatcher = graph.clientControlActionDispatcher,
                             commandQueue = graph.commandQueue,
-                            pumpCommunicationStatus = graph.pumpCommunicationStatus,
                             appName = appName,
                             authorizationFailedMessage = "Authorization failed",
                             onNavigate = { request -> navigator.handleNavigationRequest(request) },
-                            onSearchResultClick = { entry -> navigator.handleSearchResultClick(entry) },
                             onNotificationActionClick = { n -> navigator.handleNotificationAction(n.id) },
-                            onQuickLaunchActionClick = { action -> navigator.handleQuickLaunchAction(action) },
                             onImportSettingsNavigate = { source -> navController.navigate(AppRoute.ImportSettings.createRoute(source.name)) },
                             onDirectoryClick = { logger.debug(LTag.CORE, "Desktop reads its own folder") },
                             // authBrowser, not urlOpener: the sign in ends at a port this app is

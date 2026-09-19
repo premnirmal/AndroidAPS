@@ -40,20 +40,16 @@ import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.data.model.TE
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.configuration.ConfigBuilder
-import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.maintenance.PrefsFileInfo
 import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.interfaces.plugin.ActivePlugin
-import app.aaps.core.interfaces.plugin.PermissionGroup
 import app.aaps.core.interfaces.plugin.PluginBase
-import app.aaps.core.interfaces.plugin.PluginPermissions
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventShowSnackbar
 import app.aaps.core.keys.BooleanKey
-import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.interfaces.Preferences
@@ -71,8 +67,6 @@ import app.aaps.core.ui.search.SearchableItem
 import app.aaps.core.ui.search.SearchableProvider
 import app.aaps.core.ui.compose.siteRotation.SiteLocationPickerScreen
 import app.aaps.plugins.automation.AutomationRuntime
-import app.aaps.plugins.configuration.setupwizard.SWDefinition
-import app.aaps.plugins.configuration.setupwizard.SetupWizardScreen
 import app.aaps.plugins.sync.nsclientV3.clientcontrol.compose.AuthorizedClientsScreen
 import app.aaps.plugins.sync.nsclientV3.clientcontrol.compose.PairWithMasterScreen
 import app.aaps.ui.compose.calibrationDialog.CalibrationDialogScreen
@@ -159,10 +153,8 @@ fun NavGraphBuilder.appNavGraph(
     graphViewModel: app.aaps.ui.compose.overview.graphs.GraphViewModel,
     chipsViewModel: ChipsViewModel,
     // Dependencies
-    swDefinition: SWDefinition,
     rxBus: RxBus,
     activePlugin: ActivePlugin,
-    pluginPermissions: PluginPermissions,
     automationRuntime: AutomationRuntime,
     preferences: Preferences,
     rh: TextResolver,
@@ -178,8 +170,6 @@ fun NavGraphBuilder.appNavGraph(
     requestEditModeAuthorization: (onGranted: () -> Unit) -> Unit,
     onRefreshPermissions: () -> Unit,
     onExecuteQuickWizard: (guid: String) -> Unit,
-    onRequestDirectoryAccess: () -> Unit,
-    onRequestPermission: (PermissionGroup) -> Unit,
     onOpenHealthConnect: () -> Unit,
     onNavigateToTrioTab: (TrioNavTab) -> Unit,
     trioTabScaffold: @Composable (
@@ -546,6 +536,7 @@ fun NavGraphBuilder.appNavGraph(
                         onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) }
                     )
                 }
+            }
         }
 
         composable(AppRoute.TrioTreatments.route) {

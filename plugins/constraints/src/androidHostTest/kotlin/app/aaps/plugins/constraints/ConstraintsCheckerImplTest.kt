@@ -144,7 +144,7 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
             Objective8(preferences, rh, durationText, dateUtil),
             Objective9(preferences, rh, durationText, dateUtil)
         )
-        objectivesPlugin = ObjectivesPlugin(aapsLogger, rh, preferences, config, objectives)
+        objectivesPlugin = ObjectivesPlugin(aapsLogger, rh, preferences, objectives)
         runBlocking { objectivesPlugin.onStart() }
         openAPSSMBPlugin =
             OpenAPSSMBPlugin(
@@ -174,17 +174,14 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
         whenever(activePlugin.getSpecificPluginsListByInterface(PluginConstraints::class)).thenReturn(constraintsPluginsList)
     }
 
-    // Combo & Objectives
     @Test
     fun isLoopInvocationAllowedTest() {
         val c = constraintChecker.isLoopInvocationAllowed()
-        assertThat(c.reasonList).hasSize(1) // Objectives
-        assertThat(c.mostLimitedReasonList).hasSize(1) // Objectives
-        assertThat(c.value()).isFalse()
+        assertThat(c.reasonList).isEmpty()
+        assertThat(c.mostLimitedReasonList).isEmpty()
+        assertThat(c.value()).isTrue()
     }
 
-    // Safety & Objectives
-    // 2x Safety & Objectives
     @Test
     fun isClosedLoopAllowedTest() = runTest {
         whenever(config.isEngineeringModeOrRelease()).thenReturn(true)
@@ -192,19 +189,18 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
         objectivesPlugin.objectives[Objectives.CLOSED_LOOP_OBJECTIVE].startedOn = 0
         val c: Constraint<Boolean> = constraintChecker.isClosedLoopAllowed()
         aapsLogger.debug("Reason list: " + c.reasonList.toString())
-        assertThat(c.reasonList[0]).contains("Objectives: Objective 7 not started") // Safety & Objectives
-        assertThat(c.value()).isFalse()
+        assertThat(c.reasonList).isEmpty()
+        assertThat(c.value()).isTrue()
     }
 
-    // Safety & Objectives
     @Test
     fun isAutosensModeEnabledTest() {
         openAPSSMBPlugin.setPluginEnabledBlocking(PluginType.APS, true)
         objectivesPlugin.objectives[Objectives.AUTOSENS_OBJECTIVE].startedOn = 0
         whenever(preferences.get(BooleanKey.ApsUseAutosens)).thenReturn(false)
         val c = constraintChecker.isAutosensModeEnabled()
-        assertThat(c.reasonList).hasSize(2) // Safety & Objectives
-        assertThat(c.mostLimitedReasonList).hasSize(2) // Safety & Objectives
+        assertThat(c.reasonList).hasSize(1)
+        assertThat(c.mostLimitedReasonList).hasSize(1)
         assertThat(c.value()).isFalse()
     }
 
@@ -226,7 +222,6 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
         assertThat(c.value()).isFalse() // SMB should limit
     }
 
-    // Safety & Objectives
     @Test
     fun isSMBModeEnabledTest() = runTest {
         openAPSSMBPlugin.setPluginEnabledBlocking(PluginType.APS, true)
@@ -235,8 +230,8 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
         whenever(loop.runningMode()).thenReturn(RM.Mode.OPEN_LOOP)
 //        whenever(constraintChecker.isClosedLoopAllowed()).thenReturn(ConstraintObject(true))
         val c = constraintChecker.isSMBModeEnabled()
-        assertThat(c.reasonList).hasSize(3) // 2x Safety & Objectives
-        assertThat(c.mostLimitedReasonList).hasSize(3) // 2x Safety & Objectives
+        assertThat(c.reasonList).hasSize(2)
+        assertThat(c.mostLimitedReasonList).hasSize(2)
         assertThat(c.value()).isFalse()
     }
 

@@ -1,52 +1,21 @@
 package app.aaps.ui.compose.overview
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.RM
 import app.aaps.core.data.model.TT
 import app.aaps.core.interfaces.notifications.AapsNotification
 import app.aaps.core.interfaces.overview.graph.TbrState
 import app.aaps.core.interfaces.pump.BolusProgressState
-import app.aaps.core.ui.compose.isLandscape
-import app.aaps.core.ui.compose.smallestScreenWidthDp
-import app.aaps.core.ui.compose.TABLET_MIN_SW_DP
 import app.aaps.core.ui.compose.navigation.NavigationRequest
-import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
-import app.aaps.core.ui.compose.pump.PumpActivityDialog
-import app.aaps.core.ui.compose.pump.PumpActivityFab
 import app.aaps.ui.compose.main.TempTargetChipState
-import app.aaps.ui.compose.manageSheet.ManageViewModel
-import app.aaps.ui.compose.notificationsSheet.NotificationBottomSheet
-import app.aaps.ui.compose.notificationsSheet.NotificationFab
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
-import app.aaps.ui.compose.overview.statusLights.StatusViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
-
-private val SPLIT_LAYOUT_MIN_WIDTH: Dp = 720.dp
 
 @Composable
 fun OverviewScreen(

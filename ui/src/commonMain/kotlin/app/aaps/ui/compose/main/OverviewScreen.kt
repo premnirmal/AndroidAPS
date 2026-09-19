@@ -1,43 +1,22 @@
 package app.aaps.ui.compose.main
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingFlat
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.aaps.core.interfaces.bgQualityCheck.BgQualityCheck
 import app.aaps.core.interfaces.clientcontrol.ClientControlActionDispatcher
 import app.aaps.core.interfaces.configuration.Config
-import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.notifications.AapsNotification
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.pump.BolusProgressData
 import app.aaps.core.interfaces.queue.CommandQueue
-import app.aaps.core.interfaces.ui.UiInteraction
-import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.dialogs.OkDialog
 import app.aaps.core.ui.compose.navigation.NavigationRequest
-import app.aaps.core.ui.compose.pump.PumpCommunicationStatus
-import app.aaps.ui.compose.loopSheet.LoopActionViewModel
 import app.aaps.ui.compose.maintenance.ImportSource
 import app.aaps.ui.compose.maintenance.MaintenanceViewModel
-import app.aaps.ui.compose.manageSheet.ManageSheetHost
-import app.aaps.ui.compose.manageSheet.ManageViewModel
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
-import app.aaps.ui.compose.overview.statusLights.StatusViewModel
-import app.aaps.ui.compose.permissionsSheet.PermissionsViewModel
-import app.aaps.ui.compose.quickLaunch.QuickLaunchAction
-import app.aaps.ui.compose.scenesSheet.ScenesViewModel
-import app.aaps.ui.compose.treatmentsSheet.TreatmentViewModel
-import app.aaps.ui.search.BuiltInSearchables
-import app.aaps.ui.search.SearchIndexEntry
-import app.aaps.ui.search.SearchViewModel
 
 /**
  * The overview - the app's home screen - assembled once for every platform.
@@ -67,36 +46,22 @@ import app.aaps.ui.search.SearchViewModel
 fun OverviewScreen(
     // View models
     mainViewModel: MainViewModel,
-    manageViewModel: ManageViewModel,
     maintenanceViewModel: MaintenanceViewModel,
-    statusViewModel: StatusViewModel,
-    treatmentViewModel: TreatmentViewModel,
-    scenesViewModel: ScenesViewModel,
-    loopActionViewModel: LoopActionViewModel,
-    searchViewModel: SearchViewModel,
-    permissionsViewModel: PermissionsViewModel,
     graphViewModel: GraphViewModel,
     chipsViewModel: ChipsViewModel,
     // Dependencies
     activePlugin: ActivePlugin,
     config: Config,
-    objectives: Objectives,
-    bgQualityCheck: BgQualityCheck,
     notificationManager: NotificationManager,
-    uiInteraction: UiInteraction,
-    builtInSearchables: BuiltInSearchables,
     bolusProgressData: BolusProgressData,
     clientControlActionDispatcher: ClientControlActionDispatcher,
     commandQueue: CommandQueue,
-    pumpCommunicationStatus: PumpCommunicationStatus,
     // Text the app module owns
     appName: String,
     authorizationFailedMessage: String,
     // Navigation, which the platform routes because it holds the controller
     onNavigate: (NavigationRequest) -> Unit,
-    onSearchResultClick: (SearchIndexEntry) -> Unit,
     onNotificationActionClick: (AapsNotification) -> Unit,
-    onQuickLaunchActionClick: (QuickLaunchAction) -> Unit,
     onImportSettingsNavigate: (ImportSource) -> Unit,
     // Platform actions
     onDirectoryClick: () -> Unit,
@@ -109,12 +74,6 @@ fun OverviewScreen(
     onAutoShowConsumed: () -> Unit
 ) {
     val state by mainViewModel.uiState.collectAsStateWithLifecycle()
-    val searchState by searchViewModel.uiState.collectAsStateWithLifecycle()
-    val calcProgress by mainViewModel.calcProgressFlow.collectAsStateWithLifecycle()
-    val quickLaunchItems by mainViewModel.quickLaunchItems.collectAsStateWithLifecycle()
-    val permState by permissionsViewModel.uiState.collectAsStateWithLifecycle()
-    val pumpStatusBanner by pumpCommunicationStatus.statusBannerFlow.collectAsStateWithLifecycle()
-    val pumpQueueStatus by pumpCommunicationStatus.queueStatusFlow.collectAsStateWithLifecycle()
 
     // Pump setup button in bottom bar.
     // The three casts here and below are `as?`, not `as`. Each of them runs before the condition
@@ -125,42 +84,6 @@ fun OverviewScreen(
     val showPumpSetup = (!activePlugin.activePump.isInitialized() || activePlugin.activePump.isSuspended()) &&
         pumpPlugin != null && pumpPlugin.hasComposeContent()
     val pumpSetupPlugin = if (showPumpSetup) pumpPlugin else null
-
-    // Objectives progress badge (visible while objectives not all completed, in APS mode)
-    val objectivesPlugin = objectives as? PluginBase
-    val objectivesTotal = objectives.size
-    val objectivesDone = objectives.accomplishedCount
-    val showObjectivesSetup = config.APS && objectivesPlugin != null && objectivesTotal > 0 &&
-        objectivesDone < objectivesTotal && objectivesPlugin.isEnabled() && objectivesPlugin.hasComposeContent()
-    val objectivesSetupPlugin = if (showObjectivesSetup) objectivesPlugin else null
-    val objectivesProgressText = if (showObjectivesSetup) "$objectivesDone/$objectivesTotal" else null
-
-    // BG source shortcut: shown when BG quality check reports FLAT or DOUBLED
-    val bgQualityState by bgQualityCheck.stateFlow.collectAsStateWithLifecycle()
-    val bgSourcePlugin = activePlugin.activeBgSource as? PluginBase
-    val showBgSetup = (bgQualityState == BgQualityCheck.State.FLAT || bgQualityState == BgQualityCheck.State.DOUBLED) &&
-        bgSourcePlugin != null && bgSourcePlugin.hasComposeContent()
-    val bgSetupPlugin = if (showBgSetup) bgSourcePlugin else null
-    val bgQualityBadgeIcon: ImageVector? = if (showBgSetup) when (bgQualityState) {
-        BgQualityCheck.State.DOUBLED -> Icons.Filled.Warning
-        BgQualityCheck.State.FLAT    -> Icons.AutoMirrored.Filled.TrendingFlat
-        else                         -> null
-    } else null
-    val bgQualityBadgeTint: Color = when (bgQualityState) {
-        BgQualityCheck.State.RECALCULATED                       -> AapsTheme.generalColors.statusWarning
-        BgQualityCheck.State.DOUBLED, BgQualityCheck.State.FLAT -> AapsTheme.generalColors.statusCritical
-        else                                                    -> Color.Unspecified
-    }
-    val bgQualityBadgeDescription = if (showBgSetup) bgQualityCheck.stateDescription() else null
-
-    val manageSheetState = ManageSheetHost(
-        manageViewModel = manageViewModel,
-        isSimpleMode = state.isSimpleMode,
-        onNavigate = onNavigate,
-        onActionsError = { comment, title ->
-            uiInteraction.runAlarm(comment, title)
-        },
-    )
 
     // Authorization failed dialog
     if (state.showAuthFailedDialog) {

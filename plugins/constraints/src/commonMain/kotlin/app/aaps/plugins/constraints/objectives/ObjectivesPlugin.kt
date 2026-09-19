@@ -5,13 +5,6 @@ import app.aaps.plugins.constraints.ConstraintsStrings
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.constraints.Constraint
 import app.aaps.core.interfaces.constraints.Objectives
-import app.aaps.core.interfaces.constraints.Objectives.Companion.AUTOSENS_OBJECTIVE
-import app.aaps.core.interfaces.constraints.Objectives.Companion.AUTO_OBJECTIVE
-import app.aaps.core.interfaces.constraints.Objectives.Companion.CLOSED_LOOP_OBJECTIVE
-import app.aaps.core.interfaces.constraints.Objectives.Companion.EXAM_OBJECTIVE
-import app.aaps.core.interfaces.constraints.Objectives.Companion.FIRST_OBJECTIVE
-import app.aaps.core.interfaces.constraints.Objectives.Companion.LGS_OBJECTIVE
-import app.aaps.core.interfaces.constraints.Objectives.Companion.SMB_OBJECTIVE
 import app.aaps.core.interfaces.constraints.PluginConstraints
 import app.aaps.core.interfaces.di.APS
 import kotlin.jvm.JvmSuppressWildcards
@@ -23,7 +16,6 @@ import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.IntNonKey
 import app.aaps.core.keys.interfaces.Preferences
-import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.ui.compose.icons.IcPluginObjectives
 import app.aaps.plugins.constraints.objectives.compose.ObjectivesComposeContent
 import app.aaps.plugins.constraints.objectives.keys.ObjectivesBooleanComposedKey

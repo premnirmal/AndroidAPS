@@ -517,9 +517,7 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
         // 3.3
         if (preferences.get(UnitDoubleKey.OverviewLowMark) == 0.0) preferences.remove(UnitDoubleKey.OverviewLowMark)
         if (preferences.get(UnitDoubleKey.OverviewHighMark) == 0.0) preferences.remove(UnitDoubleKey.OverviewHighMark)
-        // These three migrate bidirectionally-synced keys. Skip on a client: it adopts the value from
-        // the master via sync, and a local put here would now trigger a client→master round-trip (modal)
-        // at startup. The master migrates and publishes; the client follows.
+        // Trio does not use the setup wizard and starts in simple mode.
         if (preferences.getIfExists(BooleanNonKey.GeneralSetupWizardProcessed) == null) {
             preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
         }

@@ -17,9 +17,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.Image
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingFlat
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
@@ -28,8 +25,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.app.ActivityCompat
@@ -52,13 +47,9 @@ import app.aaps.appshell.navigation.AppRoute
 import app.aaps.appshell.navigation.ElementNavigator
 import app.aaps.appshell.navigation.appNavGraph
 import app.aaps.appshell.navigation.handleNotificationAction
-import app.aaps.appshell.navigation.handleQuickLaunchAction
-import app.aaps.appshell.navigation.handleSearchResultClick
-import app.aaps.core.interfaces.bgQualityCheck.BgQualityCheck
 import app.aaps.core.interfaces.clientcontrol.ClientControlActionDispatcher
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.configuration.ConfigBuilder
-import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
@@ -70,7 +61,6 @@ import app.aaps.core.interfaces.notifications.NotificationHandle
 import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
-import app.aaps.core.interfaces.plugin.PluginPermissions
 import app.aaps.core.interfaces.profile.ProfileUtil
 import app.aaps.core.interfaces.protection.ExportPasswordDataStore
 import app.aaps.core.interfaces.protection.PasswordCheck
@@ -90,28 +80,22 @@ import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
-import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.interfaces.ui.UiRestart
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.VisibilityContext
 import app.aaps.core.objects.crypto.CryptoUtil
-import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.MetroAppCompatActivity
 import app.aaps.core.ui.compose.FallbackViewModelFactory
 import app.aaps.core.ui.compose.MetroViewModelFactoryOwner
 import app.aaps.core.ui.compose.dialogs.OkDialog
 import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
-import app.aaps.core.ui.compose.pump.PumpActivityDialog
-import app.aaps.core.ui.compose.pump.PumpCommunicationStatus
 import app.aaps.core.ui.locale.LocaleHelper
 import app.aaps.core.ui.search.SearchableItem
-import app.aaps.core.utils.isRunningRealPumpTest
 import app.aaps.implementation.plugin.PluginPermissionsImpl
 import app.aaps.implementation.protection.BiometricCheck
 import app.aaps.plugins.automation.AutomationRuntime
-import app.aaps.plugins.configuration.setupwizard.SWDefinition
 import app.aaps.plugins.source.DexcomPlugin
 import app.aaps.plugins.source.activities.RequestDexcomPermissionActivity
 import app.aaps.trio.TrioUi
@@ -119,35 +103,26 @@ import app.aaps.ui.compose.careDialog.CareportalEventType
 import app.aaps.ui.compose.clientcontrol.ClientControlPendingDialog
 import app.aaps.ui.compose.configuration.ConfigurationViewModel
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
-import app.aaps.ui.compose.loopSheet.LoopActionViewModel
 import app.aaps.ui.compose.main.MainScreen
 import app.aaps.ui.compose.main.MainViewModel
 import app.aaps.ui.compose.main.TrioNavTab
 import app.aaps.ui.compose.maintenance.ImportViewModel
 import app.aaps.ui.compose.maintenance.MaintenanceViewModel
-import app.aaps.ui.compose.manageSheet.ManageViewModel
-import app.aaps.ui.compose.manageSheet.ManageSheetHost
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
-import app.aaps.ui.compose.overview.statusLights.StatusViewModel
 import app.aaps.ui.compose.permissionsSheet.PermissionsSheet
 import app.aaps.ui.compose.permissionsSheet.PermissionsSideEffect
 import app.aaps.ui.compose.permissionsSheet.PermissionsViewModel
 import app.aaps.ui.compose.profileManagement.viewmodels.ProfileEditorViewModel
 import app.aaps.ui.compose.profileManagement.viewmodels.ProfileHelperViewModel
 import app.aaps.ui.compose.profileManagement.viewmodels.ProfileManagementViewModel
-import app.aaps.ui.compose.quickLaunch.QuickLaunchAction
 import app.aaps.ui.compose.quickWizard.viewmodels.QuickWizardManagementViewModel
 import app.aaps.ui.compose.runningMode.RunningModeManagementViewModel
-import app.aaps.ui.compose.scenesSheet.ScenesViewModel
 import app.aaps.ui.compose.siteRotationDialog.viewModels.SiteRotationManagementViewModel
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import app.aaps.ui.compose.tempTarget.TempTargetManagementViewModel
 import app.aaps.ui.compose.treatments.viewmodels.TreatmentsViewModel
-import app.aaps.ui.compose.treatmentsSheet.TreatmentViewModel
 import app.aaps.ui.search.BuiltInSearchables
-import app.aaps.ui.search.SearchIndexEntry
-import app.aaps.ui.search.SearchViewModel
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dev.zacsweers.metro.Inject
 import io.reactivex.rxjava3.disposables.CompositeDisposable
@@ -173,12 +148,10 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     @Inject lateinit var cryptoUtil: CryptoUtil
     @Inject lateinit var exportPasswordDataStore: ExportPasswordDataStore
     @Inject lateinit var activePlugin: ActivePlugin
-    @Inject lateinit var pluginPermissions: PluginPermissions
     @Inject lateinit var nsClient: NsClient
     @Inject lateinit var clientControlActionDispatcher: ClientControlActionDispatcher
     @Inject lateinit var automationRuntime: AutomationRuntime
     @Inject lateinit var configBuilder: ConfigBuilder
-    @Inject lateinit var swDefinition: SWDefinition
     @Inject lateinit var config: Config
     @Inject lateinit var trioUi: TrioUi
     @Inject lateinit var profileUtil: ProfileUtil
@@ -191,8 +164,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     @Inject lateinit var builtInSearchables: BuiltInSearchables
     @Inject lateinit var bolusProgressData: BolusProgressData
     @Inject lateinit var commandQueue: CommandQueue
-    @Inject lateinit var bgQualityCheck: BgQualityCheck
-    @Inject lateinit var objectives: Objectives
     @Inject lateinit var graphViewModelFactory: GraphViewModel.Factory
     @Inject lateinit var chipsViewModelFactory: ChipsViewModel.Factory
     @Inject lateinit var overviewDataCache: OverviewDataCache
@@ -216,12 +187,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
 
     // View models, built by Metro - each carries @ContributesIntoMap and @ViewModelKey.
     private val mainViewModel: MainViewModel by viewModels()
-    private val manageViewModel: ManageViewModel by viewModels()
     private val maintenanceViewModel: MaintenanceViewModel by viewModels()
-    private val statusViewModel: StatusViewModel by viewModels()
-    private val treatmentViewModel: TreatmentViewModel by viewModels()
-    private val scenesViewModel: ScenesViewModel by viewModels()
-    private val loopActionViewModel: LoopActionViewModel by viewModels()
     private val graphViewModel: GraphViewModel by viewModels {
         viewModelFactory { initializer { graphViewModelFactory.create(overviewDataCache, fullWindow = false) } }
     }
@@ -238,14 +204,10 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     private val profileManagementViewModel: ProfileManagementViewModel by viewModels()
     private val runningModeManagementViewModel: RunningModeManagementViewModel by viewModels()
     private val importViewModel: ImportViewModel by viewModels()
-    private val searchViewModel: SearchViewModel by viewModels()
     private val permissionsViewModel: PermissionsViewModel by viewModels()
     private val configurationViewModel: ConfigurationViewModel by viewModels()
     private val siteRotationManagementViewModel: SiteRotationManagementViewModel by viewModels()
 
-    private val pumpCommunicationStatus by lazy {
-        PumpCommunicationStatus(rxBus, commandQueue, rh, lifecycleScope)
-    }
     private var navController: NavHostController? = null
     private val _autoShowNotifications = mutableStateOf(false)
     private val disposable = CompositeDisposable()
@@ -460,11 +422,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             )
         }
 
-        val state by mainViewModel.uiState.collectAsStateWithLifecycle()
         val cobUiState by chipsViewModel.cobUiState.collectAsStateWithLifecycle()
-        val bolusState by bolusProgressData.state.collectAsStateWithLifecycle()
-        val pumpStatusBanner by pumpCommunicationStatus.statusBannerFlow.collectAsStateWithLifecycle()
-        val pumpQueueStatus by pumpCommunicationStatus.queueStatusFlow.collectAsStateWithLifecycle()
 
         NavHost(
             navController = navController,
@@ -472,47 +430,14 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         ) {
             composable(AppRoute.Main.route) {
                 val state by mainViewModel.uiState.collectAsStateWithLifecycle()
-                val pumpStatusBanner by pumpCommunicationStatus.statusBannerFlow.collectAsStateWithLifecycle()
-                val pumpQueueStatus by pumpCommunicationStatus.queueStatusFlow.collectAsStateWithLifecycle()
-                val searchState by searchViewModel.uiState.collectAsStateWithLifecycle()
                 val currentBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = currentBackStackEntry?.destination?.route
-                val calcProgress by mainViewModel.calcProgressFlow.collectAsStateWithLifecycle()
-                val quickLaunchItems by mainViewModel.quickLaunchItems.collectAsStateWithLifecycle()
 
                 // Pump setup button in bottom bar
                 val pumpPlugin = activePlugin.activePumpInternal as PluginBase
                 val showPumpSetup = (!activePlugin.activePump.isInitialized() || activePlugin.activePump.isSuspended()) &&
                     pumpPlugin.hasComposeContent()
                 val pumpSetupPlugin = if (showPumpSetup) pumpPlugin else null
-
-                // BG source shortcut: shown when BG quality check reports FLAT or DOUBLED
-                val bgQualityState by bgQualityCheck.stateFlow.collectAsStateWithLifecycle()
-                val bgSourcePlugin = activePlugin.activeBgSource as PluginBase
-                val showBgSetup = (bgQualityState == BgQualityCheck.State.FLAT || bgQualityState == BgQualityCheck.State.DOUBLED) &&
-                    bgSourcePlugin.hasComposeContent()
-                val bgSetupPlugin = if (showBgSetup) bgSourcePlugin else null
-                val bgQualityBadgeIcon: ImageVector? = if (showBgSetup) when (bgQualityState) {
-                    //BgQualityCheck.State.RECALCULATED -> Icons.Filled.Warning
-                    BgQualityCheck.State.DOUBLED      -> Icons.Filled.Warning
-                    BgQualityCheck.State.FLAT         -> Icons.AutoMirrored.Filled.TrendingFlat
-                    else                              -> null
-                } else null
-                val bgQualityBadgeTint: Color = when (bgQualityState) {
-                    BgQualityCheck.State.RECALCULATED                       -> AapsTheme.generalColors.statusWarning
-                    BgQualityCheck.State.DOUBLED, BgQualityCheck.State.FLAT -> AapsTheme.generalColors.statusCritical
-                    else                                                    -> Color.Unspecified
-                }
-                val bgQualityBadgeDescription = if (showBgSetup) bgQualityCheck.stateDescription() else null
-
-                val manageSheetState = ManageSheetHost(
-                    manageViewModel = manageViewModel,
-                    isSimpleMode = state.isSimpleMode,
-                    onNavigate = { request -> handleNavigationRequest(request, navController) },
-                    onActionsError = { comment, title ->
-                        uiInteraction.runAlarm(comment, title)
-                    },
-                )
 
                 // Authorization failed dialog
                 if (state.showAuthFailedDialog) {
@@ -634,10 +559,8 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 siteRotationManagementViewModel = siteRotationManagementViewModel,
                 graphViewModel = graphViewModel,
                 chipsViewModel = chipsViewModel,
-                swDefinition = swDefinition,
                 rxBus = rxBus,
                 activePlugin = activePlugin,
-                pluginPermissions = pluginPermissions,
                 automationRuntime = automationRuntime,
                 preferences = preferences,
                 rh = rh,
@@ -658,13 +581,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 },
                 onRefreshPermissions = { permissionsViewModel.refresh() },
                 onExecuteQuickWizard = { guid -> mainViewModel.executeQuickWizard(guid) },
-                onRequestDirectoryAccess = {
-                    try {
-                        accessTree?.launch(null)
-                    } catch (_: Exception) {
-                    }
-                },
-                onRequestPermission = { group -> permissionsViewModel.requestPermission(group) },
                 onOpenHealthConnect = {
                     try {
                         startActivity(Intent("androidx.health.ACTION_HEALTH_CONNECT_SETTINGS"))
@@ -730,7 +646,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     private var isProtectionCheckActive = false
 
     private fun refreshOnResume() {
-        manageViewModel.refreshState()
         permissionsViewModel.refresh()
         if (!isProtectionCheckActive) {
             isProtectionCheckActive = true
@@ -821,16 +736,8 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         navigator(navController).handleNavigationRequest(request)
     }
 
-    private fun handleQuickLaunchAction(action: QuickLaunchAction, navController: NavController) {
-        navigator(navController).handleQuickLaunchAction(action)
-    }
-
     private fun handleNotificationAction(notificationId: NotificationId, navController: NavController) {
         navigator(navController).handleNotificationAction(notificationId)
-    }
-
-    private fun handleSearchResultClick(entry: SearchIndexEntry, navController: NavController) {
-        navigator(navController).handleSearchResultClick(entry)
     }
 
     private fun navigateToTrioTab(tab: TrioNavTab, navController: NavController) {
