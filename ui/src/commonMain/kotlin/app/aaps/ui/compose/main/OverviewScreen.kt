@@ -201,7 +201,6 @@ fun OverviewScreen(
         onDismissSearchHardwarePump = { searchViewModel.dismissHardwarePump() },
         onMenuClick = { mainViewModel.openDrawer() },
         onNavigate = onNavigate,
-        onDrawerClosed = { mainViewModel.closeDrawer() },
         onAboutDialogDismiss = { mainViewModel.setShowAboutDialog(false) },
         onOpenBatteryHelp = if (mainViewModel.showBatteryHelp) ({ mainViewModel.openBatteryHelp() }) else null,
         onMaintenanceSheetDismiss = { mainViewModel.setShowMaintenanceSheet(false) },

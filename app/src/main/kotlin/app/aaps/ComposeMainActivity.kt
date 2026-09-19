@@ -58,7 +58,6 @@ import app.aaps.core.interfaces.bgQualityCheck.BgQualityCheck
 import app.aaps.core.interfaces.clientcontrol.ClientControlActionDispatcher
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.configuration.ConfigBuilder
-import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
@@ -90,7 +89,6 @@ import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
-import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.interfaces.ui.UiRestart
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.interfaces.Preferences
@@ -107,7 +105,6 @@ import app.aaps.core.ui.compose.pump.PumpActivityDialog
 import app.aaps.core.ui.compose.pump.PumpCommunicationStatus
 import app.aaps.core.ui.locale.LocaleHelper
 import app.aaps.core.ui.search.SearchableItem
-import app.aaps.core.utils.isRunningRealPumpTest
 import app.aaps.implementation.plugin.PluginPermissionsImpl
 import app.aaps.implementation.protection.BiometricCheck
 import app.aaps.plugins.automation.AutomationRuntime
@@ -192,7 +189,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     @Inject lateinit var bolusProgressData: BolusProgressData
     @Inject lateinit var commandQueue: CommandQueue
     @Inject lateinit var bgQualityCheck: BgQualityCheck
-    @Inject lateinit var objectives: Objectives
     @Inject lateinit var graphViewModelFactory: GraphViewModel.Factory
     @Inject lateinit var chipsViewModelFactory: ChipsViewModel.Factory
     @Inject lateinit var overviewDataCache: OverviewDataCache
@@ -490,13 +486,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     pumpPlugin.hasComposeContent()
                 val pumpSetupPlugin = if (showPumpSetup) pumpPlugin else null
 
-                // Objectives progress badge (visible while objectives not all completed, in APS mode)
-                val objectivesPlugin = objectives as PluginBase
-                val objectivesTotal = objectives.size
-                val objectivesDone = objectives.accomplishedCount
-                val showObjectivesSetup = false
-                val objectivesSetupPlugin = if (showObjectivesSetup) objectivesPlugin else null
-                val objectivesProgressText = if (showObjectivesSetup) "$objectivesDone/$objectivesTotal" else null
 
                 // BG source shortcut: shown when BG quality check reports FLAT or DOUBLED
                 val bgQualityState by bgQualityCheck.stateFlow.collectAsStateWithLifecycle()
@@ -645,8 +634,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     bgQualityBadgeIcon = bgQualityBadgeIcon,
                     bgQualityBadgeTint = bgQualityBadgeTint,
                     bgQualityBadgeDescription = bgQualityBadgeDescription,
-                    objectivesSetupPlugin = objectivesSetupPlugin,
-                    objectivesProgressText = objectivesProgressText,
                     permissionsMissing = permState.hasAnyMissing,
                     onPermissionsClick = {
                         permissionsViewModel.showSheet()
@@ -729,6 +716,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                         maintenanceViewModel.emitError(rh.gs(app.aaps.ui.R.string.health_connect_not_available))
                     }
                 },
+                isTrio = true,
                 onNavigateToTrioTab = { tab -> navigateToTrioTab(tab, navController) },
                 trioTabScaffold = { selectedTab, title, showTopBar, topBarActions, content ->
                     trioUi.tabScaffold(

@@ -101,6 +101,7 @@ fun MainScreen(
     onDismissSearchPluginSwitch: () -> Unit,
     onConfirmSearchHardwarePump: () -> Unit,
     onDismissSearchHardwarePump: () -> Unit,
+    onMenuClick: () -> Unit = {},
     onNavigate: (NavigationRequest) -> Unit,
     onTrioTabSelected: (TrioNavTab) -> Unit = {},
     trioSelectedTab: TrioNavTab = TrioNavTab.Overview,
