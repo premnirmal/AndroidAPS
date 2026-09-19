@@ -43,7 +43,6 @@ data class WizardDialogUiState(
     val bolusStep: Double = 0.1,
     val units: GlucoseUnit = GlucoseUnit.MGDL,
     val profileNames: List<String> = emptyList(),
-    val showNotes: Boolean = false,
     val hasTempTarget: Boolean = false,
     val useBolusAdvisor: Boolean = false,
     val defaultPercentage: Int = 100,

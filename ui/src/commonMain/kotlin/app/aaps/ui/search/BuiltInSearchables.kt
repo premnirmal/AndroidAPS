@@ -103,8 +103,6 @@ class BuiltInSearchables(
                     UnitDoubleKey.OverviewHighMark
                 )
             ),
-            BooleanKey.OverviewShowNotesInDialogs,
-            BooleanKey.OverviewShowNotesInDialogs,
             StringKey.GeneralDarkMode
         ),
         icon = Icons.Outlined.Palette

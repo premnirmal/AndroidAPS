@@ -130,7 +130,6 @@ class CarbsDialogViewModel(
                 carbsButtonIncrement2 = preferences.get(IntKey.OverviewCarbsButtonIncrement2),
                 carbsButtonIncrement3 = preferences.get(IntKey.OverviewCarbsButtonIncrement3),
                 units = units,
-                showNotesFromPreferences = preferences.get(BooleanKey.OverviewShowNotesInDialogs),
                 showBolusReminder = showBolusReminder,
                 hypoTtTarget = profileUtil.fromMgdlToUnits(preferences.ttTargetMgdl(TT.Reason.HYPOGLYCEMIA), units),
                 hypoTtDuration = preferences.ttDurationMinutes(TT.Reason.HYPOGLYCEMIA),

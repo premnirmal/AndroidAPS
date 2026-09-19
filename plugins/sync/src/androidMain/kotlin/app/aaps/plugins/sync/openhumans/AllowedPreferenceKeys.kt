@@ -159,7 +159,6 @@ private val allowedKeys = """
     carbs_button_increment_3
     show_cgm_button
     show_calibration_button
-    show_notes_entry_dialogs
     quickwizard
     key_advancedsettings
     boluswizard_percentage

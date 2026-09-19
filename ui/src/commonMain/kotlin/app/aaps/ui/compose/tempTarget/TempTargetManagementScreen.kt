@@ -485,7 +485,6 @@ fun TempTargetManagementScreen(
                                         eventTime = uiState.eventTime,
                                         eventTimeChanged = uiState.eventTimeChanged,
                                         notes = uiState.notes,
-                                        showNotesField = uiState.showNotesField,
                                         units = viewModel.units,
                                         rh = viewModel.rh,
                                         onNameChange = viewModel::updateEditorName,

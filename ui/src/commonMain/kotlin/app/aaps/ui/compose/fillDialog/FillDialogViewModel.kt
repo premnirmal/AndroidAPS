@@ -143,7 +143,6 @@ class FillDialogViewModel(
                 pumpUnitsWarning = pumpUnitsWarningFor(availableInsulins.firstOrNull()),
                 showBolus = !config.AAPSCLIENT,
                 siteRotationEnabled = preferences.get(BooleanKey.SiteRotationManagePump),
-                showNotesFromPreferences = preferences.get(BooleanKey.OverviewShowNotesInDialogs),
                 simpleMode = preferences.get(BooleanKey.GeneralSimpleMode),
                 concentrationEnabled = preferences.get(BooleanKey.GeneralInsulinConcentration)
             )
