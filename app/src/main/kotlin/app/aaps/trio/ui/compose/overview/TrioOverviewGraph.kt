@@ -259,7 +259,7 @@ private fun PredictionLegendBottomSheet(onDismiss: () -> Unit) {
 private fun GestureHelpItem(text: String) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.CenterVertically
     ) {
         val bulletColor = MaterialTheme.colorScheme.onSurfaceVariant
         Canvas(
@@ -285,7 +285,7 @@ private fun PredictionLegendItem(
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Canvas(
             modifier = Modifier
