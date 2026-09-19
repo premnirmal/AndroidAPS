@@ -206,33 +206,44 @@ fun TrioOverviewGraph(
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            AnimatedVisibilityComposable(
+            GraphInfoButton(
                 visible = showInfoButton,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(AapsSpacing.medium),
-                    shape = RoundedCornerShape(AapsSpacing.chipHeight),
-                    color = MaterialTheme.colorScheme.surface,
-                    shadowElevation = AapsSpacing.extraSmall
-                ) {
-                    IconButton(onClick = { showPredictionInfo = true }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Info,
-                            contentDescription = androidStringResource(R.string.trio_graph_prediction_info),
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
+                onClick = { showPredictionInfo = true },
+                modifier = Modifier.align(Alignment.TopEnd)
+            )
         }
     }
 
     if (showPredictionInfo) {
         PredictionLegendBottomSheet(onDismiss = { showPredictionInfo = false })
+    }
+}
+
+@Composable
+private fun GraphInfoButton(
+    visible: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AnimatedVisibilityComposable(
+        visible = visible,
+        modifier = modifier.padding(AapsSpacing.medium),
+        enter = fadeIn(),
+        exit = fadeOut()
+    ) {
+        Surface(
+            shape = RoundedCornerShape(AapsSpacing.chipHeight),
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = AapsSpacing.extraSmall
+        ) {
+            IconButton(onClick = onClick) {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = androidStringResource(R.string.trio_graph_prediction_info),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
     }
 }
 
