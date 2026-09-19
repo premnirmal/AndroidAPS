@@ -334,7 +334,7 @@ private fun TrioOverviewContent(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(AapsSpacing.small),
+                                .padding(horizontal = AapsSpacing.small),
                             horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -361,7 +361,7 @@ private fun TrioOverviewContent(
                                     }
                                     .clickable(onClick = onBgSourceClick),
                                     useGradientRing = true,
-                                    elevation = AapsSpacing.extraSmall
+                                    elevation = AapsSpacing.small
                             )
                             LoopStatusAndPrediction(
                                 runningMode = runningMode,
