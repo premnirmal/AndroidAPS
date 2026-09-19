@@ -83,6 +83,7 @@ import java.text.NumberFormat
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.time.Duration.Companion.milliseconds
 
 private const val DEFAULT_WINDOW_MS = 6L * 60L * 60L * 1000L
 private const val MIN_WINDOW_MS = 10L * 60L * 1000L
@@ -92,8 +93,7 @@ private const val NOW_POSITION_FRACTION = 0.6
 private const val FUTURE_POSITION_FRACTION = 1.0 - NOW_POSITION_FRACTION
 private const val DATA_GAP_MS = 17L * 60L * 1000L
 private const val DOUBLE_TAP_TIMEOUT_MS = 300L
-private const val INFO_BUTTON_HIDE_DELAY_MS = 150L
-private const val INFO_BUTTON_SHOW_DELAY_MS = 500L
+private const val INFO_BUTTON_SHOW_DELAY = 1500L
 internal const val BOLUS_VALUE_THRESHOLD_UNITS = 0.5
 
 private val GRID_INTERVALS_MS = longArrayOf(
@@ -163,16 +163,14 @@ fun TrioOverviewGraph(
 
     LaunchedEffect(isInteracting) {
         if (isInteracting) {
-            delay(INFO_BUTTON_HIDE_DELAY_MS)
             if (isInteracting) showInfoButton = false
         } else {
-            delay(INFO_BUTTON_SHOW_DELAY_MS)
+            delay(INFO_BUTTON_SHOW_DELAY.milliseconds)
             if (!isInteracting) showInfoButton = true
         }
     }
     LaunchedEffect(infoButtonHideRequest) {
         if (infoButtonHideRequest == 0) return@LaunchedEffect
-        delay(INFO_BUTTON_HIDE_DELAY_MS)
         showInfoButton = false
     }
 
@@ -227,22 +225,16 @@ private fun GraphInfoButton(
 ) {
     AnimatedVisibilityComposable(
         visible = visible,
-        modifier = modifier.padding(AapsSpacing.medium),
+        modifier = modifier,
         enter = fadeIn(),
         exit = fadeOut()
     ) {
-        Surface(
-            shape = RoundedCornerShape(AapsSpacing.chipHeight),
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = AapsSpacing.extraSmall
-        ) {
-            IconButton(onClick = onClick) {
-                Icon(
-                    imageVector = Icons.Outlined.Info,
-                    contentDescription = androidStringResource(R.string.trio_graph_prediction_info),
-                    tint = MaterialTheme.colorScheme.onSurface
-                )
-            }
+        IconButton(onClick = onClick) {
+            Icon(
+                imageVector = Icons.Outlined.Info,
+                contentDescription = androidStringResource(R.string.trio_graph_prediction_info),
+                tint = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }

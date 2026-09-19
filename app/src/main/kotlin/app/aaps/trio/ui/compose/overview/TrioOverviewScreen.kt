@@ -348,33 +348,37 @@ private fun TrioOverviewContent(
                                         onNavigate(NavigationRequest.Element(ElementType.PUMP))
                                     }
                             )
+                            val circleSize = AapsSpacing.bgCircleSize * LocalAapsScale.current + AapsSpacing.medium
                             Box(
                                 contentAlignment = Alignment.Center,
-                                modifier = Modifier.onGloballyPositioned { coordinates ->
-                                    val position = coordinates.positionInRoot()
-                                    bgGlowCenter = Offset(
-                                        x = position.x + coordinates.size.width / 2f,
-                                        y = position.y + coordinates.size.height / 2f
-                                    )
-                                }
+                                modifier = Modifier
+                                    .size(circleSize)
+                                    .onGloballyPositioned { coordinates ->
+                                        val position = coordinates.positionInRoot()
+                                        bgGlowCenter = Offset(
+                                            x = position.x + coordinates.size.width / 2f,
+                                            y = position.y + coordinates.size.height / 2f
+                                        )
+                                    }
                             ) {
                                 if (calcProgress < 100) {
                                     CircularProgressIndicator(
                                         progress = { animatedCalcProgress.value },
                                         modifier = Modifier.size(
-                                            AapsSpacing.bgCircleSize * LocalAapsScale.current +
-                                                AapsSpacing.medium
+                                            circleSize
                                         ),
                                         color = MaterialTheme.colorScheme.primary,
                                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                                     )
                                 }
+                                val bgInfoSize = AapsSpacing.bgCircleSize * LocalAapsScale.current
                                 BgInfoSection(
                                     bgInfo = bgInfo,
                                     timeAgoText = bgTimeAgoText,
+                                    size = bgInfoSize,
                                     modifier = Modifier.clickable(onClick = onBgSourceClick),
                                     useGradientRing = true,
-                                    elevation = AapsSpacing.small
+                                    elevation = AapsSpacing.medium
                                 )
                             }
                             LoopStatusAndPrediction(
@@ -700,12 +704,14 @@ private fun TrioProfileCard(
         tonalElevation = AapsSpacing.extraSmall,
         shadowElevation = AapsSpacing.extraSmall
     ) {
-        Box {
+        Column(
+            modifier = Modifier.padding(
+                horizontal = AapsSpacing.large,
+                vertical = AapsSpacing.medium
+            ),
+            verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
+        ) {
             Row(
-                modifier = Modifier.padding(
-                    horizontal = AapsSpacing.large,
-                    vertical = AapsSpacing.medium
-                ),
                 horizontalArrangement = Arrangement.spacedBy(AapsSpacing.large),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -743,11 +749,9 @@ private fun TrioProfileCard(
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .height(AapsSpacing.chipProgressHeight),
-                    color = contentColor,
-                    trackColor = contentColor.copy(alpha = 0.3f)
+                        .height(AapsSpacing.small),
+                    trackColor = MaterialTheme.colorScheme.surface,
                 )
             }
         }
