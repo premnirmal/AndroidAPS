@@ -17,11 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.windowInsetsTopHeight
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -104,8 +101,6 @@ fun MainScreen(
     onDismissSearchPluginSwitch: () -> Unit,
     onConfirmSearchHardwarePump: () -> Unit,
     onDismissSearchHardwarePump: () -> Unit,
-    // Menu/navigation
-    onMenuClick: () -> Unit,
     onNavigate: (NavigationRequest) -> Unit,
     onTrioTabSelected: (TrioNavTab) -> Unit = {},
     trioSelectedTab: TrioNavTab = TrioNavTab.Overview,
@@ -124,7 +119,6 @@ fun MainScreen(
         onWizardClick: () -> Unit
     ) -> Unit = { _, _, _, _ -> },
     trioOverview: @Composable (TrioOverviewModel) -> Unit = {},
-    onDrawerClosed: () -> Unit,
     onAboutDialogDismiss: () -> Unit,
     /** Null hides the button - only Android has the problem it links to. */
     onOpenBatteryHelp: (() -> Unit)?,
@@ -170,8 +164,6 @@ fun MainScreen(
     modifier: Modifier = Modifier
 ) {
     LocalDateUtil.current
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
     var showTreatmentSheet by remember { mutableStateOf(false) }
     var showAutomationSheet by remember { mutableStateOf(false) }
     var showLoopActionSheet by remember { mutableStateOf(false) }
@@ -179,25 +171,9 @@ fun MainScreen(
     val automationState by scenesViewModel.uiState.collectAsStateWithLifecycle()
     val cobUiState by chipsViewModel.cobUiState.collectAsStateWithLifecycle()
     val snackbarHostState = LocalSnackbarHostState.current
-    val isTrio = mainViewModel.isTrio
 
     LaunchedEffect(Unit) {
         mainViewModel.refreshOverviewState()
-    }
-
-    // Sync drawer state with ui state
-    LaunchedEffect(uiState.isDrawerOpen) {
-        if (uiState.isDrawerOpen) {
-            drawerState.open()
-        } else {
-            drawerState.close()
-        }
-    }
-
-    LaunchedEffect(drawerState.isClosed) {
-        if (drawerState.isClosed && uiState.isDrawerOpen) {
-            onDrawerClosed()
-        }
     }
 
     val mainContent: @Composable () -> Unit = {
@@ -232,38 +208,32 @@ fun MainScreen(
             // (returning zero height) if those Scaffold slots were populated.
             Scaffold(
                 bottomBar = {
-                    if (isTrio) {
-                        AnimatedVisibility(
-                            visible = showChrome,
-                            enter = slideInVertically { it },
-                            exit = slideOutVertically { it }
-                        ) {
-                            trioBottomBar(
-                                trioSelectedTab,
-                                cobUiState.carbsReq,
-                                { tab -> onTrioTabSelected(tab) },
-                                { showTrioAddSheet = true },
-                                Modifier
-                            )
-                        }
+                    AnimatedVisibility(
+                        visible = showChrome,
+                        enter = slideInVertically { it },
+                        exit = slideOutVertically { it }
+                    ) {
+                        trioBottomBar(
+                            trioSelectedTab,
+                            cobUiState.carbsReq,
+                            { tab -> onTrioTabSelected(tab) },
+                            { showTrioAddSheet = true },
+                            Modifier
+                        )
                     }
                 }
             ) { scaffoldPadding ->
                 val hasToolbar = quickLaunchItems.isNotEmpty()
-                val topScaffoldPadding = if (isTrio) 0.dp else scaffoldPadding.calculateTopPadding()
-                val bottomScaffoldPadding = if (isTrio) 0.dp else scaffoldPadding.calculateBottomPadding()
-
                 // Content padding: in preview mode use only system bars;
                 // in normal mode add measured bar heights
                 val contentPadding = when {
-                    isTrio     -> PaddingValues(bottom = scaffoldPadding.calculateBottomPadding())
                     previewMode -> scaffoldPadding
                     else        -> {
                         val topBarHeight = with(density) { topBarHeightPx.toDp() }
                         val bottomBarHeight = with(density) { bottomBarHeightPx.toDp() }
                         PaddingValues(
-                            top = topScaffoldPadding + topBarHeight,
-                            bottom = bottomScaffoldPadding + bottomBarHeight
+                            top = topBarHeight,
+                            bottom = scaffoldPadding.calculateBottomPadding() + bottomBarHeight
                         )
                     }
                 }
@@ -328,7 +298,6 @@ fun MainScreen(
                         isPumpCommunicating = isPumpCommunicating,
                         onStopBolus = onStopBolus,
                         timeInRangeTodayPercentFlow = mainViewModel.timeInRangeTodayPercent,
-                        isTrio = isTrio,
                         trioOverview = trioOverview,
                         pumpNeedsSetup = pumpSetupPlugin != null,
                         pumpEndTimeMillis = uiState.pumpEndTimeMillis,
@@ -378,27 +347,6 @@ fun MainScreen(
                     }
 
                     // Version overlay
-                    if (!isTrio) {
-                        VersionOverlay(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(contentPadding)
-                        )
-                    }
-
-                    // Trio draws its overview background behind the status bar. Other layouts keep
-                    // an opaque surface here so graph and floating toolbar content cannot reduce
-                    // system-icon contrast.
-                    if (!isTrio) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .fillMaxWidth()
-                                .windowInsetsTopHeight(WindowInsets.statusBars)
-                                .background(MaterialTheme.colorScheme.surface)
-                        )
-                    }
-
                     // Navigation bar protection scrim
                     Box(
                         modifier = Modifier
@@ -407,101 +355,6 @@ fun MainScreen(
                             .windowInsetsBottomHeight(WindowInsets.navigationBars)
                             .background(MaterialTheme.colorScheme.surface)
                     )
-
-                    // Top bar overlay
-                    AnimatedVisibility(
-                        visible = showChrome && !isTrio,
-                        enter = slideInVertically { -it },
-                        exit = slideOutVertically { -it },
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = topScaffoldPadding)
-                    ) {
-                        MainTopBar(
-                            searchUiState = searchUiState,
-                            onMenuClick = {
-                                scope.launch {
-                                    drawerState.open()
-                                    onMenuClick()
-                                }
-                            },
-                            onPreferencesClick = { onNavigate(NavigationRequest.Element(ElementType.SETTINGS)) },
-                            onSearchQueryChange = onSearchQueryChange,
-                            onSearchClear = onSearchClear,
-                            onSearchActiveChange = onSearchActiveChange,
-                            isSimpleMode = uiState.isSimpleMode,
-                            // Guard against transient 0 heights during AnimatedVisibility exit:
-                            // the resulting contentPadding invalidation can schedule a remeasure
-                            // on a node that's losing its owner — crashes in dispatchDraw.
-                            modifier = Modifier.onSizeChanged {
-                                if (it.height > 0 && it.height != topBarHeightPx) topBarHeightPx = it.height
-                            }
-                        )
-                    }
-
-                    // Bottom bar overlay
-                    AnimatedVisibility(
-                        visible = showChrome && !isTrio,
-                        enter = slideInVertically { it },
-                        exit = slideOutVertically { it },
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = bottomScaffoldPadding)
-                    ) {
-                        val loopActionState = loopActionViewModel.uiState.collectAsStateWithLifecycle().value
-                        MainNavigationBar(
-                            onManageClick = { manageSheetState.show() },
-                            onTreatmentClick = {
-                                treatmentViewModel.refreshState()
-                                showTreatmentSheet = true
-                            },
-                            masterOrPairedClient = masterOrPairedClient,
-                            quickWizardCount = uiState.quickWizardItems.size,
-                            onAutomationClick = {
-                                scenesViewModel.refreshState()
-                                showAutomationSheet = true
-                            },
-                            // Total drives nav-button visibility (button stays visible whenever
-                            // scenes/automation exist, even if currently un-activatable).
-                            // Count drives the badge — only items the user can act on right now.
-                            automationTotal = automationState.items.size + automationState.sceneItems.size,
-                            automationCount = automationState.items.count { it.activationReason == null } +
-                                automationState.sceneItems.count { it.activationReason == null },
-                            pumpSetupPlugin = pumpSetupPlugin,
-                            bgSetupPlugin = bgSetupPlugin,
-                            bgQualityBadgeIcon = bgQualityBadgeIcon,
-                            bgQualityBadgeTint = bgQualityBadgeTint,
-                            bgQualityBadgeDescription = bgQualityBadgeDescription,
-                            objectivesSetupPlugin = objectivesSetupPlugin,
-                            objectivesProgressText = objectivesProgressText,
-                            onNavigate = onNavigate,
-                            permissionsMissing = permissionsMissing,
-                            onPermissionsClick = onPermissionsClick,
-                            loopActionAvailable = loopActionState.actionAvailable,
-                            onLoopActionClick = { showLoopActionSheet = true },
-                            modifier = Modifier.onSizeChanged {
-                                if (it.height > 0 && it.height != bottomBarHeightPx) bottomBarHeightPx = it.height
-                            }
-                        )
-                    }
-
-                    // Quick launch toolbar overlay
-                    AnimatedVisibility(
-                        visible = hasToolbar && showChrome && !isTrio,
-                        enter = slideInVertically { it },
-                        exit = slideOutVertically { it },
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(
-                                bottom = bottomScaffoldPadding +
-                                    with(density) { bottomBarHeightPx.toDp() } + 8.dp
-                            )
-                    ) {
-                        QuickLaunchToolbar(
-                            items = quickLaunchItems,
-                            onActionClick = onQuickLaunchActionClick,
-                        )
-                    }
 
                     // Tap overlay to restore chrome in preview mode (only when hidden)
                     if (previewMode && !chromeVisible) {
@@ -519,30 +372,7 @@ fun MainScreen(
         }
     }
 
-    if (isTrio) {
-        Box(modifier = modifier.fillMaxSize()) { mainContent() }
-    } else {
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            drawerContent = {
-                MainDrawer(
-                    appTitle = mainViewModel.appTitle,
-                    versionName = mainViewModel.versionName,
-                    onNavigate = { request ->
-                        scope.launch { drawerState.close() }
-                        onDrawerClosed()
-                        onNavigate(request)
-                    },
-                    isTreatmentsEnabled = uiState.isProfileLoaded,
-                    showAdvancedMenuItems = mainViewModel.showAdvancedMenuItems
-                )
-            },
-            gesturesEnabled = true,
-            modifier = modifier
-        ) {
-            mainContent()
-        }
-    }
+    Box(modifier = modifier.fillMaxSize()) { mainContent() }
 
     // Treatment bottom sheet
     if (showTreatmentSheet) {

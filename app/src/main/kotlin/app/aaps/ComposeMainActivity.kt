@@ -251,7 +251,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     private val disposable = CompositeDisposable()
 
     override fun onMembersInjected() {
-        setTheme(if (config.TRIO) CoreUiR.style.AppTheme_Trio_NoActionBar else CoreUiR.style.AppTheme_NoActionBar)
+        setTheme(CoreUiR.style.AppTheme_Trio_NoActionBar)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -366,13 +366,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
 
         // Auto-launch setup wizard on first run
         LaunchedEffect(Unit) {
-            if (!config.TRIO && !preferences.get(BooleanNonKey.GeneralSetupWizardProcessed) && !isRunningRealPumpTest()) {
-                protectionCheck.requestProtection(ProtectionCheck.Protection.PREFERENCES) { result ->
-                    if (result == ProtectionResult.GRANTED) {
-                        navController.navigate(AppRoute.SetupWizard.route)
-                    }
-                }
-            }
         }
 
         // Permissions bottom sheet
@@ -501,8 +494,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 val objectivesPlugin = objectives as PluginBase
                 val objectivesTotal = objectives.size
                 val objectivesDone = objectives.accomplishedCount
-                val showObjectivesSetup = config.APS && !config.TRIO && objectivesTotal > 0 && objectivesDone < objectivesTotal &&
-                    objectivesPlugin.isEnabled() && objectivesPlugin.hasComposeContent()
+                val showObjectivesSetup = false
                 val objectivesSetupPlugin = if (showObjectivesSetup) objectivesPlugin else null
                 val objectivesProgressText = if (showObjectivesSetup) "$objectivesDone/$objectivesTotal" else null
 
@@ -576,7 +568,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     onDismissSearchPluginSwitch = { searchViewModel.dismissPluginSwitch() },
                     onConfirmSearchHardwarePump = { searchViewModel.confirmHardwarePump() },
                     onDismissSearchHardwarePump = { searchViewModel.dismissHardwarePump() },
-                    onMenuClick = { mainViewModel.openDrawer() },
                     onNavigate = { request -> handleNavigationRequest(request, navController) },
                     onTrioTabSelected = { tab -> navigateToTrioTab(tab, navController) },
                     trioSelectedTab = trioTabForRoute(currentRoute),
@@ -601,7 +592,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                         )
                     },
                     trioOverview = trioUi::overview,
-                    onDrawerClosed = { mainViewModel.closeDrawer() },
                     onAboutDialogDismiss = { mainViewModel.setShowAboutDialog(false) },
                     onOpenBatteryHelp = if (mainViewModel.showBatteryHelp) {
                         { mainViewModel.openBatteryHelp() }
@@ -739,7 +729,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                         maintenanceViewModel.emitError(rh.gs(app.aaps.ui.R.string.health_connect_not_available))
                     }
                 },
-                isTrio = config.TRIO,
                 onNavigateToTrioTab = { tab -> navigateToTrioTab(tab, navController) },
                 trioTabScaffold = { selectedTab, title, showTopBar, topBarActions, content ->
                     trioUi.tabScaffold(
@@ -761,7 +750,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
 
         // Modal bolus progress overlay — shown above everything for standard bolus
         bolusState?.let { state ->
-            if (!state.isSMB && !config.TRIO) {
+            if (!state.isSMB) {
                 val pumpStatus = pumpStatusBanner?.text ?: ""
                 val queueStatus = pumpQueueStatus
                 PumpActivityDialog(
@@ -866,9 +855,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         lifecycleScope.launch {
             preferences.observe(StringKey.GeneralLanguage).drop(1).collect { recreate() }
         }
-        lifecycleScope.launch {
-            preferences.observe(BooleanKey.GeneralTrioMode).drop(1).collect { recreate() }
-        }
         // The same rebuild, asked for by code that cannot reach this activity - an import applying
         // its settings, for one. Android answers it by recreating, because that is the only thing
         // that re-runs `attachBaseContext` and so the only thing that can change the locale
@@ -929,7 +915,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     }
 
     private fun navigateToTrioTab(tab: TrioNavTab, navController: NavController) {
-        if (!config.TRIO) return
         val route = when (tab) {
             TrioNavTab.Overview   -> AppRoute.Main.route
             TrioNavTab.Adjustments -> AppRoute.TrioTreatments.route

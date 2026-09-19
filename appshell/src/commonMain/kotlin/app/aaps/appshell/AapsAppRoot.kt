@@ -118,12 +118,7 @@ fun AapsAppRoot(
     onClose: () -> Unit,
     content: @Composable (NavHostController) -> Unit
 ) {
-    // Trio and standard mode expose different destination sets. A mode switch recreates the
-    // activity, so use a different saved-state key instead of restoring a route absent from the
-    // newly selected graph.
-    val navController = key(config.TRIO) {
-        rememberNavController()
-    }.also(onNavControllerReady)
+    val navController = rememberNavController().also(onNavControllerReady)
     val masterReachable by nsClient.masterReachable.collectAsStateWithLifecycle()
     val masterControlAllowed by nsClient.masterControlAllowed.collectAsStateWithLifecycle()
 
@@ -157,7 +152,7 @@ fun AapsAppRoot(
         LocalClearExportPasswordStore provides { exportPasswordDataStore.clearPasswordDataStore() },
         LocalVisibilityContext provides visibilityContext
     ) {
-        AapsTheme(trioMode = config.TRIO) {
+        AapsTheme(trioMode = true) {
             val rootSnackbarHostState = remember { SnackbarHostState() }
             CompositionLocalProvider(LocalSnackbarHostState provides rootSnackbarHostState) {
                 val initProgress by config.initProgressFlow.collectAsStateWithLifecycle()
@@ -191,11 +186,7 @@ fun AapsAppRoot(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(
-                                bottom = if (config.TRIO && initProgress.done) {
-                                    AapsSpacing.xxLarge * 3 + AapsSpacing.medium
-                                } else {
-                                    0.dp
-                                }
+                                bottom = if (initProgress.done) AapsSpacing.xxLarge * 3 + AapsSpacing.medium else 0.dp
                             )
                     )
 

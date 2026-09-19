@@ -212,8 +212,8 @@ class MainViewModel(
 
     val versionName: String get() = config.VERSION_NAME
     val appTitle: String get() = rh.gs(config.appName)
-    val isTrio: Boolean get() = config.TRIO
-    val showAdvancedMenuItems: Boolean get() = !config.TRIO
+    val isTrio: Boolean get() = true
+    val showAdvancedMenuItems: Boolean get() = false
     val calcProgressFlow: StateFlow<Int> = overviewDataCache.calcProgressFlow
     private val _timeInRangeTodayPercent = MutableStateFlow<Int?>(null)
     val timeInRangeTodayPercent: StateFlow<Int?> = _timeInRangeTodayPercent.asStateFlow()
