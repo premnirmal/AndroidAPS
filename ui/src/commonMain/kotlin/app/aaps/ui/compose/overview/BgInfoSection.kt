@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -62,7 +64,8 @@ fun BgInfoSection(
     modifier: Modifier = Modifier,
     size: Dp = AapsSpacing.bgCircleSize * LocalAapsScale.current,
     showTimeAgo: Boolean = true,
-    useGradientRing: Boolean = false
+    useGradientRing: Boolean = false,
+    elevation: Dp = 0.dp
 ) {
     if (bgInfo == null) {
         // Show placeholder when no data
@@ -114,6 +117,12 @@ fun BgInfoSection(
             .padding(AapsSpacing.small)
             .semantics { contentDescription = a11yDescription }
     ) {
+        Surface(
+            modifier = Modifier.size(size),
+            shape = CircleShape,
+            color = circleColor,
+            shadowElevation = elevation
+        ) {}
         // Background ring + trend arc indicator
         Canvas(modifier = Modifier.size(size)) {
             val strokeWidth = ringStrokeWidth.toPx()

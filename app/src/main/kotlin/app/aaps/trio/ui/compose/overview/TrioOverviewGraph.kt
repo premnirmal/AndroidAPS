@@ -11,13 +11,22 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,6 +54,7 @@ import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.input.pointer.util.addPointerInputChange
+import androidx.compose.ui.res.stringResource as androidStringResource
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
@@ -62,6 +72,7 @@ import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.LocalDateUtil
 import app.aaps.core.ui.compose.stringResource
+import app.aaps.ui.R
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -69,7 +80,7 @@ import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 
-private const val DEFAULT_WINDOW_MS = 3L * 60L * 60L * 1000L
+private const val DEFAULT_WINDOW_MS = 6L * 60L * 60L * 1000L
 private const val MIN_WINDOW_MS = 10L * 60L * 1000L
 private const val MAX_WINDOW_MS = 72L * 60L * 60L * 1000L
 private const val LIVE_EDGE_TOLERANCE_MS = 10L * 60L * 1000L
@@ -138,26 +149,150 @@ fun TrioOverviewGraph(
     )
     val range = derivedTimeRange?.first?.let { it to liveEnd }
         ?: (liveEnd - 24L * 60L * 60L * 1000L to liveEnd)
+    var selectedRangeHours by rememberSaveable { mutableStateOf<Int?>(6) }
+    var showPredictionInfo by rememberSaveable { mutableStateOf(false) }
 
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(height),
-        shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
-        color = Color.Transparent,
-        shadowElevation = 0.dp
+    Column(modifier = modifier.fillMaxWidth()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(height)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
+                color = Color.Transparent,
+                shadowElevation = 0.dp
+            ) {
+                InteractiveTrioGlucoseChart(
+                    history = history,
+                    predictions = visiblePredictions,
+                    boluses = treatments.boluses,
+                    fullRange = range,
+                    nowTimestamp = nowTimestamp,
+                    lowMark = chartConfig.lowMark,
+                    highMark = chartConfig.highMark,
+                    selectedRangeHours = selectedRangeHours,
+                    onRangeSelected = { selectedRangeHours = it },
+                    onInteraction = graphViewModel::onGraphInteraction,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(AapsSpacing.medium),
+                shape = RoundedCornerShape(AapsSpacing.chipHeight),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = AapsSpacing.extraSmall
+            ) {
+                IconButton(onClick = { showPredictionInfo = true }) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = androidStringResource(R.string.trio_graph_prediction_info),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = AapsSpacing.small),
+            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small)
+        ) {
+            listOf(4, 6, 12, 24).forEach { hours ->
+                FilterChip(
+                    selected = selectedRangeHours == hours,
+                    onClick = { selectedRangeHours = hours },
+                    label = {
+                        Text(stringResource(CoreUiStrings.units_format_hours, hours))
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+
+    if (showPredictionInfo) {
+        PredictionLegendBottomSheet(onDismiss = { showPredictionInfo = false })
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+private fun PredictionLegendBottomSheet(onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AapsSpacing.extraLarge),
+            verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
+        ) {
+            Text(
+                text = androidStringResource(R.string.trio_graph_prediction_info),
+                style = MaterialTheme.typography.titleLarge
+            )
+            PredictionLegendItem(
+                title = androidStringResource(R.string.trio_graph_prediction_iob_title),
+                description = androidStringResource(R.string.trio_graph_prediction_iob_description),
+                color = AapsTheme.generalColors.iobPrediction
+            )
+            PredictionLegendItem(
+                title = androidStringResource(R.string.trio_graph_prediction_cob_title),
+                description = androidStringResource(R.string.trio_graph_prediction_cob_description),
+                color = AapsTheme.generalColors.cobPrediction
+            )
+            PredictionLegendItem(
+                title = androidStringResource(R.string.trio_graph_prediction_acob_title),
+                description = androidStringResource(R.string.trio_graph_prediction_acob_description),
+                color = AapsTheme.generalColors.aCobPrediction
+            )
+            PredictionLegendItem(
+                title = androidStringResource(R.string.trio_graph_prediction_uam_title),
+                description = androidStringResource(R.string.trio_graph_prediction_uam_description),
+                color = AapsTheme.generalColors.uamPrediction
+            )
+            PredictionLegendItem(
+                title = androidStringResource(R.string.trio_graph_prediction_zt_title),
+                description = androidStringResource(R.string.trio_graph_prediction_zt_description),
+                color = AapsTheme.generalColors.ztPrediction
+            )
+        }
+    }
+}
+
+@Composable
+private fun PredictionLegendItem(
+    title: String,
+    description: String,
+    color: Color
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
+        verticalAlignment = Alignment.Top
     ) {
-        InteractiveTrioGlucoseChart(
-            history = history,
-            predictions = visiblePredictions,
-            boluses = treatments.boluses,
-            fullRange = range,
-            nowTimestamp = nowTimestamp,
-            lowMark = chartConfig.lowMark,
-            highMark = chartConfig.highMark,
-            onInteraction = graphViewModel::onGraphInteraction,
-            modifier = Modifier.fillMaxSize()
-        )
+        Canvas(
+            modifier = Modifier
+                .padding(top = AapsSpacing.medium)
+                .size(AapsSpacing.xxLarge)
+        ) {
+            drawLine(
+                color = color,
+                start = Offset.Zero,
+                end = Offset(size.width, 0f),
+                strokeWidth = 2.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 8.dp.toPx()))
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -170,6 +305,8 @@ private fun InteractiveTrioGlucoseChart(
     nowTimestamp: Long,
     lowMark: Double,
     highMark: Double,
+    selectedRangeHours: Int?,
+    onRangeSelected: (Int?) -> Unit,
     onInteraction: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -206,6 +343,16 @@ private fun InteractiveTrioGlucoseChart(
         val minCenter = fullStart + half
         val maxCenter = (fullEnd - half).coerceAtLeast(minCenter)
         return value.coerceIn(minCenter, maxCenter)
+    }
+
+    LaunchedEffect(selectedRangeHours, maxDuration) {
+        val hours = selectedRangeHours ?: return@LaunchedEffect
+        val duration = (hours * 60L * 60L * 1000L)
+            .coerceIn(MIN_WINDOW_MS, maxDuration)
+        visibleDuration = duration
+        centerTime = clampCenter(nowCenteredViewport(nowTimestamp, duration), duration)
+        selectedPoint = null
+        selectedBolus = null
     }
 
     LaunchedEffect(maxDuration) {
@@ -295,6 +442,7 @@ private fun InteractiveTrioGlucoseChart(
                                     .coerceIn(MIN_WINDOW_MS, maxDuration)
                                 visibleDuration = newDuration
                                 centerTime = clampCenter(centerTime, newDuration)
+                                onRangeSelected(null)
                                 zoomGesture = true
                                 event.changes.forEach { it.consume() }
                             }
@@ -330,9 +478,11 @@ private fun InteractiveTrioGlucoseChart(
                             }
                             visibleDuration = targetDuration
                             centerTime = clampCenter(centerTime, targetDuration)
+                            onRangeSelected(null)
                             selectedPoint = null
                             selectedBolus = null
                             lastTapTime = 0L
+                            onRangeSelected(null)
                             onInteraction()
                         }
 
@@ -376,6 +526,7 @@ private fun InteractiveTrioGlucoseChart(
 
                         horizontalGesture -> {
                             lastTapTime = 0L
+                            onRangeSelected(null)
                             onInteraction()
                             val velocityX = velocityTracker.calculateVelocity().x
                             if (abs(velocityX) > 1_000f) {
