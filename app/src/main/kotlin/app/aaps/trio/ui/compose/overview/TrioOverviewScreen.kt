@@ -348,42 +348,42 @@ private fun TrioOverviewContent(
                                         onNavigate(NavigationRequest.Element(ElementType.PUMP))
                                     }
                             )
-                            BgInfoSection(
-                                bgInfo = bgInfo,
-                                timeAgoText = bgTimeAgoText,
-                                modifier = Modifier
-                                    .onGloballyPositioned { coordinates ->
+                            Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier.onGloballyPositioned { coordinates ->
                                         val position = coordinates.positionInRoot()
                                         bgGlowCenter = Offset(
                                             x = position.x + coordinates.size.width / 2f,
                                             y = position.y + coordinates.size.height / 2f
                                         )
                                     }
-                                    .clickable(onClick = onBgSourceClick),
-                                    useGradientRing = true,
-                                    elevation = AapsSpacing.extraSmall
-                            )
+                            ) {
+                                    BgInfoSection(
+                                        bgInfo = bgInfo,
+                                        timeAgoText = bgTimeAgoText,
+                                        modifier = Modifier.clickable(onClick = onBgSourceClick),
+                                        useGradientRing = true,
+                                        elevation = AapsSpacing.extraSmall
+                                    )
+                                    if (calcProgress < 100) {
+                                        CircularProgressIndicator(
+                                            progress = { animatedCalcProgress.value },
+                                            modifier = Modifier.size(
+                                                AapsSpacing.bgCircleSize * LocalAapsScale.current +
+                                                    AapsSpacing.medium
+                                            ),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                    }
+                            }
                             LoopStatusAndPrediction(
-                                runningMode = runningMode,
-                                runningModeText = runningModeText,
+                                    runningMode = runningMode,
+                                    runningModeText = runningModeText,
                                 lastLoopAgeMillis = lastLoopAgeMillis,
                                 predictedText = predictedText,
                                 onClick = { showPredictionInfo = true },
                                 modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
-
-                    Box(modifier = Modifier
-                        .fillMaxWidth()
-                        .height(AapsSpacing.chipProgressHeight)) {
-                        if (calcProgress < 100) {
-                            LinearProgressIndicator(
-                                progress = { animatedCalcProgress.value },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = AapsSpacing.small)
-                                    .height(AapsSpacing.chipProgressHeight)
                             )
                         }
                     }
