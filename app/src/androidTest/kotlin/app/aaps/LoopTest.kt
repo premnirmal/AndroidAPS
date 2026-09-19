@@ -99,7 +99,7 @@ class LoopTest : AapsInstrumentedTest() {
         // There should be missing profile
         (profileFunction as ProfileFunctionImpl).cache.clear()
         loop.invoke("test2", allowNotification = false)
-        var loopStatusEvent = rxHelper.waitFor(EventLoopSetLastRunGui::class, comment = "step2")
+        val loopStatusEvent = rxHelper.waitFor(EventLoopSetLastRunGui::class, comment = "step2")
         assertThat(loopStatusEvent.first).isTrue()
         assertThat((loopStatusEvent.second as EventLoopSetLastRunGui).text).contains("NO PROFILE SET")
 
