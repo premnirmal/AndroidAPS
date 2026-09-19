@@ -1,5 +1,8 @@
 package app.aaps.trio.ui.compose.overview
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -31,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +78,7 @@ import app.aaps.core.ui.compose.stringResource
 import app.aaps.ui.R
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import java.text.NumberFormat
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -87,6 +92,8 @@ private const val NOW_POSITION_FRACTION = 0.6
 private const val FUTURE_POSITION_FRACTION = 1.0 - NOW_POSITION_FRACTION
 private const val DATA_GAP_MS = 17L * 60L * 1000L
 private const val DOUBLE_TAP_TIMEOUT_MS = 300L
+private const val INFO_BUTTON_HIDE_DELAY_MS = 150L
+private const val INFO_BUTTON_SHOW_DELAY_MS = 500L
 internal const val BOLUS_VALUE_THRESHOLD_UNITS = 0.5
 
 private val GRID_INTERVALS_MS = longArrayOf(
@@ -151,6 +158,23 @@ fun TrioOverviewGraph(
     var selectedRangeHours by rememberSaveable { mutableStateOf<Int?>(6) }
     var showPredictionInfo by rememberSaveable { mutableStateOf(false) }
     var isInteracting by remember { mutableStateOf(false) }
+    var showInfoButton by remember { mutableStateOf(true) }
+    var infoButtonHideRequest by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(isInteracting) {
+        if (isInteracting) {
+            delay(INFO_BUTTON_HIDE_DELAY_MS)
+            if (isInteracting) showInfoButton = false
+        } else {
+            delay(INFO_BUTTON_SHOW_DELAY_MS)
+            if (!isInteracting) showInfoButton = true
+        }
+    }
+    LaunchedEffect(infoButtonHideRequest) {
+        if (infoButtonHideRequest == 0) return@LaunchedEffect
+        delay(INFO_BUTTON_HIDE_DELAY_MS)
+        showInfoButton = false
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
@@ -174,12 +198,19 @@ fun TrioOverviewGraph(
                     highMark = chartConfig.highMark,
                     selectedRangeHours = selectedRangeHours,
                     onRangeSelected = { selectedRangeHours = it },
-                    onInteraction = graphViewModel::onGraphInteraction,
+                    onInteraction = {
+                        graphViewModel.onGraphInteraction()
+                        infoButtonHideRequest++
+                    },
                     onInteractingChanged = { isInteracting = it },
                     modifier = Modifier.fillMaxSize()
                 )
             }
-            if (!isInteracting) {
+            AnimatedVisibility(
+                visible = showInfoButton,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
                 Surface(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -423,7 +454,6 @@ private fun InteractiveTrioGlucoseChart(
             .pointerInput(history, predictions, boluses, fullStart, fullEnd, maxDuration) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
-                    onInteractingChanged(true)
                     coroutineScope.launch { inertia.stop() }
                     val velocityTracker = VelocityTracker()
                     velocityTracker.addPointerInputChange(down)
@@ -434,6 +464,7 @@ private fun InteractiveTrioGlucoseChart(
                     var totalY = 0f
                     var horizontalGesture = false
                     var zoomGesture = false
+                    var interactionStarted = false
                     var pointerCount = 1
 
                     while (true) {
@@ -461,6 +492,10 @@ private fun InteractiveTrioGlucoseChart(
                                 centerTime = clampCenter(centerTime, newDuration)
                                 onRangeSelected(null)
                                 zoomGesture = true
+                                if (!interactionStarted) {
+                                    interactionStarted = true
+                                    onInteractingChanged(true)
+                                }
                                 event.changes.forEach { it.consume() }
                             }
                         } else {
@@ -472,6 +507,10 @@ private fun InteractiveTrioGlucoseChart(
 
                             if (!horizontalGesture && abs(totalX) > viewConfiguration.touchSlop) {
                                 horizontalGesture = abs(totalX) > abs(totalY)
+                                if (horizontalGesture) {
+                                    interactionStarted = true
+                                    onInteractingChanged(true)
+                                }
                             }
                             if (horizontalGesture) {
                                 val timePerPixel = visibleDuration.toDouble() / size.width.coerceAtLeast(1)
@@ -488,6 +527,8 @@ private fun InteractiveTrioGlucoseChart(
 
                     when {
                         wasTap && isSecondTap -> {
+                            interactionStarted = true
+                            onInteractingChanged(true)
                             val targetDuration = if (visibleDuration <= DEFAULT_WINDOW_MS / 2L) {
                                 DEFAULT_WINDOW_MS.coerceAtMost(maxDuration)
                             } else {
@@ -568,7 +609,7 @@ private fun InteractiveTrioGlucoseChart(
                             onInteraction()
                         }
                     }
-                    onInteractingChanged(false)
+                    if (interactionStarted) onInteractingChanged(false)
                 }
             }
     ) {
