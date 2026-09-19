@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.BitmapFactory
+import android.media.AudioManager
+import android.media.RingtoneManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import app.aaps.core.interfaces.logging.AAPSLogger
@@ -28,7 +30,7 @@ import dev.zacsweers.metro.SingleIn
 import android.app.NotificationManager as AndroidNotificationManager
 
 /**
- * The Android half of notification handling: silent channels, the system tray, and vibration.
+ * The Android half of notification handling: system channels, the system tray, and vibration.
  * The registry that decides *which* notifications exist is shared - see `CommonNotificationManager`.
  * This class only answers "given this notification, what does Android actually do", which is the
  * question `NotificationManagerImpl` used to answer inline.
@@ -62,8 +64,7 @@ class AndroidSystemNotificationPlatform(
     }
 
     /**
-     * Urgent alarms are always shown as silent heads-up notifications with vibration. Anything else
-     * is shown only when the user asked for it with
+     * Urgent alarms are shown as heads-up notifications. Anything else is shown only when the user asked for it with
      *    [BooleanKey.AlertUrgentAsAndroidNotification] **and** it carries no actions - a notification
      *    with actions is answered in the app, not from the tray.
      */
@@ -114,14 +115,13 @@ class AndroidSystemNotificationPlatform(
         if (started) return
         started = true
 
-        notificationManager.deleteNotificationChannel("AndroidAPS-Overview")
+        notificationManager.deleteNotificationChannel("AndroidAPS-Overview-Silent")
         notificationManager.createNotificationChannel(
             NotificationChannel(
                 NotificationManager.CHANNEL_ID,
                 NotificationManager.CHANNEL_ID,
                 AndroidNotificationManager.IMPORTANCE_HIGH
             ).apply {
-                setSound(null, null)
                 enableVibration(true)
             }
         )
@@ -148,6 +148,7 @@ class AndroidSystemNotificationPlatform(
             .setContentIntent(notificationHolder().openAppIntent())
         if (n.level == NotificationLevel.URGENT) {
             builder.setVibrate(longArrayOf(1000, 1000, 1000, 1000))
+                .setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM), AudioManager.STREAM_ALARM)
         } else {
             builder.setVibrate(longArrayOf(0, 100, 50, 100, 50))
         }

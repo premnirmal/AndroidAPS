@@ -8,6 +8,7 @@ import app.aaps.core.interfaces.notifications.NotificationLevel
 import app.aaps.core.interfaces.notifications.SystemNotificationPlatform
 import platform.UserNotifications.UNAuthorizationOptionAlert
 import platform.UserNotifications.UNAuthorizationOptionBadge
+import platform.UserNotifications.UNAuthorizationOptionSound
 import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNNotificationCategory
 import platform.UserNotifications.UNNotificationCategoryOptionCustomDismissAction
@@ -16,13 +17,14 @@ import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotificationInterruptionLevel.UNNotificationInterruptionLevelActive
 import platform.UserNotifications.UNNotificationInterruptionLevel.UNNotificationInterruptionLevelTimeSensitive
 import platform.UserNotifications.UNNotificationRequest
+import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
 
 /**
  * The system tray half of notifications on iOS.
  *
  * iOS keeps far more of this than Android does. There is no channel to create and no `PendingIntent`
- * to build. The system decides how to present the silent notification.
+ * to build. The system decides how to present the notification.
  *
  * Permission is requested once, lazily, on the first notification. Asking in the constructor would
  * put the system prompt in front of the user during start up, before anything has explained why the
@@ -69,7 +71,7 @@ class IosSystemNotificationPlatform(
         val content = UNMutableNotificationContent().apply {
             setTitle(title)
             setBody(notification.text)
-            // Notifications are visual only.
+            setSound(UNNotificationSound.defaultSound)
             // Without the category the dismiss callback never fires - see onDismissed.
             setCategoryIdentifier(CATEGORY)
             setInterruptionLevel(
@@ -211,7 +213,7 @@ class IosSystemNotificationPlatform(
     private fun ensureAuthorization() {
         if (authorizationAsked) return
         authorizationAsked = true
-        val options = UNAuthorizationOptionAlert or UNAuthorizationOptionBadge
+        val options = UNAuthorizationOptionAlert or UNAuthorizationOptionBadge or UNAuthorizationOptionSound
         center.requestAuthorizationWithOptions(options) { granted, error ->
             if (error != null) aapsLogger.error(LTag.NOTIFICATION, "Notification permission failed: $error")
             else aapsLogger.debug(LTag.NOTIFICATION, "Notification permission granted=$granted")

@@ -19,7 +19,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 
-/** Builds silent, visual Android notifications for AAPS alarms. */
+/** Builds Android notifications for AAPS alarms. */
 @SingleIn(AppScope::class)
 @Inject
 class AlarmNotificationManager(
@@ -32,13 +32,14 @@ class AlarmNotificationManager(
     companion object {
 
         const val GROUP_ID = "aaps_alarm_group"
-        const val CHANNEL_ALARM_VISUAL = "aaps_alarm_visual_v1"
+        const val CHANNEL_ALARM = "aaps_alarm_v2"
         const val NOTIFICATION_ID_FULL_SCREEN = 4712
         const val ALARM_ID_OFFSET = 100_000
 
         private const val WAKE_REQUEST_CODE = 4713
         private const val SCREEN_WAKE_DELAY_MS = 1_500L
         private val LEGACY_SOUND_CHANNELS = listOf(
+            "aaps_alarm_visual_v1",
             "aaps_alarm_fullscreen",
             "aaps_alarm_fullscreen_silent",
             "aaps_alarm_alarm_alarm",
@@ -63,14 +64,13 @@ class AlarmNotificationManager(
         LEGACY_SOUND_CHANNELS.forEach(mgr::deleteNotificationChannel)
         mgr.createNotificationChannel(
             NotificationChannel(
-                CHANNEL_ALARM_VISUAL,
+                CHANNEL_ALARM,
                 "Urgent alarms",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                setSound(null, null)
                 enableVibration(true)
                 group = GROUP_ID
-                description = "Visual, heads-up, and vibration alerts for urgent alarms."
+                description = "Heads-up and vibration alerts for urgent alarms."
             }
         )
     }
@@ -97,7 +97,7 @@ class AlarmNotificationManager(
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        val notification = NotificationCompat.Builder(context, CHANNEL_ALARM_VISUAL)
+        val notification = NotificationCompat.Builder(context, CHANNEL_ALARM)
             .setSmallIcon(iconsProvider.getNotificationIcon())
             .setContentTitle(title)
             .setContentText(status)
@@ -151,7 +151,7 @@ class AlarmNotificationManager(
         urgent: Boolean
     ) {
         channels
-        val builder = NotificationCompat.Builder(context, CHANNEL_ALARM_VISUAL)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ALARM)
             .setSmallIcon(iconsProvider.getNotificationIcon())
             .setLargeIcon(BitmapFactory.decodeResource(context.resources, iconsProvider.getIcon()))
             .setContentTitle(title)
