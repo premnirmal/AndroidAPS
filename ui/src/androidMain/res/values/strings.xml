@@ -27,6 +27,10 @@
     <string name="trio_graph_prediction_uam_description">Expected glucose when an unannounced meal is detected.</string>
     <string name="trio_graph_prediction_zt_title">Zero temp prediction</string>
     <string name="trio_graph_prediction_zt_description">Expected glucose if insulin delivery is set to zero.</string>
+    <string name="trio_graph_gesture_help_title">Chart gestures</string>
+    <string name="trio_graph_gesture_pinch">Pinch with two fingers to zoom in or out.</string>
+    <string name="trio_graph_gesture_double_tap">Double tap to zoom in and out.</string>
+    <string name="trio_graph_gesture_scroll">Scroll left or right to move through time.</string>
     <string name="trio_no_pump">No Pump</string>
     <string name="trio_pump_time_days_hours" comment="%1$d=whole days left, %2$d=remaining whole hours. Example: 2d 6h">%1$dd %2$dh</string>
     <string name="trio_pump_time_hours" comment="%1$d=whole hours left. Example: 6h">%1$dh</string>
