@@ -61,7 +61,6 @@
     <string name="goingtodeliver">Iniciando aplicação de %1$.2f U</string>
     <string name="androidaps_start">AAPS iniciado</string>
     <string name="format_hours">%1$.2f h</string>
-    <string name="objectives">Objetivos</string>
     <string name="please_wait">Por favor aguarde…</string>
     <string name="stop">Parar</string>
     <string name="invalid_profile">Perfil inválido!</string>

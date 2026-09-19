@@ -8,38 +8,8 @@ import org.junit.jupiter.api.Test
 
 /**
  * Invariant tests on the [ElementType] enum itself. Pure data — no Compose or Android.
- *
- * The `searchableEntries` companion is `by lazy` so we also implicitly check that the lazy
- * initializer holds across repeated calls.
  */
 class ElementTypeTest {
-
-    @Test
-    fun searchableEntries_matchesEntriesFilteredBySearchableFlag() {
-        val expected = ElementType.entries.filter { it.searchable }
-        assertThat(ElementType.searchableEntries).containsExactlyElementsIn(expected).inOrder()
-    }
-
-    @Test
-    fun searchableEntries_isStableAcrossCalls() {
-        // `by lazy` should return the same instance every time.
-        assertThat(ElementType.searchableEntries).isSameInstanceAs(ElementType.searchableEntries)
-    }
-
-    @Test
-    fun searchableEntries_isNotEmpty() {
-        // A regression where every searchable=true is dropped would cause the global search UI to
-        // silently return nothing; the only way that's correct is if we deliberately strip the
-        // flag from every enum value, which would be a major intentional change.
-        assertThat(ElementType.searchableEntries).isNotEmpty()
-    }
-
-    @Test
-    fun searchableEntries_neverIncludeInternalCategory() {
-        // INTERNAL is for non-user-facing utilities — they must not surface in search.
-        val internalSearchables = ElementType.searchableEntries.filter { it.category == ElementCategory.INTERNAL }
-        assertThat(internalSearchables).isEmpty()
-    }
 
     @Test
     fun defaultCategory_isInternal() {
@@ -93,15 +63,5 @@ class ElementTypeTest {
         expectedPreferences.forEach { type ->
             assertThat(type.protection).isEqualTo(ProtectionCheck.Protection.PREFERENCES)
         }
-    }
-
-    @Test
-    fun navigationCategory_entries_areAllSearchable() {
-        // The navigation drawer surfaces these via global search; missing one would make it
-        // unreachable from search.
-        val navUnreachable = ElementType.entries
-            .filter { it.category == ElementCategory.NAVIGATION }
-            .filterNot { it.searchable }
-        assertThat(navUnreachable).isEmpty()
     }
 }

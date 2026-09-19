@@ -164,7 +164,6 @@ class GraphScopeStabilityTest {
             "nsClientSourcePlugin",
             "nsClientV3Plugin",
             "nsIncomingDataProcessor",
-            "objectivesPlugin",
             "openHumansMetroBridge",
             "overviewData",
             "overviewDataCache",

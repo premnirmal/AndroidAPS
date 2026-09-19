@@ -37,7 +37,6 @@ import app.aaps.core.interfaces.sync.NsClient
 import app.aaps.core.interfaces.tempTargets.ttTargetMgdl
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.DecimalFormatter
-import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.objects.extensions.toPureProfile
 import app.aaps.core.objects.profile.ProfileSealed
@@ -658,10 +657,7 @@ class ProfileManagementViewModel(
                         onOk = {
                             appScope.launch {
                                 when (val result = batchExecutor.commit(prepared.id, Sources.ProfileSwitchDialog, label)) {
-                                    is ActionProgress.Applied  -> {
-                                        if (percentage == 90 && durationMinutes == 10) preferences.put(BooleanNonKey.ObjectivesProfileSwitchUsed, true)
-                                        withContext(Dispatchers.Main) { onSuccess() }
-                                    }
+                                    is ActionProgress.Applied  -> withContext(Dispatchers.Main) { onSuccess() }
 
                                     is ActionProgress.Rejected ->
                                         if (result.reason == FailureReason.NotReachable || result.reason == FailureReason.ControlDisabled)

@@ -1,15 +1,13 @@
 package app.aaps.core.ui.search
 
 /**
- * Built-in screens, dialogs, hints, and other non-plugin searchables
- * should implement this interface.
+ * Built-in (non-plugin) preference screens are offered through this interface.
  * Plugin preferences are collected separately via ActivePlugin.
  */
 interface SearchableProvider {
 
     /**
-     * Returns the list of searchable items provided by this source.
-     * Called when building or refreshing the search index.
+     * Returns the list of items provided by this source.
      */
     fun getSearchableItems(): List<SearchableItem>
 }

@@ -9,7 +9,6 @@ enum class IntNonKey(
     override val exportable: Boolean = true
 ) : IntNonPreferenceKey {
 
-    ObjectivesManualEnacts("ObjectivesmanualEnacts", 0),
     TddCycleOffset("tdd_cycle_offset", 0),
     LastOverviewProfilePercentage("last_overview_profile_percentage", 100, exportable = false)
 }

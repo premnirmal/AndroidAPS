@@ -54,7 +54,6 @@
     <string name="tdd_total">TDD Total</string>
     <string name="goingtodeliver">A punt de lliurar %1$.2f U</string>
     <string name="format_hours">%1$.2f h</string>
-    <string name="objectives">Objectius</string>
     <string name="please_wait">Espereu si us plau…</string>
     <string name="stop">Stop</string>
     <string name="active"><![CDATA[<Actiu>]]></string>

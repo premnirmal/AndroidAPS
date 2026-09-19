@@ -41,7 +41,6 @@
     <string name="goingtodeliver">Isporučit ću %1$.2f U</string>
     <string name="androidaps_start">AAPS je počeo</string>
     <string name="format_hours">%1$.2f h</string>
-    <string name="objectives">Ciljevi</string>
     <string name="please_wait">Molimo pričekajte…</string>
     <string name="stop">Zaustavi</string>
     <string name="active"><![CDATA[<Active>]]></string>
