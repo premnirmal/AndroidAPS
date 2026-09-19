@@ -44,6 +44,8 @@ class FabricPrivacyImpl(
      * constructed is not.
      */
     fun start() {
+        firebaseAnalytics.setAnalyticsCollectionEnabled(false)
+        FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = false
     }
 
     override fun setUserProperty(key: String, value: String) {

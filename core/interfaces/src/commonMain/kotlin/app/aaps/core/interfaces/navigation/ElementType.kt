@@ -85,7 +85,6 @@ enum class ElementType(
     TDD_CYCLE_PATTERN(category = ElementCategory.NAVIGATION, searchable = true),
     PROFILE_HELPER(category = ElementCategory.NAVIGATION, searchable = true),
     HISTORY_BROWSER(category = ElementCategory.NAVIGATION, searchable = true),
-    SETUP_WIZARD(category = ElementCategory.NAVIGATION, searchable = true, protection = ProtectionCheck.Protection.PREFERENCES),
     MAINTENANCE(category = ElementCategory.NAVIGATION, searchable = true, protection = ProtectionCheck.Protection.PREFERENCES),
     CONFIGURATION(category = ElementCategory.NAVIGATION, searchable = true, protection = ProtectionCheck.Protection.PREFERENCES),
     ABOUT(category = ElementCategory.NAVIGATION, searchable = true),

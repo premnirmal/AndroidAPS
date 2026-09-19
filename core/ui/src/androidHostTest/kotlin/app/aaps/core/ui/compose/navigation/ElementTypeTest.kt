@@ -86,7 +86,6 @@ class ElementTypeTest {
     fun settingsLikeElements_requirePreferencesAuth() {
         val expectedPreferences = setOf(
             ElementType.SETTINGS,
-            ElementType.SETUP_WIZARD,
             ElementType.MAINTENANCE,
             ElementType.CONFIGURATION,
             ElementType.SCENE_MANAGEMENT

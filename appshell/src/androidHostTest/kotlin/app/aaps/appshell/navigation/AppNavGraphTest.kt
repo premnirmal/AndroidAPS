@@ -56,10 +56,8 @@ class AppNavGraphTest {
                 siteRotationManagementViewModel = mock(),
                 graphViewModel = mock(),
                 chipsViewModel = mock(),
-                swDefinition = mock(),
                 rxBus = mock(),
                 activePlugin = activePlugin,
-                pluginPermissions = mock(),
                 automationRuntime = mock(),
                 preferences = mock(),
                 rh = mock(),
@@ -74,8 +72,10 @@ class AppNavGraphTest {
                 requestEditModeAuthorization = { onGranted -> onGranted() },
                 onRefreshPermissions = {},
                 onExecuteQuickWizard = {},
-                onRequestDirectoryAccess = {},
-                onRequestPermission = {},
+                onOpenHealthConnect = {},
+                onNavigateToTrioTab = {},
+                trioTabScaffold = { _, _, _, _, _ -> },
+
                 overview = if (withOverview) ({ }) else null
             )
         }
@@ -94,7 +94,7 @@ class AppNavGraphTest {
             AppRoute.Preferences.route,
             AppRoute.RunningMode.route,
             AppRoute.Configuration.route,
-            AppRoute.SetupWizard.route
+            AppRoute.TrioSettings.route
         )
     }
 

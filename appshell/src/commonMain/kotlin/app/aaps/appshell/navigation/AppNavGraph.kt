@@ -179,7 +179,6 @@ fun NavGraphBuilder.appNavGraph(
         topBarActions: @Composable RowScope.() -> Unit,
         content: @Composable (PaddingValues) -> Unit
     ) -> Unit,
-    findScreenDef: (key: String) -> PreferenceSubScreenDef?,
     /**
      * The overview, which is the app home screen.
      *

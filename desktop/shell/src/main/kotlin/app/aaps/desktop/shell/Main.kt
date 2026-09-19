@@ -1,6 +1,7 @@
 package app.aaps.desktop.shell
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -38,7 +39,6 @@ import java.util.Locale
 import app.aaps.appshell.navigation.AppRoute
 import app.aaps.appshell.navigation.appNavGraph
 import app.aaps.appshell.navigation.ElementNavigator
-import app.aaps.appshell.navigation.handleNotificationAction
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.logging.LTag
@@ -52,8 +52,6 @@ import app.aaps.implementation.maintenance.DesktopFolders
 import app.aaps.shared.clientbindings.ClientViewModelFactory
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
 import app.aaps.ui.compose.main.MainViewModel
-import app.aaps.ui.compose.main.OverviewScreen
-import app.aaps.ui.compose.maintenance.MaintenanceViewModel
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import app.aaps.ui.compose.profileManagement.viewmodels.ProfileEditorViewModel
@@ -117,7 +115,7 @@ fun main() {
             icon = appIcon
         ) {
             startup.fold(
-                onSuccess = { AapsDesktopApp(it, appIcon, appName) },
+                onSuccess = { AapsDesktopApp(it, appIcon) },
                 onFailure = { MaterialTheme { Failed(it) } }
             )
         }
@@ -233,7 +231,7 @@ private fun startPlugins(graph: DesktopAppGraph) {
  * in the log rather than doing nothing quietly.
  */
 @Composable
-private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter, appName: String) {
+private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter) {
     val logger = graph.logger
     val viewModelFactory = remember(graph) { ClientViewModelFactory(graph) }
 
@@ -337,10 +335,7 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter, appName: St
                 }
             )
 
-            // The overview is the start destination, the same as Android and iOS. Settings used to
-            // be, which left its back arrow inert - there was nothing behind it - and left every
-            // other screen unreachable, since they are all reached from the overview.
-            NavHost(navController = navController, startDestination = AppRoute.Main.route) {
+            NavHost(navController = navController, startDestination = AppRoute.Preferences.route) {
                 appNavGraph(
                     navController = navController,
                     insulinManagementViewModel = insulinManagement,
@@ -393,35 +388,9 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter, appName: St
                     },
                     onRefreshPermissions = { logger.debug(LTag.CORE, "No runtime permissions to refresh on desktop") },
                     onExecuteQuickWizard = { guid -> mainViewModel.executeQuickWizard(guid) },
-                    overview = {
-                        OverviewScreen(
-                            mainViewModel = mainViewModel,
-                            maintenanceViewModel = metroViewModel<MaintenanceViewModel>(),
-                            graphViewModel = graphs,
-                            chipsViewModel = chips,
-                            activePlugin = graph.activePlugin,
-                            config = graph.config,
-                            notificationManager = graph.notificationManager,
-                            bolusProgressData = graph.bolusProgressData,
-                            clientControlActionDispatcher = graph.clientControlActionDispatcher,
-                            commandQueue = graph.commandQueue,
-                            appName = appName,
-                            authorizationFailedMessage = "Authorization failed",
-                            onNavigate = { request -> navigator.handleNavigationRequest(request) },
-                            onNotificationActionClick = { n -> navigator.handleNotificationAction(n.id) },
-                            onImportSettingsNavigate = { source -> navController.navigate(AppRoute.ImportSettings.createRoute(source.name)) },
-                            onDirectoryClick = { logger.debug(LTag.CORE, "Desktop reads its own folder") },
-                            // authBrowser, not urlOpener: the sign in ends at a port this app is
-                            // listening on, and DesktopAuthBrowser has the fallback launcher an
-                            // ordinary link opener does not. See AuthBrowser.
-                            onLaunchBrowser = { url -> graph.authBrowser.show(url) },
-                            onBringToForeground = { logger.debug(LTag.CORE, "Desktop window is already in front") },
-                            onRecreateActivity = { logger.notWiredYet("window recreate") },
-                            onAuthorizationFailed = { logger.error(LTag.CORE, "Authorization failed") },
-                            autoShowNotificationSheet = false,
-                            onAutoShowConsumed = {}
-                        )
-                    }
+                    onOpenHealthConnect = { logger.debug(LTag.CORE, "Health Connect is not available on desktop") },
+                    onNavigateToTrioTab = {},
+                    trioTabScaffold = { _, _, _, _, content -> content(PaddingValues()) }
                 )
             }
         }

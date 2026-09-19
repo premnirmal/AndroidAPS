@@ -90,9 +90,7 @@ import app.aaps.core.ui.compose.FallbackViewModelFactory
 import app.aaps.core.ui.compose.MetroViewModelFactoryOwner
 import app.aaps.core.ui.compose.dialogs.OkDialog
 import app.aaps.core.ui.compose.navigation.NavigationRequest
-import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
 import app.aaps.core.ui.locale.LocaleHelper
-import app.aaps.core.ui.search.SearchableItem
 import app.aaps.implementation.plugin.PluginPermissionsImpl
 import app.aaps.implementation.protection.BiometricCheck
 import app.aaps.plugins.automation.AutomationRuntime
@@ -603,44 +601,9 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                         content = content
                     )
                 },
-                findScreenDef = { key -> findScreenDef(key) },
             )
         }
 
-    }
-
-    private val pluginScreenDefsCache: List<PreferenceSubScreenDef> by lazy {
-        activePlugin.getPluginsList().mapNotNull { it.getPreferenceScreenContent() as? PreferenceSubScreenDef }
-    }
-
-    private fun findScreenDef(key: String): PreferenceSubScreenDef? {
-        builtInSearchables.getSearchableItems().forEach { item ->
-            if (item is SearchableItem.Category) {
-                if (item.screenDef.key == key) return item.screenDef
-                val nested = findNestedScreen(item.screenDef, key)
-                if (nested != null) return nested
-            }
-        }
-        for (content in pluginScreenDefsCache) {
-            if (content.key == key) return content
-            val nested = findNestedScreen(content, key)
-            if (nested != null) return nested
-        }
-        return null
-    }
-
-    private fun findNestedScreen(
-        screen: PreferenceSubScreenDef,
-        key: String
-    ): PreferenceSubScreenDef? {
-        for (item in screen.items) {
-            if (item is PreferenceSubScreenDef) {
-                if (item.key == key) return item
-                val nested = findNestedScreen(item, key)
-                if (nested != null) return nested
-            }
-        }
-        return null
     }
 
     private var isProtectionCheckActive = false

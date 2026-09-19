@@ -1,6 +1,7 @@
 package app.aaps.ios.shell.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -26,11 +27,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import app.aaps.appshell.AapsAppRoot
 import app.aaps.appshell.navigation.appNavGraph
-import app.aaps.ui.compose.maintenance.MaintenanceViewModel
 import app.aaps.ui.compose.main.MainViewModel
-import app.aaps.ui.compose.main.OverviewScreen
 import app.aaps.appshell.navigation.ElementNavigator
-import app.aaps.appshell.navigation.handleNotificationAction
 import app.aaps.appshell.navigation.AppRoute
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
@@ -133,7 +131,6 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
     // From the bundle, like the icon and for the same reason: one framework serves both AAPSClient
     // and AAPSClient2, so each target's own `CFBundleDisplayName` is the only thing that can tell
     // them apart. This was the literal "AAPS" before - the name of the *master*, on a follower.
-    val appName = graph.textResolver.gs(graph.config.appName)
     val appIcon = loadAppIcon()
     if (appIcon == null) logger.error(LTag.CORE, "The app bundle gave no icon; showing the plain AAPS mark")
     logger.debug(LTag.CORE, "Starting the AAPS Compose root on iOS")
@@ -302,10 +299,7 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                     }
                 )
 
-                // The overview is the start destination, the same as Android and desktop. Settings
-                // used to be, which left its back arrow inert - there was nothing behind it - and
-                // left every other screen unreachable, since they are all reached from the overview.
-                NavHost(navController = navController, startDestination = AppRoute.Main.route) {
+                NavHost(navController = navController, startDestination = AppRoute.Preferences.route) {
                     appNavGraph(
                         navController = navController,
                         insulinManagementViewModel = insulinManagement,
@@ -355,54 +349,9 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                         },
                         onRefreshPermissions = { reportNotAvailable("permission refresh") },
                         onExecuteQuickWizard = { guid -> reportNotReady("quick wizard $guid") },
-                        overview = {
-                            OverviewScreen(
-                                mainViewModel = mainViewModel,
-                                maintenanceViewModel = metroViewModel<MaintenanceViewModel>(),
-                                graphViewModel = graphs,
-                                chipsViewModel = chips,
-                                activePlugin = graph.activePlugin,
-                                config = graph.config,
-                                notificationManager = graph.notificationManager,
-                                bolusProgressData = graph.bolusProgressData,
-                                clientControlActionDispatcher = graph.clientControlActionDispatcher,
-                                commandQueue = graph.commandQueue,
-                                appName = appName,
-                                authorizationFailedMessage = "Authorization failed",
-                                onNavigate = { request -> navigator.handleNavigationRequest(request) },
-                                onNotificationActionClick = { n -> navigator.handleNotificationAction(n.id) },
-                                // The destination is already in the shared graph and the view model is
-                                // already handed to it above, so this is the same call the other two
-                                // shells make. It was a placeholder only while iOS had no importer.
-                                onImportSettingsNavigate = { source -> navController.navigate(AppRoute.ImportSettings.createRoute(source.name)) },
-                                // Needs a UIDocumentPicker, which nothing on iOS has yet.
-                                onDirectoryClick = { reportNotReady("directory picker") },
-                                // The Google sign in, and the only thing that reaches this callback.
-                                // Shown *over* AAPS rather than handed to Safari: switching to Safari
-                                // lets iOS suspend this app within seconds, and the loopback listener
-                                // waiting for Google's redirect goes with it - so the sign in would
-                                // never complete. `urlOpener` is right for ordinary links and wrong
-                                // for this one. See AuthBrowser.
-                                onLaunchBrowser = { url -> graph.authBrowser.show(url) },
-                                // Android says "bring the app back" because the browser took over the
-                                // screen; on iOS the browser is a sheet this app presented, so the
-                                // same intent is to close it.
-                                //
-                                // Only ever after the wait has ended, never while it is running. This
-                                // event is also emitted when a sign in fails, and the first version
-                                // dismissed on that too - which closed the Google page while the user
-                                // was still typing into it, because the wait had timed out at a
-                                // minute. The timeout is now five minutes; this stays defensive
-                                // because "bring the app forward" is harmless on Android and
-                                // destructive here.
-                                onBringToForeground = { graph.authBrowser.dismiss() },
-                                // No activity to recreate. A Compose scene is not restarted this way.
-                                onRecreateActivity = { logger.debug(LTag.CORE, "Nothing to recreate on iOS after a database reset") },
-                                onAuthorizationFailed = { logger.error(LTag.CORE, "Authorization failed") },
-                                autoShowNotificationSheet = false,
-                                onAutoShowConsumed = {}
-                            )
-                        }
+                        onOpenHealthConnect = { reportNotAvailable("Health Connect") },
+                        onNavigateToTrioTab = {},
+                        trioTabScaffold = { _, _, _, _, content -> content(PaddingValues()) }
                     )
                 }
             }
