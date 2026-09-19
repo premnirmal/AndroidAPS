@@ -23,7 +23,6 @@ enum class TempTargetChipState {
 
 @Immutable
 data class MainUiState(
-    val isDrawerOpen: Boolean = false,
     val isSimpleMode: Boolean = true,
     val isProfileLoaded: Boolean = false,
     val showAboutDialog: Boolean = false,

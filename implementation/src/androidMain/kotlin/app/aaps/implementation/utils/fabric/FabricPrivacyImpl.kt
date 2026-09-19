@@ -1,13 +1,10 @@
 package app.aaps.implementation.utils.fabric
 
-import android.content.SharedPreferences
 import android.os.Bundle
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
-import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.rx.weardata.EventData
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
-import app.aaps.core.keys.BooleanKey
 import com.google.firebase.Firebase
 import com.google.firebase.analytics.FirebaseAnalytics
 import com.google.firebase.analytics.analytics
@@ -29,9 +26,7 @@ import dev.zacsweers.metro.SingleIn
 @SingleIn(AppScope::class)
 @Inject
 class FabricPrivacyImpl(
-    private val aapsLogger: AAPSLogger,
-    private val sharedPreferences: SharedPreferences, // Injecting Preferences is causing circular dependencies
-    private val config: Config
+    private val aapsLogger: AAPSLogger
 ) : FabricPrivacy {
 
     // Resolved on first use. `Firebase.analytics` needs an initialized FirebaseApp, and this class is
@@ -49,10 +44,6 @@ class FabricPrivacyImpl(
      * constructed is not.
      */
     fun start() {
-        if (config.TRIO) return
-        val enabled = !java.lang.Boolean.getBoolean("disableFirebase") && fabricEnabled()
-        firebaseAnalytics.setAnalyticsCollectionEnabled(enabled)
-        FirebaseCrashlytics.getInstance().isCrashlyticsCollectionEnabled = enabled
     }
 
     override fun setUserProperty(key: String, value: String) {
@@ -123,9 +114,7 @@ class FabricPrivacyImpl(
         FirebaseCrashlytics.getInstance().recordException(throwable)
     }
 
-    override fun fabricEnabled(): Boolean {
-        return !config.TRIO && sharedPreferences.getBoolean(BooleanKey.MaintenanceEnableFabric.key, true)
-    }
+    override fun fabricEnabled() = false
 
     override fun logWearException(wearException: EventData.WearException) {
         aapsLogger.debug(LTag.WEAR, "logWearException")

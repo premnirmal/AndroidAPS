@@ -251,7 +251,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     private val disposable = CompositeDisposable()
 
     override fun onMembersInjected() {
-        setTheme(if (config.TRIO) CoreUiR.style.AppTheme_Trio_NoActionBar else CoreUiR.style.AppTheme_NoActionBar)
+        setTheme(CoreUiR.style.AppTheme_Trio_NoActionBar)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -362,17 +362,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             }
             navController.addOnDestinationChangedListener(listener)
             onDispose { navController.removeOnDestinationChangedListener(listener) }
-        }
-
-        // Auto-launch setup wizard on first run
-        LaunchedEffect(Unit) {
-            if (!config.TRIO && !preferences.get(BooleanNonKey.GeneralSetupWizardProcessed) && !isRunningRealPumpTest()) {
-                protectionCheck.requestProtection(ProtectionCheck.Protection.PREFERENCES) { result ->
-                    if (result == ProtectionResult.GRANTED) {
-                        navController.navigate(AppRoute.SetupWizard.route)
-                    }
-                }
-            }
         }
 
         // Permissions bottom sheet
@@ -497,15 +486,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     pumpPlugin.hasComposeContent()
                 val pumpSetupPlugin = if (showPumpSetup) pumpPlugin else null
 
-                // Objectives progress badge (visible while objectives not all completed, in APS mode)
-                val objectivesPlugin = objectives as PluginBase
-                val objectivesTotal = objectives.size
-                val objectivesDone = objectives.accomplishedCount
-                val showObjectivesSetup = config.APS && !config.TRIO && objectivesTotal > 0 && objectivesDone < objectivesTotal &&
-                    objectivesPlugin.isEnabled() && objectivesPlugin.hasComposeContent()
-                val objectivesSetupPlugin = if (showObjectivesSetup) objectivesPlugin else null
-                val objectivesProgressText = if (showObjectivesSetup) "$objectivesDone/$objectivesTotal" else null
-
                 // BG source shortcut: shown when BG quality check reports FLAT or DOUBLED
                 val bgQualityState by bgQualityCheck.stateFlow.collectAsStateWithLifecycle()
                 val bgSourcePlugin = activePlugin.activeBgSource as PluginBase
@@ -553,36 +533,10 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     aboutDialogData = if (state.showAboutDialog) {
                         mainViewModel.buildAboutDialogData(getString(R.string.app_name))
                     } else null,
-                    manageSheetState = manageSheetState,
-                    manageViewModel = manageViewModel,
                     maintenanceViewModel = maintenanceViewModel,
-                    statusViewModel = statusViewModel,
-                    treatmentViewModel = treatmentViewModel,
-                    scenesViewModel = scenesViewModel,
-                    loopActionViewModel = loopActionViewModel,
-                    // Search
-                    searchUiState = searchState,
-                    onSearchQueryChange = { searchViewModel.onQueryChanged(it) },
-                    onSearchClear = { searchViewModel.clearQuery() },
-                    onSearchActiveChange = { active ->
-                        if (active) searchViewModel.onSearchModeActivated()
-                        else searchViewModel.onSearchModeDeactivated()
-                    },
-                    onSearchResultClick = { entry ->
-                        handleSearchResultClick(entry, navController)
-                    },
-                    onSearchPluginToggle = { plugin -> searchViewModel.togglePlugin(plugin) },
-                    onConfirmSearchPluginSwitch = { searchViewModel.confirmPluginSwitch() },
-                    onDismissSearchPluginSwitch = { searchViewModel.dismissPluginSwitch() },
-                    onConfirmSearchHardwarePump = { searchViewModel.confirmHardwarePump() },
-                    onDismissSearchHardwarePump = { searchViewModel.dismissHardwarePump() },
-                    onMenuClick = { mainViewModel.openDrawer() },
                     onNavigate = { request -> handleNavigationRequest(request, navController) },
                     onTrioTabSelected = { tab -> navigateToTrioTab(tab, navController) },
                     trioSelectedTab = trioTabForRoute(currentRoute),
-                    trioTopBar = { title, modifier ->
-                        trioUi.topBar(title = title, modifier = modifier)
-                    },
                     trioBottomBar = { selectedTab, carbsRequired, onTabSelected, onAddClick, modifier ->
                         trioUi.bottomBar(
                             selectedTab = selectedTab,
@@ -601,7 +555,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                         )
                     },
                     trioOverview = trioUi::overview,
-                    onDrawerClosed = { mainViewModel.closeDrawer() },
                     onAboutDialogDismiss = { mainViewModel.setShowAboutDialog(false) },
                     onOpenBatteryHelp = if (mainViewModel.showBatteryHelp) {
                         { mainViewModel.openBatteryHelp() }
@@ -651,29 +604,9 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     autoShowNotificationSheet = _autoShowNotifications.value,
                     onAutoShowConsumed = { _autoShowNotifications.value = false },
                     pumpSetupPlugin = pumpSetupPlugin,
-                    bgSetupPlugin = bgSetupPlugin,
-                    bgQualityBadgeIcon = bgQualityBadgeIcon,
-                    bgQualityBadgeTint = bgQualityBadgeTint,
-                    bgQualityBadgeDescription = bgQualityBadgeDescription,
-                    objectivesSetupPlugin = objectivesSetupPlugin,
-                    objectivesProgressText = objectivesProgressText,
-                    permissionsMissing = permState.hasAnyMissing,
-                    onPermissionsClick = {
-                        permissionsViewModel.showSheet()
-                    },
-                    // Toolbar
-                    quickLaunchItems = quickLaunchItems,
-                    onQuickLaunchActionClick = { action -> handleQuickLaunchAction(action, navController) },
-                    calcProgress = calcProgress,
                     graphViewModel = graphViewModel,
                     chipsViewModel = chipsViewModel,
-                    statusLightsDef = builtInSearchables.statusLights,
-                    treatmentButtonsDef = builtInSearchables.treatmentButtons,
-                    // Pump activity
                     bolusStateFlow = bolusProgressData.state,
-                    pumpStatusText = pumpStatusBanner?.text ?: "",
-                    queueStatusText = pumpQueueStatus,
-                    isPumpCommunicating = pumpStatusBanner != null,
                     onStopBolus = {
                         if (config.AAPSCLIENT) {
                             clientControlActionDispatcher.stopBolus()
@@ -739,7 +672,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                         maintenanceViewModel.emitError(rh.gs(app.aaps.ui.R.string.health_connect_not_available))
                     }
                 },
-                isTrio = config.TRIO,
                 onNavigateToTrioTab = { tab -> navigateToTrioTab(tab, navController) },
                 trioTabScaffold = { selectedTab, title, showTopBar, topBarActions, content ->
                     trioUi.tabScaffold(
@@ -759,30 +691,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             )
         }
 
-        // Modal bolus progress overlay — shown above everything for standard bolus
-        bolusState?.let { state ->
-            if (!state.isSMB && !config.TRIO) {
-                val pumpStatus = pumpStatusBanner?.text ?: ""
-                val queueStatus = pumpQueueStatus
-                PumpActivityDialog(
-                    bolusState = state,
-                    pumpStatus = pumpStatus,
-                    queueStatus = queueStatus,
-                    isModal = true,
-                    onStop = {
-                        if (config.AAPSCLIENT) {
-                            clientControlActionDispatcher.stopBolus()
-                            bolusProgressData.stopPressed()
-                        } else {
-                            commandQueue.cancelAllBoluses(null)
-                        }
-                    },
-                    // Only reachable via the stalled-state Dismiss button (client/follower): hides the
-                    // local mirror dialog. Delivery belongs to the master — this does not touch the pump.
-                    onDismiss = { bolusProgressData.clear() }
-                )
-            }
-        }
     }
 
     private val pluginScreenDefsCache: List<PreferenceSubScreenDef> by lazy {
@@ -866,9 +774,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         lifecycleScope.launch {
             preferences.observe(StringKey.GeneralLanguage).drop(1).collect { recreate() }
         }
-        lifecycleScope.launch {
-            preferences.observe(BooleanKey.GeneralTrioMode).drop(1).collect { recreate() }
-        }
         // The same rebuild, asked for by code that cannot reach this activity - an import applying
         // its settings, for one. Android answers it by recreating, because that is the only thing
         // that re-runs `attachBaseContext` and so the only thing that can change the locale
@@ -929,7 +834,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     }
 
     private fun navigateToTrioTab(tab: TrioNavTab, navController: NavController) {
-        if (!config.TRIO) return
         val route = when (tab) {
             TrioNavTab.Overview   -> AppRoute.Main.route
             TrioNavTab.Adjustments -> AppRoute.TrioTreatments.route

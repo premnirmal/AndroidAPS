@@ -212,8 +212,6 @@ class MainViewModel(
 
     val versionName: String get() = config.VERSION_NAME
     val appTitle: String get() = rh.gs(config.appName)
-    val isTrio: Boolean get() = config.TRIO
-    val showAdvancedMenuItems: Boolean get() = !config.TRIO
     val calcProgressFlow: StateFlow<Int> = overviewDataCache.calcProgressFlow
     private val _timeInRangeTodayPercent = MutableStateFlow<Int?>(null)
     val timeInRangeTodayPercent: StateFlow<Int?> = _timeInRangeTodayPercent.asStateFlow()
@@ -280,7 +278,6 @@ class MainViewModel(
     /** Derived UI state. Starts immediately so the first overview frame has current values. */
     val uiState: StateFlow<MainUiState> = combine(_eventState, chipStateFlow) { ev, chip ->
         MainUiState(
-            isDrawerOpen = ev.isDrawerOpen,
             isSimpleMode = ev.isSimpleMode,
             showAboutDialog = ev.showAboutDialog,
             showMaintenanceSheet = ev.showMaintenanceSheet,
@@ -780,15 +777,6 @@ class MainViewModel(
         TempTargetState.ADJUSTED -> TempTargetChipState.Adjusted
     }
 
-    // Drawer state
-    fun openDrawer() {
-        _eventState.update { it.copy(isDrawerOpen = true) }
-    }
-
-    fun closeDrawer() {
-        _eventState.update { it.copy(isDrawerOpen = false) }
-    }
-
     // About dialog state
     fun setShowAboutDialog(show: Boolean) {
         _eventState.update { it.copy(showAboutDialog = show) }
@@ -1095,7 +1083,6 @@ class MainViewModel(
  * observers. Kept in a MutableStateFlow because these fields are not derived from other flows.
  */
 private data class EventState(
-    val isDrawerOpen: Boolean = false,
     val isSimpleMode: Boolean = true,
     val smbEnabled: Boolean = false,
     val showAboutDialog: Boolean = false,

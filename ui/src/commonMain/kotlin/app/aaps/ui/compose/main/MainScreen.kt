@@ -86,30 +86,10 @@ fun MainScreen(
     mainViewModel: MainViewModel,
     uiState: MainUiState,
     aboutDialogData: AboutDialogData?,
-    manageSheetState: ManageSheetState,
-    manageViewModel: ManageViewModel,
     maintenanceViewModel: MaintenanceViewModel,
-    statusViewModel: StatusViewModel,
-    treatmentViewModel: TreatmentViewModel,
-    scenesViewModel: ScenesViewModel,
-    loopActionViewModel: app.aaps.ui.compose.loopSheet.LoopActionViewModel,
-    // Search
-    searchUiState: SearchUiState,
-    onSearchQueryChange: (String) -> Unit,
-    onSearchClear: () -> Unit,
-    onSearchActiveChange: (Boolean) -> Unit,
-    onSearchResultClick: (SearchIndexEntry) -> Unit,
-    onSearchPluginToggle: (PluginBase) -> Unit,
-    onConfirmSearchPluginSwitch: () -> Unit,
-    onDismissSearchPluginSwitch: () -> Unit,
-    onConfirmSearchHardwarePump: () -> Unit,
-    onDismissSearchHardwarePump: () -> Unit,
-    // Menu/navigation
-    onMenuClick: () -> Unit,
     onNavigate: (NavigationRequest) -> Unit,
     onTrioTabSelected: (TrioNavTab) -> Unit = {},
     trioSelectedTab: TrioNavTab = TrioNavTab.Overview,
-    trioTopBar: @Composable (title: String, modifier: Modifier) -> Unit = { _, _ -> },
     trioBottomBar: @Composable (
         selectedTab: TrioNavTab,
         carbsRequired: Int,
@@ -124,7 +104,6 @@ fun MainScreen(
         onWizardClick: () -> Unit
     ) -> Unit = { _, _, _, _ -> },
     trioOverview: @Composable (TrioOverviewModel) -> Unit = {},
-    onDrawerClosed: () -> Unit,
     onAboutDialogDismiss: () -> Unit,
     /** Null hides the button - only Android has the problem it links to. */
     onOpenBatteryHelp: (() -> Unit)?,
@@ -140,77 +119,28 @@ fun MainScreen(
     onNotificationActionClick: (AapsNotification) -> Unit,
     autoShowNotificationSheet: Boolean,
     onAutoShowConsumed: () -> Unit,
-    // Pump setup
     pumpSetupPlugin: PluginBase? = null,
-    // BG source shortcut
-    bgSetupPlugin: PluginBase? = null,
-    bgQualityBadgeIcon: ImageVector? = null,
-    bgQualityBadgeTint: Color = Color.Unspecified,
-    bgQualityBadgeDescription: String? = null,
-    // Objectives progress
-    objectivesSetupPlugin: PluginBase? = null,
-    objectivesProgressText: String? = null,
-    // Permissions
-    permissionsMissing: Boolean = false,
-    onPermissionsClick: () -> Unit = {},
-    // Toolbar
-    quickLaunchItems: List<ResolvedQuickLaunchItem> = emptyList(),
-    onQuickLaunchActionClick: (QuickLaunchAction) -> Unit = {},
-    calcProgress: Int,
     graphViewModel: GraphViewModel,
     chipsViewModel: ChipsViewModel,
-    statusLightsDef: PreferenceSubScreenDef,
-    treatmentButtonsDef: PreferenceSubScreenDef,
-    // Pump activity
     bolusStateFlow: StateFlow<BolusProgressState?>,
-    pumpStatusText: String = "",
-    queueStatusText: AnnotatedString? = null,
-    isPumpCommunicating: Boolean = false,
     onStopBolus: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     LocalDateUtil.current
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    var showTreatmentSheet by remember { mutableStateOf(false) }
-    var showAutomationSheet by remember { mutableStateOf(false) }
-    var showLoopActionSheet by remember { mutableStateOf(false) }
     var showTrioAddSheet by rememberSaveable { mutableStateOf(false) }
-    val automationState by scenesViewModel.uiState.collectAsStateWithLifecycle()
     val cobUiState by chipsViewModel.cobUiState.collectAsStateWithLifecycle()
     val snackbarHostState = LocalSnackbarHostState.current
-    val isTrio = mainViewModel.isTrio
 
     LaunchedEffect(Unit) {
         mainViewModel.refreshOverviewState()
     }
 
-    // Sync drawer state with ui state
-    LaunchedEffect(uiState.isDrawerOpen) {
-        if (uiState.isDrawerOpen) {
-            drawerState.open()
-        } else {
-            drawerState.close()
-        }
-    }
-
-    LaunchedEffect(drawerState.isClosed) {
-        if (drawerState.isClosed && uiState.isDrawerOpen) {
-            onDrawerClosed()
-        }
-    }
-
     val mainContent: @Composable () -> Unit = {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val density = LocalDensity.current
             val previewMode = maxHeight < PREVIEW_MODE_MIN_HEIGHT
             var chromeVisible by remember { mutableStateOf(false) }
             val showChrome = !previewMode || chromeVisible
             val interactionSource = remember { MutableInteractionSource() }
-
-            // Measure actual bar heights for content padding in non-preview mode
-            var topBarHeightPx by remember { mutableIntStateOf(0) }
-            var bottomBarHeightPx by remember { mutableIntStateOf(0) }
 
             // Auto-hide chrome after timeout, reset when leaving preview mode
             LaunchedEffect(chromeVisible, previewMode) {
@@ -232,41 +162,22 @@ fun MainScreen(
             // (returning zero height) if those Scaffold slots were populated.
             Scaffold(
                 bottomBar = {
-                    if (isTrio) {
-                        AnimatedVisibility(
-                            visible = showChrome,
-                            enter = slideInVertically { it },
-                            exit = slideOutVertically { it }
-                        ) {
-                            trioBottomBar(
-                                trioSelectedTab,
-                                cobUiState.carbsReq,
-                                { tab -> onTrioTabSelected(tab) },
-                                { showTrioAddSheet = true },
-                                Modifier
-                            )
-                        }
-                    }
-                }
-            ) { scaffoldPadding ->
-                val hasToolbar = quickLaunchItems.isNotEmpty()
-                val topScaffoldPadding = if (isTrio) 0.dp else scaffoldPadding.calculateTopPadding()
-                val bottomScaffoldPadding = if (isTrio) 0.dp else scaffoldPadding.calculateBottomPadding()
-
-                // Content padding: in preview mode use only system bars;
-                // in normal mode add measured bar heights
-                val contentPadding = when {
-                    isTrio     -> PaddingValues(bottom = scaffoldPadding.calculateBottomPadding())
-                    previewMode -> scaffoldPadding
-                    else        -> {
-                        val topBarHeight = with(density) { topBarHeightPx.toDp() }
-                        val bottomBarHeight = with(density) { bottomBarHeightPx.toDp() }
-                        PaddingValues(
-                            top = topScaffoldPadding + topBarHeight,
-                            bottom = bottomScaffoldPadding + bottomBarHeight
+                    AnimatedVisibility(
+                        visible = showChrome,
+                        enter = slideInVertically { it },
+                        exit = slideOutVertically { it }
+                    ) {
+                        trioBottomBar(
+                            trioSelectedTab,
+                            cobUiState.carbsReq,
+                            { tab -> onTrioTabSelected(tab) },
+                            { showTrioAddSheet = true },
+                            Modifier
                         )
                     }
                 }
+            ) { scaffoldPadding ->
+                val contentPadding = PaddingValues(bottom = scaffoldPadding.calculateBottomPadding())
 
                 val activeSceneState by mainViewModel.activeSceneState.collectAsStateWithLifecycle()
                 val sceneExpired by mainViewModel.sceneExpired.collectAsStateWithLifecycle()
@@ -297,14 +208,9 @@ fun MainScreen(
                         lastLoopAgeMillis = uiState.lastLoopAgeMillis,
                         tbrState = uiState.tbrState,
                         smbEnabled = uiState.smbEnabled,
-                        isSimpleMode = uiState.isSimpleMode,
-                        calcProgress = calcProgress,
                         calcProgressFlow = mainViewModel.calcProgressFlow,
                         graphViewModel = graphViewModel,
                         chipsViewModel = chipsViewModel,
-                        manageViewModel = manageViewModel,
-                        statusViewModel = statusViewModel,
-                        statusLightsDef = statusLightsDef,
                         onNavigate = onNavigate,
                         onTbrChipClick = mainViewModel::showTbrInfo,
                         onIobChipClick = chipsViewModel::showIobInfo,
@@ -321,14 +227,9 @@ fun MainScreen(
                         commandsAllowed = masterOrPairedClient,
                         formatDuration = mainViewModel::formatDuration,
                         paddingValues = contentPadding,
-                        fabBottomOffset = if (hasToolbar && showChrome) 56.dp else 0.dp,
                         bolusStateFlow = bolusStateFlow,
-                        pumpStatusText = pumpStatusText,
-                        queueStatusText = queueStatusText,
-                        isPumpCommunicating = isPumpCommunicating,
                         onStopBolus = onStopBolus,
                         timeInRangeTodayPercentFlow = mainViewModel.timeInRangeTodayPercent,
-                        isTrio = isTrio,
                         trioOverview = trioOverview,
                         pumpNeedsSetup = pumpSetupPlugin != null,
                         pumpEndTimeMillis = uiState.pumpEndTimeMillis,
@@ -338,67 +239,6 @@ fun MainScreen(
                         }
                     )
 
-                    // Search results overlay
-                    if (searchUiState.isSearchActive) {
-                        SearchResults(
-                            results = searchUiState.results,
-                            wikiResults = searchUiState.wikiResults,
-                            isSearching = searchUiState.isSearching,
-                            isSearchingWiki = searchUiState.isSearchingWiki,
-                            wikiOffline = searchUiState.wikiOffline,
-                            revision = searchUiState.revision,
-                            onResultClick = onSearchResultClick,
-                            onPluginToggle = onSearchPluginToggle,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(contentPadding)
-                        )
-                    }
-
-                    // Plugin enable/disable confirmations raised from search results (same dialogs as Config Builder)
-                    searchUiState.pluginSwitchConfirmation?.let { confirmation ->
-                        OkCancelDialog(
-                            title = stringResource(CoreUiStrings.configbuilder_switch_confirmation_title),
-                            message = stringResource(
-                                CoreUiStrings.configbuilder_switch_confirmation,
-                                confirmation.fromName,
-                                confirmation.toName
-                            ),
-                            onConfirm = onConfirmSearchPluginSwitch,
-                            onDismiss = onDismissSearchPluginSwitch
-                        )
-                    }
-                    searchUiState.hardwarePumpConfirmation?.let { confirmation ->
-                        OkCancelDialog(
-                            title = stringResource(CoreUiStrings.confirmation),
-                            message = confirmation.message,
-                            onConfirm = onConfirmSearchHardwarePump,
-                            onDismiss = onDismissSearchHardwarePump
-                        )
-                    }
-
-                    // Version overlay
-                    if (!isTrio) {
-                        VersionOverlay(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(contentPadding)
-                        )
-                    }
-
-                    // Trio draws its overview background behind the status bar. Other layouts keep
-                    // an opaque surface here so graph and floating toolbar content cannot reduce
-                    // system-icon contrast.
-                    if (!isTrio) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .fillMaxWidth()
-                                .windowInsetsTopHeight(WindowInsets.statusBars)
-                                .background(MaterialTheme.colorScheme.surface)
-                        )
-                    }
-
                     // Navigation bar protection scrim
                     Box(
                         modifier = Modifier
@@ -407,101 +247,6 @@ fun MainScreen(
                             .windowInsetsBottomHeight(WindowInsets.navigationBars)
                             .background(MaterialTheme.colorScheme.surface)
                     )
-
-                    // Top bar overlay
-                    AnimatedVisibility(
-                        visible = showChrome && !isTrio,
-                        enter = slideInVertically { -it },
-                        exit = slideOutVertically { -it },
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = topScaffoldPadding)
-                    ) {
-                        MainTopBar(
-                            searchUiState = searchUiState,
-                            onMenuClick = {
-                                scope.launch {
-                                    drawerState.open()
-                                    onMenuClick()
-                                }
-                            },
-                            onPreferencesClick = { onNavigate(NavigationRequest.Element(ElementType.SETTINGS)) },
-                            onSearchQueryChange = onSearchQueryChange,
-                            onSearchClear = onSearchClear,
-                            onSearchActiveChange = onSearchActiveChange,
-                            isSimpleMode = uiState.isSimpleMode,
-                            // Guard against transient 0 heights during AnimatedVisibility exit:
-                            // the resulting contentPadding invalidation can schedule a remeasure
-                            // on a node that's losing its owner — crashes in dispatchDraw.
-                            modifier = Modifier.onSizeChanged {
-                                if (it.height > 0 && it.height != topBarHeightPx) topBarHeightPx = it.height
-                            }
-                        )
-                    }
-
-                    // Bottom bar overlay
-                    AnimatedVisibility(
-                        visible = showChrome && !isTrio,
-                        enter = slideInVertically { it },
-                        exit = slideOutVertically { it },
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = bottomScaffoldPadding)
-                    ) {
-                        val loopActionState = loopActionViewModel.uiState.collectAsStateWithLifecycle().value
-                        MainNavigationBar(
-                            onManageClick = { manageSheetState.show() },
-                            onTreatmentClick = {
-                                treatmentViewModel.refreshState()
-                                showTreatmentSheet = true
-                            },
-                            masterOrPairedClient = masterOrPairedClient,
-                            quickWizardCount = uiState.quickWizardItems.size,
-                            onAutomationClick = {
-                                scenesViewModel.refreshState()
-                                showAutomationSheet = true
-                            },
-                            // Total drives nav-button visibility (button stays visible whenever
-                            // scenes/automation exist, even if currently un-activatable).
-                            // Count drives the badge — only items the user can act on right now.
-                            automationTotal = automationState.items.size + automationState.sceneItems.size,
-                            automationCount = automationState.items.count { it.activationReason == null } +
-                                automationState.sceneItems.count { it.activationReason == null },
-                            pumpSetupPlugin = pumpSetupPlugin,
-                            bgSetupPlugin = bgSetupPlugin,
-                            bgQualityBadgeIcon = bgQualityBadgeIcon,
-                            bgQualityBadgeTint = bgQualityBadgeTint,
-                            bgQualityBadgeDescription = bgQualityBadgeDescription,
-                            objectivesSetupPlugin = objectivesSetupPlugin,
-                            objectivesProgressText = objectivesProgressText,
-                            onNavigate = onNavigate,
-                            permissionsMissing = permissionsMissing,
-                            onPermissionsClick = onPermissionsClick,
-                            loopActionAvailable = loopActionState.actionAvailable,
-                            onLoopActionClick = { showLoopActionSheet = true },
-                            modifier = Modifier.onSizeChanged {
-                                if (it.height > 0 && it.height != bottomBarHeightPx) bottomBarHeightPx = it.height
-                            }
-                        )
-                    }
-
-                    // Quick launch toolbar overlay
-                    AnimatedVisibility(
-                        visible = hasToolbar && showChrome && !isTrio,
-                        enter = slideInVertically { it },
-                        exit = slideOutVertically { it },
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(
-                                bottom = bottomScaffoldPadding +
-                                    with(density) { bottomBarHeightPx.toDp() } + 8.dp
-                            )
-                    ) {
-                        QuickLaunchToolbar(
-                            items = quickLaunchItems,
-                            onActionClick = onQuickLaunchActionClick,
-                        )
-                    }
 
                     // Tap overlay to restore chrome in preview mode (only when hidden)
                     if (previewMode && !chromeVisible) {
@@ -519,49 +264,7 @@ fun MainScreen(
         }
     }
 
-    if (isTrio) {
-        Box(modifier = modifier.fillMaxSize()) { mainContent() }
-    } else {
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            drawerContent = {
-                MainDrawer(
-                    appTitle = mainViewModel.appTitle,
-                    versionName = mainViewModel.versionName,
-                    onNavigate = { request ->
-                        scope.launch { drawerState.close() }
-                        onDrawerClosed()
-                        onNavigate(request)
-                    },
-                    isTreatmentsEnabled = uiState.isProfileLoaded,
-                    showAdvancedMenuItems = mainViewModel.showAdvancedMenuItems
-                )
-            },
-            gesturesEnabled = true,
-            modifier = modifier
-        ) {
-            mainContent()
-        }
-    }
-
-    // Treatment bottom sheet
-    if (showTreatmentSheet) {
-        val treatmentState by treatmentViewModel.uiState.collectAsStateWithLifecycle()
-        TreatmentBottomSheet(
-            onDismiss = { showTreatmentSheet = false },
-            showCgm = treatmentState.showCgm,
-            showCalibration = treatmentState.showCalibration,
-            showTreatment = treatmentState.showTreatment,
-            showInsulin = treatmentState.showInsulin,
-            showCarbs = treatmentState.showCarbs,
-            showCalculator = treatmentState.showCalculator,
-            isDexcomSource = treatmentState.isDexcomSource,
-            showSettingsIcon = treatmentState.showSettingsIcon,
-            quickWizardItems = treatmentState.quickWizardItems,
-            onNavigate = onNavigate,
-            treatmentButtonsDef = treatmentButtonsDef,
-        )
-    }
+    Box(modifier = modifier.fillMaxSize()) { mainContent() }
 
     if (showTrioAddSheet) {
         trioAddActionsSheet(
@@ -578,27 +281,6 @@ fun MainScreen(
                 showTrioAddSheet = false
                 onNavigate(NavigationRequest.Element(ElementType.BOLUS_WIZARD))
             }
-        )
-    }
-
-    // Automation bottom sheet
-    if (showAutomationSheet) {
-        ScenesBottomSheet(
-            onDismiss = { showAutomationSheet = false },
-            automationItems = automationState.items,
-            onItemClick = { item -> mainViewModel.requestAutomationConfirmation(item.eventId) },
-            sceneItems = automationState.sceneItems,
-            onSceneClick = { sceneId -> mainViewModel.requestSceneConfirmation(sceneId) }
-        )
-    }
-
-    // Loop accept action bottom sheet
-    if (showLoopActionSheet) {
-        val loopState by loopActionViewModel.uiState.collectAsStateWithLifecycle()
-        app.aaps.ui.compose.loopSheet.LoopActionBottomSheet(
-            state = loopState,
-            onPerform = { mainViewModel.performLoopAccept() },
-            onDismiss = { showLoopActionSheet = false }
         )
     }
 

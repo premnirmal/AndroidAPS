@@ -520,15 +520,11 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
         // These three migrate bidirectionally-synced keys. Skip on a client: it adopts the value from
         // the master via sync, and a local put here would now trigger a client→master round-trip (modal)
         // at startup. The master migrates and publishes; the client follows.
-        if (config.TRIO) {
-            if (preferences.getIfExists(BooleanNonKey.GeneralSetupWizardProcessed) == null) {
-                preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
-            }
-            if (preferences.getIfExists(BooleanKey.GeneralSimpleMode) == null) {
-                preferences.put(BooleanKey.GeneralSimpleMode, true)
-            }
-        } else if (!config.AAPSCLIENT && preferences.getIfExists(BooleanKey.GeneralSimpleMode) == null) {
-            preferences.put(BooleanKey.GeneralSimpleMode, !preferences.get(BooleanNonKey.GeneralSetupWizardProcessed))
+        if (preferences.getIfExists(BooleanNonKey.GeneralSetupWizardProcessed) == null) {
+            preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
+        }
+        if (preferences.getIfExists(BooleanKey.GeneralSimpleMode) == null) {
+            preferences.put(BooleanKey.GeneralSimpleMode, true)
         }
         // Migrate from OpenAPSSMBDynamicISFPlugin
         if (sp.getBoolean("ConfigBuilder_APS_OpenAPSSMBDynamicISFPlugin_Enabled", false)) {

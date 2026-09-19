@@ -178,30 +178,8 @@ fun OverviewScreen(
         mainViewModel = mainViewModel,
         uiState = state,
         aboutDialogData = if (state.showAboutDialog) mainViewModel.buildAboutDialogData(appName) else null,
-        manageSheetState = manageSheetState,
-        manageViewModel = manageViewModel,
         maintenanceViewModel = maintenanceViewModel,
-        statusViewModel = statusViewModel,
-        treatmentViewModel = treatmentViewModel,
-        scenesViewModel = scenesViewModel,
-        loopActionViewModel = loopActionViewModel,
-        // Search
-        searchUiState = searchState,
-        onSearchQueryChange = { searchViewModel.onQueryChanged(it) },
-        onSearchClear = { searchViewModel.clearQuery() },
-        onSearchActiveChange = { active ->
-            if (active) searchViewModel.onSearchModeActivated()
-            else searchViewModel.onSearchModeDeactivated()
-        },
-        onSearchResultClick = onSearchResultClick,
-        onSearchPluginToggle = { plugin -> searchViewModel.togglePlugin(plugin) },
-        onConfirmSearchPluginSwitch = { searchViewModel.confirmPluginSwitch() },
-        onDismissSearchPluginSwitch = { searchViewModel.dismissPluginSwitch() },
-        onConfirmSearchHardwarePump = { searchViewModel.confirmHardwarePump() },
-        onDismissSearchHardwarePump = { searchViewModel.dismissHardwarePump() },
-        onMenuClick = { mainViewModel.openDrawer() },
         onNavigate = onNavigate,
-        onDrawerClosed = { mainViewModel.closeDrawer() },
         onAboutDialogDismiss = { mainViewModel.setShowAboutDialog(false) },
         onOpenBatteryHelp = if (mainViewModel.showBatteryHelp) ({ mainViewModel.openBatteryHelp() }) else null,
         onMaintenanceSheetDismiss = { mainViewModel.setShowMaintenanceSheet(false) },
@@ -217,27 +195,9 @@ fun OverviewScreen(
         autoShowNotificationSheet = autoShowNotificationSheet,
         onAutoShowConsumed = onAutoShowConsumed,
         pumpSetupPlugin = pumpSetupPlugin,
-        bgSetupPlugin = bgSetupPlugin,
-        bgQualityBadgeIcon = bgQualityBadgeIcon,
-        bgQualityBadgeTint = bgQualityBadgeTint,
-        bgQualityBadgeDescription = bgQualityBadgeDescription,
-        objectivesSetupPlugin = objectivesSetupPlugin,
-        objectivesProgressText = objectivesProgressText,
-        permissionsMissing = permState.hasAnyMissing,
-        onPermissionsClick = { permissionsViewModel.showSheet() },
-        // Toolbar
-        quickLaunchItems = quickLaunchItems,
-        onQuickLaunchActionClick = onQuickLaunchActionClick,
-        calcProgress = calcProgress,
         graphViewModel = graphViewModel,
         chipsViewModel = chipsViewModel,
-        statusLightsDef = builtInSearchables.statusLights,
-        treatmentButtonsDef = builtInSearchables.treatmentButtons,
-        // Pump activity
         bolusStateFlow = bolusProgressData.state,
-        pumpStatusText = pumpStatusBanner?.text ?: "",
-        queueStatusText = pumpQueueStatus,
-        isPumpCommunicating = pumpStatusBanner != null,
         onStopBolus = {
             if (config.AAPSCLIENT) {
                 clientControlActionDispatcher.stopBolus()

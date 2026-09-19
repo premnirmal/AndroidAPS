@@ -3,7 +3,6 @@ package app.aaps.plugins.constraints.objectives
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.plugins.constraints.ConstraintsStrings
 import app.aaps.core.data.plugin.PluginType
-import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.constraints.Constraint
 import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.constraints.Objectives.Companion.AUTOSENS_OBJECTIVE
@@ -46,7 +45,6 @@ class ObjectivesPlugin(
     aapsLogger: AAPSLogger,
     override val rh: TextResolver,
     preferences: Preferences,
-    private val config: Config,
     val objectives: List<@JvmSuppressWildcards Objective>
 ) : PluginBaseWithPreferences(
     pluginDescription = PluginDescription()
@@ -55,8 +53,8 @@ class ObjectivesPlugin(
         .icon(IcPluginObjectives)
         .pluginName(CoreUiStrings.objectives)
         .shortName(ConstraintsStrings.objectives_shortname)
-        .enableByDefault(config.APS && !config.TRIO)
-        .showInList { !config.TRIO }
+        .enableByDefault(false)
+        .showInList { false }
         .description(ConstraintsStrings.description_objectives),
     ownPreferences = ObjectivesBooleanComposedKey.entries + ObjectivesLongComposedKey.entries,
     aapsLogger, rh, preferences
@@ -90,71 +88,36 @@ class ObjectivesPlugin(
      * Constraints interface
      */
     override fun isLoopInvocationAllowed(value: Constraint<Boolean>): Constraint<Boolean> {
-        if (config.TRIO) return value
-        // Check if initialized
-        if (objectives.isEmpty()) return value
-        if (!objectives[FIRST_OBJECTIVE].isStarted)
-            value.set(false, rh.gs(ConstraintsStrings.objectivenotstarted, FIRST_OBJECTIVE + 1), this)
         return value
     }
 
     override fun isLgsForced(value: Constraint<Boolean>): Constraint<Boolean> {
-        if (config.TRIO) return value
-        // Check if initialized
-        if (objectives.isEmpty()) return value
-        if (objectives[LGS_OBJECTIVE].isStarted && !objectives[LGS_OBJECTIVE].isAccomplished)
-            value.set(true, rh.gs(ConstraintsStrings.objectivenotfinished, LGS_OBJECTIVE + 1), this)
         return value
     }
 
     override suspend fun isClosedLoopAllowed(value: Constraint<Boolean>): Constraint<Boolean> {
-        if (config.TRIO) return value
-        // Check if initialized
-        if (objectives.isEmpty()) return value
-        if (!objectives[CLOSED_LOOP_OBJECTIVE].isStarted)
-            value.set(false, rh.gs(ConstraintsStrings.objectivenotstarted, CLOSED_LOOP_OBJECTIVE + 1), this)
         return value
     }
 
     override fun isAutosensModeEnabled(value: Constraint<Boolean>): Constraint<Boolean> {
-        if (config.TRIO) return value
-        // Check if initialized
-        if (objectives.isEmpty()) return value
-        if (!objectives[AUTOSENS_OBJECTIVE].isStarted)
-            value.set(false, rh.gs(ConstraintsStrings.objectivenotstarted, AUTOSENS_OBJECTIVE + 1), this)
         return value
     }
 
     override suspend fun isSMBModeEnabled(value: Constraint<Boolean>): Constraint<Boolean> {
-        if (config.TRIO) return value
-        // Check if initialized
-        if (objectives.isEmpty()) return value
-        if (!objectives[SMB_OBJECTIVE].isStarted)
-            value.set(false, rh.gs(ConstraintsStrings.objectivenotstarted, SMB_OBJECTIVE + 1), this)
         return value
     }
 
     override fun isAutomationEnabled(value: Constraint<Boolean>): Constraint<Boolean> {
-        if (config.TRIO) return value
-        // Check if initialized
-        if (objectives.isEmpty()) return value
-        if (!objectives[AUTO_OBJECTIVE].isStarted)
-            value.set(false, rh.gs(ConstraintsStrings.objectivenotstarted, AUTO_OBJECTIVE + 1), this)
         return value
     }
 
     override fun isConcentrationEnabled(value: Constraint<Boolean>): Constraint<Boolean> {
-        if (config.TRIO) return value
-        if (objectives.isEmpty()) return value
-        if (!objectives[EXAM_OBJECTIVE].isAccomplished) {
-            value.set(false, rh.gs(ConstraintsStrings.objectivenotfinished, EXAM_OBJECTIVE + 1), this)
-        }
         return value
     }
 
-    override val size: Int get() = if (config.TRIO) 0 else objectives.size
-    override val accomplishedCount: Int get() = if (config.TRIO) 0 else objectives.count { it.isAccomplished }
+    override val size = 0
+    override val accomplishedCount = 0
 
-    override fun isAccomplished(index: Int) = !config.TRIO && objectives[index].isAccomplished
-    override fun isStarted(index: Int): Boolean = !config.TRIO && objectives[index].isStarted
+    override fun isAccomplished(index: Int) = false
+    override fun isStarted(index: Int) = false
 }

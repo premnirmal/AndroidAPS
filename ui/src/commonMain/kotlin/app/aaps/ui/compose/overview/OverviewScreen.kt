@@ -69,14 +69,9 @@ fun OverviewScreen(
     lastLoopAgeMillis: Long? = null,
     tbrState: TbrState,
     smbEnabled: Boolean,
-    isSimpleMode: Boolean,
-    calcProgress: Int,
     calcProgressFlow: StateFlow<Int>,
     graphViewModel: GraphViewModel,
     chipsViewModel: ChipsViewModel,
-    manageViewModel: ManageViewModel,
-    statusViewModel: StatusViewModel,
-    statusLightsDef: PreferenceSubScreenDef,
     onNavigate: (NavigationRequest) -> Unit,
     onTbrChipClick: () -> Unit,
     onIobChipClick: () -> Unit,
@@ -94,13 +89,8 @@ fun OverviewScreen(
     commandsAllowed: Boolean = true,
     formatDuration: (Long) -> String = { ms -> "${(ms / 60000L).toInt()}m" },
     paddingValues: PaddingValues,
-    fabBottomOffset: Dp = 0.dp,
     bolusStateFlow: StateFlow<BolusProgressState?>,
-    pumpStatusText: String = "",
-    queueStatusText: AnnotatedString? = null,
-    isPumpCommunicating: Boolean = false,
     onStopBolus: () -> Unit = {},
-    isTrio: Boolean = false,
     trioOverview: @Composable (TrioOverviewModel) -> Unit = {},
     pumpNeedsSetup: Boolean = false,
     pumpEndTimeMillis: Long? = null,
@@ -109,37 +99,6 @@ fun OverviewScreen(
     timeInRangeTodayPercentFlow: StateFlow<Int?>,
     modifier: Modifier = Modifier
 ) {
-    val notifications by notificationsFlow.collectAsStateWithLifecycle()
-    val bolusState by bolusStateFlow.collectAsStateWithLifecycle()
-    var dismissedNotificationKeys by remember { mutableStateOf(emptySet<Int>()) }
-    val visibleNotifications = notifications.filterNot { it.instanceKey in dismissedNotificationKeys }
-    val dismissNotification: (AapsNotification) -> Unit = { notification ->
-        dismissedNotificationKeys = dismissedNotificationKeys + notification.instanceKey
-        onDismissNotification(notification)
-    }
-    var showNotificationSheet by remember { mutableStateOf(false) }
-    var showPumpActivityDialog by remember { mutableStateOf(false) }
-
-    LaunchedEffect(notifications) {
-        val activeKeys = notifications.mapTo(mutableSetOf()) { it.instanceKey }
-        dismissedNotificationKeys = dismissedNotificationKeys.intersect(activeKeys)
-    }
-    val showPumpFab = isPumpCommunicating || bolusState?.isSMB == true
-
-    LaunchedEffect(showPumpFab) {
-        if (!showPumpFab && showPumpActivityDialog) {
-            delay(3_000)
-            showPumpActivityDialog = false
-        }
-    }
-
-    LaunchedEffect(autoShowNotificationSheet, isTrio) {
-        if (autoShowNotificationSheet && !isTrio) {
-            showNotificationSheet = true
-            onAutoShowConsumed()
-        }
-    }
-
     val runningModeSceneManaged = activeSceneState?.scopedRecords?.rmId
         ?.let { it == runningModeRecordId && it > 0 } == true
     val tempTargetSceneManaged = activeSceneState?.scopedRecords?.ttId
@@ -147,13 +106,9 @@ fun OverviewScreen(
     val profileSceneManaged = activeSceneState?.scopedRecords?.psId
         ?.let { it == profilePsId && it > 0 } == true
 
-    val isLandscape = isLandscape()
-    val isTablet = smallestScreenWidthDp() >= TABLET_MIN_SW_DP && isLandscape
-
     Box(modifier = modifier.fillMaxSize()) {
-        if (isTrio) {
-            trioOverview(
-                TrioOverviewModel(
+        trioOverview(
+            TrioOverviewModel(
                     profileName = profileName,
                     isProfileModified = isProfileModified,
                     profileProgress = profileProgress,
@@ -199,182 +154,7 @@ fun OverviewScreen(
                     onStopBolus = onStopBolus,
                     timeInRangeTodayPercentFlow = timeInRangeTodayPercentFlow,
                     formatDuration = formatDuration
-                )
             )
-        } else if (isTablet) {
-            OverviewScreenTablet(
-                profileName = profileName,
-                isProfileModified = isProfileModified,
-                profileProgress = profileProgress,
-                profileSceneManaged = profileSceneManaged,
-                tempTargetText = tempTargetText,
-                tempTargetState = tempTargetState,
-                tempTargetProgress = tempTargetProgress,
-                tempTargetReason = tempTargetReason,
-                tempTargetSceneManaged = tempTargetSceneManaged,
-                runningMode = runningMode,
-                runningModeText = runningModeText,
-                runningModeRemaining = runningModeRemaining,
-                runningModeProgress = runningModeProgress,
-                runningModeSceneManaged = runningModeSceneManaged,
-                tbrState = tbrState,
-                smbEnabled = smbEnabled,
-                isSimpleMode = isSimpleMode,
-                graphViewModel = graphViewModel,
-                chipsViewModel = chipsViewModel,
-                manageViewModel = manageViewModel,
-                statusViewModel = statusViewModel,
-                statusLightsDef = statusLightsDef,
-                onNavigate = onNavigate,
-                onTbrChipClick = onTbrChipClick,
-                onIobChipClick = onIobChipClick,
-                paddingValues = paddingValues,
-                activeSceneState = activeSceneState,
-                sceneExpired = sceneExpired,
-                onEndScene = onEndScene,
-                onDismissScene = onDismissScene,
-                endSceneEnabled = endSceneEnabled,
-                commandsAllowed = commandsAllowed,
-                onBgSourceClick = onBgSourceClick,
-                formatDuration = formatDuration
-            )
-        } else BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            if (isLandscape && maxWidth >= SPLIT_LAYOUT_MIN_WIDTH) {
-                OverviewScreenSplit(
-                    profileName = profileName,
-                    isProfileModified = isProfileModified,
-                    profileProgress = profileProgress,
-                    profileSceneManaged = profileSceneManaged,
-                    tempTargetText = tempTargetText,
-                    tempTargetState = tempTargetState,
-                    tempTargetProgress = tempTargetProgress,
-                    tempTargetReason = tempTargetReason,
-                    tempTargetSceneManaged = tempTargetSceneManaged,
-                    runningMode = runningMode,
-                    runningModeText = runningModeText,
-                    runningModeRemaining = runningModeRemaining,
-                    runningModeProgress = runningModeProgress,
-                    runningModeSceneManaged = runningModeSceneManaged,
-                    tbrState = tbrState,
-                    smbEnabled = smbEnabled,
-                    isSimpleMode = isSimpleMode,
-                    graphViewModel = graphViewModel,
-                    chipsViewModel = chipsViewModel,
-                    manageViewModel = manageViewModel,
-                    statusViewModel = statusViewModel,
-                    statusLightsDef = statusLightsDef,
-                    onNavigate = onNavigate,
-                    onTbrChipClick = onTbrChipClick,
-                    onIobChipClick = onIobChipClick,
-                    paddingValues = paddingValues,
-                    activeSceneState = activeSceneState,
-                    sceneExpired = sceneExpired,
-                    onEndScene = onEndScene,
-                    onDismissScene = onDismissScene,
-                    endSceneEnabled = endSceneEnabled,
-                    commandsAllowed = commandsAllowed,
-                    onBgSourceClick = onBgSourceClick,
-                    formatDuration = formatDuration
-                )
-            } else {
-                OverviewScreenStacked(
-                    profileName = profileName,
-                    isProfileModified = isProfileModified,
-                    profileProgress = profileProgress,
-                    profileSceneManaged = profileSceneManaged,
-                    tempTargetText = tempTargetText,
-                    tempTargetState = tempTargetState,
-                    tempTargetProgress = tempTargetProgress,
-                    tempTargetReason = tempTargetReason,
-                    tempTargetSceneManaged = tempTargetSceneManaged,
-                    runningMode = runningMode,
-                    runningModeText = runningModeText,
-                    runningModeRemaining = runningModeRemaining,
-                    runningModeProgress = runningModeProgress,
-                    runningModeSceneManaged = runningModeSceneManaged,
-                    tbrState = tbrState,
-                    smbEnabled = smbEnabled,
-                    isSimpleMode = isSimpleMode,
-                    graphViewModel = graphViewModel,
-                    chipsViewModel = chipsViewModel,
-                    manageViewModel = manageViewModel,
-                    statusViewModel = statusViewModel,
-                    statusLightsDef = statusLightsDef,
-                    onNavigate = onNavigate,
-                    onTbrChipClick = onTbrChipClick,
-                    onIobChipClick = onIobChipClick,
-                    paddingValues = paddingValues,
-                    activeSceneState = activeSceneState,
-                    sceneExpired = sceneExpired,
-                    onEndScene = onEndScene,
-                    onDismissScene = onDismissScene,
-                    endSceneEnabled = endSceneEnabled,
-                    commandsAllowed = commandsAllowed,
-                    onBgSourceClick = onBgSourceClick,
-                    formatDuration = formatDuration
-                )
-            }
-        }
-
-        // Calculation progress (IOB / graph data). Overlaid on top of content so it never reflows
-        // the layout — previously a flow child of the content Column which caused the screen to jump.
-        AnimatedVisibility(
-            visible = calcProgress < 100 && !isTrio,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(paddingValues)
-                .fillMaxWidth()
-        ) {
-            LinearProgressIndicator(
-                progress = { calcProgress / 100f },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-            )
-        }
-
-        PumpActivityFab(
-            visible = showPumpFab && !isTrio,
-            bolusState = bolusState,
-            onClick = { showPumpActivityDialog = true },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(paddingValues)
-                .padding(end = 16.dp, bottom = 128.dp + fabBottomOffset)
-        )
-
-        if (!isTrio) {
-            NotificationFab(
-                notificationCount = visibleNotifications.size,
-                highestLevel = visibleNotifications.minByOrNull { it.level.ordinal }?.level,
-                onClick = { showNotificationSheet = true },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(paddingValues)
-                    .padding(end = 16.dp, bottom = 72.dp + fabBottomOffset)
-            )
-        }
-    }
-
-    if (showPumpActivityDialog && !isTrio) {
-        PumpActivityDialog(
-            bolusState = bolusState,
-            pumpStatus = pumpStatusText,
-            queueStatus = queueStatusText,
-            isModal = false,
-            onStop = onStopBolus,
-            onDismiss = { showPumpActivityDialog = false }
-        )
-    }
-
-    if (!isTrio && showNotificationSheet && visibleNotifications.isNotEmpty()) {
-        NotificationBottomSheet(
-            notifications = visibleNotifications,
-            onDismissSheet = { showNotificationSheet = false },
-            onDismissNotification = dismissNotification,
-            onNotificationActionClick = onNotificationActionClick
         )
     }
 }

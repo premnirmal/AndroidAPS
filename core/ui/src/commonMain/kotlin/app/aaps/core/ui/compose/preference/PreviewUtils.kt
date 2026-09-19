@@ -149,7 +149,6 @@ private object PreviewConfig : Config {
     override val AAPSCLIENT2: Boolean = false
     override val AAPSCLIENT3: Boolean = false
     override val PUMPCONTROL: Boolean = false
-    override val TRIO: Boolean = false
     override val PUMPDRIVERS: Boolean = true
     // A preview draws every row, so it claims the platform that restricts the fewest of them.
     override val platform: AppPlatform = AppPlatform.Android

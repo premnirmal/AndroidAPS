@@ -181,7 +181,6 @@ fun NavGraphBuilder.appNavGraph(
     onRequestDirectoryAccess: () -> Unit,
     onRequestPermission: (PermissionGroup) -> Unit,
     onOpenHealthConnect: () -> Unit,
-    isTrio: Boolean,
     onNavigateToTrioTab: (TrioNavTab) -> Unit,
     trioTabScaffold: @Composable (
         selectedTab: TrioNavTab,
@@ -530,8 +529,7 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
-    if (isTrio) {
-        composable(AppRoute.TrioTreatmentList.route) {
+    composable(AppRoute.TrioTreatmentList.route) {
             trioTabScaffold(
                 TrioNavTab.Treatments,
                 stringResource(CoreUiStrings.treatments),
@@ -548,7 +546,6 @@ fun NavGraphBuilder.appNavGraph(
                         onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) }
                     )
                 }
-            }
         }
 
         composable(AppRoute.TrioTreatments.route) {
@@ -571,7 +568,6 @@ fun NavGraphBuilder.appNavGraph(
                             requestEditModeAuthorization { tempTargetManagementViewModel.setScreenMode(ScreenMode.EDIT) }
                         }
                     )
-                }
             }
         }
     }
@@ -583,13 +579,11 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
-    if (isTrio) {
-        composable(AppRoute.TrioStats.route) {
+    composable(AppRoute.TrioStats.route) {
             TrioStatsScreen(
                 viewModel = statsViewModel,
                 onNavigateBack = { navController.safePopBackStack() }
             )
-        }
     }
 
     composable(AppRoute.ProfileHelper.route) {
@@ -606,8 +600,7 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
-    if (isTrio) {
-        composable(AppRoute.TrioHistory.route) {
+    composable(AppRoute.TrioHistory.route) {
             trioTabScaffold(
                 TrioNavTab.Adjustments,
                 stringResource(MainStrings.nav_history_browser),
@@ -620,7 +613,6 @@ fun NavGraphBuilder.appNavGraph(
                     modifier = Modifier.padding(paddingValues),
                     showTopBar = false
                 )
-            }
         }
     }
 
@@ -718,7 +710,7 @@ fun NavGraphBuilder.appNavGraph(
                 navController.navigate(AppRoute.PluginCategory.createRoute(type.ordinal))
             },
             onOpenHealthConnect = onOpenHealthConnect,
-            showHealthConnect = isTrio,
+            showHealthConnect = true,
             onConfirmHardwarePump = {
                 configurationViewModel.confirmHardwarePumpSwitch()
                 onRefreshPermissions()
@@ -727,8 +719,7 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
-    if (isTrio) {
-        composable(AppRoute.TrioSettings.route) {
+    composable(AppRoute.TrioSettings.route) {
             trioTabScaffold(
                 TrioNavTab.Settings,
                 stringResource(CoreUiStrings.settings),
@@ -754,7 +745,6 @@ fun NavGraphBuilder.appNavGraph(
                             navController.navigate(AppRoute.Configuration.route)
                         }
                     )
-                }
             }
         }
     }
@@ -877,42 +867,6 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
-    if (!isTrio) {
-        composable(AppRoute.SetupWizard.route) {
-            SetupWizardScreen(
-                swDefinition = swDefinition,
-                onFinish = {
-                    preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
-                    navController.safePopBackStack()
-                },
-                onBack = { navController.safePopBackStack() },
-                onImportSettings = { navController.navigate(AppRoute.ImportSettings.createRoute("LOCAL")) },
-                onPluginPreferences = { pluginId -> navController.navigate(AppRoute.PluginPreferences.createRoute(pluginId)) },
-                onPluginOpen = { pluginId -> onNavigationRequest(NavigationRequest.Plugin(pluginId), navController) },
-                onSetMasterPassword = { navController.navigate(AppRoute.PreferenceScreen.createRoute("protection", StringKey.ProtectionMasterPassword.key)) },
-                onManageInsulin = { navController.navigate(AppRoute.InsulinManagement.createRoute()) },
-                onManageProfile = { navController.navigate(AppRoute.Profile.createRoute()) },
-                onProfileSwitch = { navController.navigate(AppRoute.ProfileActivation.createRoute(0)) },
-                onOpenAuthorizedClients = { navController.navigate(AppRoute.AuthorizedClients.route) },
-                onPairWithMaster = { navController.navigate(AppRoute.PairWithMaster.route) },
-                onOpenNsReceiveSettings = { navController.navigate(AppRoute.PreferenceScreen.createRoute("ns_client_synchronization")) },
-                onRunObjectives = {
-                    val index = activePlugin.getPluginsList().indexOfFirst { it is Objectives }
-                    if (index >= 0) navController.navigate(AppRoute.PluginContent.createRoute(index))
-                },
-                onRequestDirectoryAccess = onRequestDirectoryAccess,
-                onRequestPermission = onRequestPermission,
-                permissionItems = {
-                    val allGroups = pluginPermissions.collectAllPermissions()
-                    val missingGroups = pluginPermissions.collectMissingPermissions()
-                    val missingSets = missingGroups.map { it.permissions.toSet() }.toSet()
-                    allGroups.map { group -> group to (group.permissions.toSet() !in missingSets) }
-                },
-                isDirectoryAccessGranted = { prefFileList.isDirectoryAccessGranted() },
-                rxBus = rxBus
-            )
-        }
-    }
 }
 
 @Composable
