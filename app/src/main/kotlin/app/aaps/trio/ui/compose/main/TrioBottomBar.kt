@@ -149,7 +149,7 @@ private fun RowScope.TrioTabItem(
 @Preview(showBackground = true)
 @Composable
 private fun TrioBottomBarPreview() {
-    AapsTheme {
+    MaterialTheme {
         TrioBottomBar(
             selectedTab = TrioNavTab.Overview,
             carbsRequired = 23,

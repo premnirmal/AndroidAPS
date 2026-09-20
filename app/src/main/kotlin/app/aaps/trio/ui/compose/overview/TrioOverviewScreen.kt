@@ -290,13 +290,11 @@ private fun TrioOverviewContent(
         }
     }
 
-    BoxWithConstraints(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .padding(paddingValues)
     ) {
-        val chartHeight = maxHeight * 0.45f
-
         TrioBgGlow(
             visible = bgInfo != null,
             center = bgGlowCenter,
@@ -442,7 +440,10 @@ private fun TrioOverviewContent(
                 }
             }
 
-            graphContent(chartHeight)
+            BoxWithConstraints(modifier = Modifier.weight(1f)) {
+                val chartHeight = constraints.maxHeight.dp
+                graphContent(chartHeight)
+            }
 
             if (bolusState != null) {
                 TrioBolusingCard(
@@ -475,7 +476,7 @@ private fun TrioOverviewContent(
                 onClick = { onNavigate(NavigationRequest.TrioStatistics) }
             )
 
-            Spacer(modifier = Modifier.size(width = 200.dp, height = 20.dp))
+            Spacer(modifier = Modifier.fillMaxWidth().height(height = 8.dp))
         }
     }
 

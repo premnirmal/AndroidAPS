@@ -374,17 +374,20 @@ private fun TrioChartLegendItem(label: String, color: Color) {
 @Composable
 private fun TrioStatsRangeSelector(
     selectedRange: TrioStatsRange,
-    onSelect: (TrioStatsRange) -> Unit
+    onSelect: (TrioStatsRange) -> Unit,
 ) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small)
-    ) {
-        items(trioStatsRanges) { range ->
-            FilterChip(
-                selected = selectedRange == range,
-                onClick = { onSelect(range) },
-                label = { Text(range.label()) }
-            )
+    Box( modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small)
+        ) {
+            trioStatsRanges.forEach { range ->
+                FilterChip(
+                    selected = selectedRange == range,
+                    onClick = { onSelect(range) },
+                    label = { Text(range.label()) }
+                )
+            }
         }
     }
 }
