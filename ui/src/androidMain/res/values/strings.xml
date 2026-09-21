@@ -53,6 +53,7 @@
     <string name="trio_stats_no_data">No glucose data is available for this range.</string>
     <string name="trio_stats_today">Today</string>
     <string name="trio_stats_short_days" comment="%1$d=number of days. Example: 14d">%1$dd</string>
+    <string name="trio_stats_short_hours" comment="%1$d=number of hours. Example: 24h">%1$dh</string>
     <string name="trio_stats_agp">Ambulatory Glucose Profile (AGP)</string>
     <string name="trio_stats_percentile_10_90">10–90%</string>
     <string name="trio_stats_percentile_25_75">25–75%</string>

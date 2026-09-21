@@ -62,6 +62,7 @@ import kotlin.math.ceil
 
 private val trioStatsRanges = listOf(
     TrioStatsRange.TODAY,
+    TrioStatsRange.HOURS_24,
     TrioStatsRange.DAYS_7,
     TrioStatsRange.DAYS_30,
     TrioStatsRange.DAYS_90
@@ -394,10 +395,11 @@ private fun TrioStatsRangeSelector(
 
 @Composable
 private fun TrioStatsRange.label(): String = when (this) {
-    TrioStatsRange.TODAY   -> stringResource(UiStrings.trio_stats_today)
-    TrioStatsRange.DAYS_7  -> stringResource(UiStrings.trio_stats_short_days, 7)
-    TrioStatsRange.DAYS_30 -> stringResource(UiStrings.trio_stats_short_days, 30)
-    TrioStatsRange.DAYS_90 -> stringResource(UiStrings.trio_stats_short_days, 90)
+    TrioStatsRange.TODAY    -> stringResource(UiStrings.trio_stats_today)
+    TrioStatsRange.HOURS_24 -> stringResource(UiStrings.trio_stats_short_hours, 24)
+    TrioStatsRange.DAYS_7   -> stringResource(UiStrings.trio_stats_short_days, 7)
+    TrioStatsRange.DAYS_30  -> stringResource(UiStrings.trio_stats_short_days, 30)
+    TrioStatsRange.DAYS_90  -> stringResource(UiStrings.trio_stats_short_days, 90)
 }
 
 @Composable
