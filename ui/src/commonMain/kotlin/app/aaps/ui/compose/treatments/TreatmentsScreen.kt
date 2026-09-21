@@ -57,7 +57,8 @@ import kotlinx.coroutines.launch
 fun TreatmentsScreen(
     viewModel: TreatmentsViewModel,
     onNavigateBack: () -> Unit,
-    showTopBar: Boolean = true
+    showTopBar: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     val showExtendedBolusTab = viewModel.showExtendedBolusTab()
     val iconColors = AapsTheme.elementColors
@@ -163,6 +164,7 @@ fun TreatmentsScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         contentWindowInsets = if (showTopBar) ScaffoldDefaults.contentWindowInsets else WindowInsets(0),
         topBar = {
             if (showTopBar) {

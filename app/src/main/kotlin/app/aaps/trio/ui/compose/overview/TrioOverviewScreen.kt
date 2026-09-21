@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.ArrowCircleRight
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -44,6 +45,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
@@ -289,12 +291,13 @@ private fun TrioOverviewContent(
             )
         }
     }
-
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .padding(paddingValues)
     ) {
+        val chartHeight = maxHeight * 0.45f
+
         TrioBgGlow(
             visible = bgInfo != null,
             center = bgGlowCenter,
@@ -376,8 +379,8 @@ private fun TrioOverviewContent(
                                 )
                             }
                             LoopStatusAndPrediction(
-                                    runningMode = runningMode,
-                                    runningModeText = runningModeText,
+                                runningMode = runningMode,
+                                runningModeText = runningModeText,
                                 lastLoopAgeMillis = lastLoopAgeMillis,
                                 predictedText = predictedText,
                                 onClick = { showPredictionInfo = true },
@@ -440,43 +443,42 @@ private fun TrioOverviewContent(
                 }
             }
 
-            BoxWithConstraints(modifier = Modifier.weight(1f)) {
-                val chartHeight = constraints.maxHeight.dp
-                graphContent(chartHeight)
-            }
+            graphContent(chartHeight)
 
             if (bolusState != null) {
                 TrioBolusingCard(
                     state = bolusState,
                     onStopBolus = onStopBolus
                 )
-            } else {
-                val profileCardTarget = if (profileCardTempTargetState.state == TempTargetChipState.Active) {
-                    ElementType.TEMP_TARGET_MANAGEMENT
-                } else {
-                    ElementType.PROFILE_MANAGEMENT
-                }
-                TrioProfileCard(
-                    profileName = profileName,
-                    profilePercentage = profilePercentage,
-                    profileTargetRangeText = profileTargetRangeText,
-                    tempTargetRangeText = profileCardTempTargetState.rangeText,
-                    tempTargetRemainingText = profileCardTempTargetState.remainingText,
-                    tempTargetState = profileCardTempTargetState.state,
-                    tempTargetReason = profileCardTempTargetState.reason,
-                    tempTargetProgress = profileCardTempTargetState.progress,
-                    progress = profileProgress,
-                    sceneManaged = profileSceneManaged,
-                    onClick = { onNavigate(NavigationRequest.Element(profileCardTarget)) }
-                )
             }
+
+            val profileCardTarget = if (profileCardTempTargetState.state == TempTargetChipState.Active) {
+                ElementType.TEMP_TARGET_MANAGEMENT
+            } else {
+                ElementType.PROFILE_MANAGEMENT
+            }
+            TrioProfileCard(
+                profileName = profileName,
+                profilePercentage = profilePercentage,
+                profileTargetRangeText = profileTargetRangeText,
+                tempTargetRangeText = profileCardTempTargetState.rangeText,
+                tempTargetRemainingText = profileCardTempTargetState.remainingText,
+                tempTargetState = profileCardTempTargetState.state,
+                tempTargetReason = profileCardTempTargetState.reason,
+                tempTargetProgress = profileCardTempTargetState.progress,
+                progress = profileProgress,
+                sceneManaged = profileSceneManaged,
+                onClick = { onNavigate(NavigationRequest.Element(profileCardTarget)) }
+            )
 
             TimeInRangeTodayCard(
                 timeInRangeTodayPercent = timeInRangeTodayPercent,
                 onClick = { onNavigate(NavigationRequest.TrioStatistics) }
             )
 
-            Spacer(modifier = Modifier.fillMaxWidth().height(height = 8.dp))
+            Spacer(modifier = Modifier
+                .fillMaxWidth()
+                .height(height = 8.dp))
         }
     }
 
@@ -710,17 +712,11 @@ private fun TrioProfileCard(
         profileName
     }
 
-    Surface(
+    OutlinedCard(
         onClick = onClick,
+        colors = CardDefaults.elevatedCardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(AapsSpacing.extraLarge),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
-        ),
-        tonalElevation = AapsSpacing.extraSmall,
-        shadowElevation = AapsSpacing.extraSmall
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
         Column(
             modifier = Modifier.padding(
@@ -788,19 +784,13 @@ private fun TrioBolusingCard(
     onStopBolus: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        shape = RoundedCornerShape(AapsSpacing.extraLarge),
-        color = MaterialTheme.colorScheme.primaryContainer,
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
-        ),
-        tonalElevation = AapsSpacing.extraSmall,
-        shadowElevation = AapsSpacing.extraSmall,
-        modifier = modifier.fillMaxWidth()
+    OutlinedCard(
+        colors = CardDefaults.elevatedCardColors().copy(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
         Column(
-            modifier = Modifier.padding(
+            modifier = Modifier.fillMaxWidth().padding(
                 horizontal = AapsSpacing.large,
                 vertical = AapsSpacing.medium
             ),
@@ -823,10 +813,10 @@ private fun TrioBolusingCard(
                         modifier = Modifier.size(AapsSpacing.xxLarge)
                     )
                 }
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1.0f)) {
                     Text(
                         text = stringResource(R.string.trio_bolusing_title),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                     Text(
@@ -835,7 +825,7 @@ private fun TrioBolusingCard(
                             state.delivered.cU,
                             state.insulin
                         ),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
@@ -849,13 +839,21 @@ private fun TrioBolusingCard(
                     }
                 }
             }
-            LinearProgressIndicator(
-                progress = { state.percent.coerceIn(0, 100) / 100f },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(AapsSpacing.small),
-                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            )
+                    .height(AapsSpacing.small)
+            ) {
+                if (state.percent > 0) {
+                    LinearProgressIndicator(
+                        progress = { state.percent.coerceIn(0, 100) / 100f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(AapsSpacing.small),
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                    )
+                }
+            }
         }
     }
 }
@@ -866,17 +864,11 @@ private fun TimeInRangeTodayCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    OutlinedCard(
         onClick = onClick,
-        shape = RoundedCornerShape(AapsSpacing.extraLarge),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        border = BorderStroke(
-            width = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
-        ),
-        tonalElevation = AapsSpacing.extraSmall,
-        shadowElevation = AapsSpacing.extraSmall,
-        modifier = modifier.fillMaxWidth()
+        colors = CardDefaults.elevatedCardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
         Column(
             modifier = Modifier.padding(
@@ -1255,14 +1247,14 @@ private fun TrioBolusingCardPreview() {
             TrioBolusingCard(
                 state = BolusProgressState(
                     2.0, false, false, 20, TextRef.Literal(""), TextRef.Literal(""),
-                    PumpInsulin(0.5), false, false, false,
+                    PumpInsulin(0.5), false, true, false,
                 ),
                 {},
             )
             TrioBolusingCard(
                 state = BolusProgressState(
                     2.0, false, false, 0, TextRef.Literal(""), TextRef.Literal(""),
-                    PumpInsulin(0.0), false, false, false,
+                    PumpInsulin(0.0), false, true, false,
                 ),
                 {},
             )

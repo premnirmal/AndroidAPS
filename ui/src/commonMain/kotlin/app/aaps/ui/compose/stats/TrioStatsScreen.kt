@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,13 +13,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -96,22 +95,17 @@ fun TrioStatsScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(AapsSpacing.extraLarge),
-            verticalArrangement = Arrangement.spacedBy(AapsSpacing.extraLarge)
+        Column(
+            modifier = Modifier.fillMaxSize().padding(paddingValues).verticalScroll(rememberScrollState()),
         ) {
-            item {
-                TrioStatsRangeSelector(
-                    selectedRange = state.trioRange,
-                    onSelect = viewModel::loadTrioStats
-                )
-            }
+            TrioStatsRangeSelector(
+                modifier = Modifier.padding(bottom = 8.dp),
+                selectedRange = state.trioRange,
+                onSelect = viewModel::loadTrioStats
+            )
 
             when {
-                state.trioStatsLoading -> item {
+                state.trioStatsLoading                                                ->
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -120,25 +114,21 @@ fun TrioStatsScreen(
                     ) {
                         CircularProgressIndicator()
                     }
-                }
 
-                state.trioStatsData == null || state.trioStatsData?.readingCount == 0 -> item {
+                state.trioStatsData == null || state.trioStatsData?.readingCount == 0 ->
                     Text(
                         text = stringResource(UiStrings.trio_stats_no_data),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
 
                 else -> state.trioStatsData?.let { data ->
-                    item {
-                        TrioGlucoseProfileCard(
-                            data = data,
-                            lowMgdl = viewModel.trioLowMgdl,
-                            highMgdl = viewModel.trioHighMgdl,
-                            glycemicMetricUnits = viewModel.trioGlycemicMetricUnits
-                        )
-                    }
+                    TrioGlucoseProfileCard(
+                        data = data,
+                        lowMgdl = viewModel.trioLowMgdl,
+                        highMgdl = viewModel.trioHighMgdl,
+                        glycemicMetricUnits = viewModel.trioGlycemicMetricUnits
+                    )
                 }
             }
         }
@@ -180,8 +170,8 @@ private fun TrioGlucoseProfileCard(
         )
     )
 
-    Column (
-        modifier = Modifier.fillMaxWidth(),
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         TrioStatsCard {
@@ -376,8 +366,9 @@ private fun TrioChartLegendItem(label: String, color: Color) {
 private fun TrioStatsRangeSelector(
     selectedRange: TrioStatsRange,
     onSelect: (TrioStatsRange) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    Box( modifier = Modifier.fillMaxWidth()) {
+    Box(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.align(Alignment.Center),
             horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small)
@@ -427,62 +418,62 @@ private fun TrioGlycemicOverview(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
             content = {
-            TrioOverviewValue(
-                label = stringResource(
-                    UiStrings.trio_stats_range,
-                    formatGlucose(lowMgdl),
-                    formatGlucose(highMgdl)
-                ),
-                value = data.tir.inRange,
-                color = colors.bgInRange
-            )
-            TrioOverviewValue(
-                label = stringResource(
-                    UiStrings.trio_stats_range,
-                    formatGlucose(70.0),
-                    formatGlucose(140.0)
-                ),
-                value = data.tightRangePercent,
-                color = colors.bgInRange
-            )
+                TrioOverviewValue(
+                    label = stringResource(
+                        UiStrings.trio_stats_range,
+                        formatGlucose(lowMgdl),
+                        formatGlucose(highMgdl)
+                    ),
+                    value = data.tir.inRange,
+                    color = colors.bgInRange
+                )
+                TrioOverviewValue(
+                    label = stringResource(
+                        UiStrings.trio_stats_range,
+                        formatGlucose(70.0),
+                        formatGlucose(140.0)
+                    ),
+                    value = data.tightRangePercent,
+                    color = colors.bgInRange
+                )
             }
         )
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
             content = {
-            TrioOverviewValue(
-                label = stringResource(
-                    UiStrings.trio_stats_above,
-                    formatGlucose(highMgdl)
-                ),
-                value = data.tir.high + data.tir.veryHigh,
-                color = colors.bgHigh
-            )
-            TrioOverviewValue(
-                label = stringResource(
-                    UiStrings.trio_stats_below,
-                    formatGlucose(lowMgdl)
-                ),
-                value = data.tir.veryLow + data.tir.low,
-                color = colors.bgVeryLow
-            )
+                TrioOverviewValue(
+                    label = stringResource(
+                        UiStrings.trio_stats_above,
+                        formatGlucose(highMgdl)
+                    ),
+                    value = data.tir.high + data.tir.veryHigh,
+                    color = colors.bgHigh
+                )
+                TrioOverviewValue(
+                    label = stringResource(
+                        UiStrings.trio_stats_below,
+                        formatGlucose(lowMgdl)
+                    ),
+                    value = data.tir.veryLow + data.tir.low,
+                    color = colors.bgVeryLow
+                )
             }
         )
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
             content = {
-            TrioOverviewValue(
-                label = stringResource(UiStrings.trio_stats_average),
-                value = formatGlucose(data.averageMgdl),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            TrioOverviewValue(
-                label = stringResource(UiStrings.trio_stats_median),
-                value = formatGlucose(data.medianMgdl),
-                color = MaterialTheme.colorScheme.onSurface
-            )
+                TrioOverviewValue(
+                    label = stringResource(UiStrings.trio_stats_average),
+                    value = formatGlucose(data.averageMgdl),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                TrioOverviewValue(
+                    label = stringResource(UiStrings.trio_stats_median),
+                    value = formatGlucose(data.medianMgdl),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
         )
         TrioTirRing(bands)
@@ -601,10 +592,10 @@ private fun TrioGlycemicOverviewPreview() {
             highMgdl = 180.0,
             formatGlucose = { value ->
                 when (value) {
-                    70.0 -> "3.9"
+                    70.0  -> "3.9"
                     140.0 -> "7.8"
                     180.0 -> "10.0"
-                    else -> "6.6"
+                    else  -> "6.6"
                 }
             }
         )
@@ -616,11 +607,9 @@ private fun TrioStatsCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Surface(
+    ElevatedCard(
         modifier = modifier,
         shape = RoundedCornerShape(AapsSpacing.xxLarge),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = AapsSpacing.extraSmall
     ) {
         Column(
             modifier = Modifier.padding(AapsSpacing.extraLarge),

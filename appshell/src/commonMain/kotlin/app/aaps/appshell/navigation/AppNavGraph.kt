@@ -5,6 +5,7 @@ import androidx.savedstate.read
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -522,10 +523,13 @@ fun NavGraphBuilder.appNavGraph(
                 stringResource(CoreUiStrings.treatments),
                 false,
                 {}
-            ) {
+            ) { paddingValues ->
                 TreatmentsScreen(
                     viewModel = treatmentsViewModel,
-                    onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) }
+                    onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .consumeWindowInsets(paddingValues)
                 )
             }
         }
@@ -536,14 +540,17 @@ fun NavGraphBuilder.appNavGraph(
                 stringResource(UiStrings.trio_tab_adjustments),
                 false,
                 {}
-            ) {
+            ) { paddingValues ->
                 TempTargetManagementScreen(
                     viewModel = tempTargetManagementViewModel,
                     initialMode = ScreenMode.EDIT,
                     onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
                     onRequestEditMode = {
                         requestEditModeAuthorization { tempTargetManagementViewModel.setScreenMode(ScreenMode.EDIT) }
-                    }
+                    },
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .consumeWindowInsets(paddingValues)
                 )
             }
         }
@@ -586,7 +593,9 @@ fun NavGraphBuilder.appNavGraph(
                 HistoryScreen(
                     title = stringResource(MainStrings.nav_history_browser),
                     onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
-                    modifier = Modifier.padding(paddingValues),
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .consumeWindowInsets(paddingValues),
                     showTopBar = false
                 )
         }
@@ -710,7 +719,9 @@ fun NavGraphBuilder.appNavGraph(
                 builtInSearchables = builtInSearchables,
                 configBuilder = configBuilder,
                 onBackClick = { onNavigateToTrioTab(TrioNavTab.Overview) },
-                modifier = Modifier.padding(paddingValues),
+                modifier = Modifier
+                    .padding(paddingValues)
+                    .consumeWindowInsets(paddingValues),
                 showTopBar = false,
                 showSimpleModeHiddenPreferences = true,
                 onConfigurationClick = {

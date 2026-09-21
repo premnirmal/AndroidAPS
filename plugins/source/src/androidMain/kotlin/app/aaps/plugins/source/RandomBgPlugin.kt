@@ -130,13 +130,13 @@ class RandomBgPlugin(
     }
 
     override fun specialEnableCondition(): Boolean {
-        return true//isRunningTest() || virtualPump.isEnabled() && config.isEngineeringMode() || config.isEnabled(ExternalOptions.UNFINISHED_MODE)
+        return isRunningTest() || virtualPump.isEnabled() && config.isEngineeringMode() || config.isEnabled(ExternalOptions.UNFINISHED_MODE)
     }
 
     @SuppressLint("CheckResult")
     @VisibleForTesting
     fun handleNewData() {
-        // if (!isEnabled()) return
+        if (!isEnabled()) return
 
         val randomize = preferences.get(BooleanKey.BgSourceRandomBgRandomize)
         val cal = GregorianCalendar()
