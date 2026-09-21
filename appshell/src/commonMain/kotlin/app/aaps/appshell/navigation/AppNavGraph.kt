@@ -522,17 +522,11 @@ fun NavGraphBuilder.appNavGraph(
                 stringResource(CoreUiStrings.treatments),
                 false,
                 {}
-            ) { paddingValues ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
-                    TreatmentsScreen(
-                        viewModel = treatmentsViewModel,
-                        onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) }
-                    )
-                }
+            ) {
+                TreatmentsScreen(
+                    viewModel = treatmentsViewModel,
+                    onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) }
+                )
             }
         }
 
@@ -542,23 +536,17 @@ fun NavGraphBuilder.appNavGraph(
                 stringResource(UiStrings.trio_tab_adjustments),
                 false,
                 {}
-            ) { paddingValues ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
-                    TempTargetManagementScreen(
-                        viewModel = tempTargetManagementViewModel,
-                        initialMode = ScreenMode.EDIT,
-                        onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
-                        onRequestEditMode = {
-                            requestEditModeAuthorization { tempTargetManagementViewModel.setScreenMode(ScreenMode.EDIT) }
-                        }
-                    )
+            ) {
+                TempTargetManagementScreen(
+                    viewModel = tempTargetManagementViewModel,
+                    initialMode = ScreenMode.EDIT,
+                    onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
+                    onRequestEditMode = {
+                        requestEditModeAuthorization { tempTargetManagementViewModel.setScreenMode(ScreenMode.EDIT) }
+                    }
+                )
             }
         }
-    }
 
     composable(AppRoute.Stats.route) {
         StatsScreen(
@@ -715,25 +703,20 @@ fun NavGraphBuilder.appNavGraph(
                 {
                     VersionOverlay()
                 }
-            ) { paddingValues ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
-                    AllPreferencesScreen(
-                        activePlugin = activePlugin,
-                        rh = rh,
-                        builtInSearchables = builtInSearchables,
-                        configBuilder = configBuilder,
-                        onBackClick = { onNavigateToTrioTab(TrioNavTab.Overview) },
-                        showTopBar = false,
-                        showSimpleModeHiddenPreferences = true,
-                        onConfigurationClick = {
-                            navController.navigate(AppRoute.Configuration.route)
-                        }
-                    )
-            }
+        ) { paddingValues ->
+            AllPreferencesScreen(
+                activePlugin = activePlugin,
+                rh = rh,
+                builtInSearchables = builtInSearchables,
+                configBuilder = configBuilder,
+                onBackClick = { onNavigateToTrioTab(TrioNavTab.Overview) },
+                modifier = Modifier.padding(paddingValues),
+                showTopBar = false,
+                showSimpleModeHiddenPreferences = true,
+                onConfigurationClick = {
+                    navController.navigate(AppRoute.Configuration.route)
+                }
+            )
         }
     }
 

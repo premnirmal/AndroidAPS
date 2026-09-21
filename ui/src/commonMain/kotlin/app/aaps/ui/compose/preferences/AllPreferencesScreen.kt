@@ -1,6 +1,6 @@
 package app.aaps.ui.compose.preferences
 
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -63,6 +63,7 @@ import kotlinx.coroutines.launch
  * @param builtInSearchables BuiltInSearchables instance (single source of truth for built-in screens)
  * @param configBuilder ConfigBuilder for the synced-selection gate (client APS visibility)
  * @param onBackClick Callback when back button is clicked
+ * @param modifier Modifier applied to the preference list
  * @param onConfigurationClick Optional action shown at the bottom of the settings list
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -73,6 +74,7 @@ fun AllPreferencesScreen(
     builtInSearchables: BuiltInSearchables,
     configBuilder: ConfigBuilder,
     onBackClick: () -> Unit,
+    modifier: Modifier = Modifier,
     showTopBar: Boolean = true,
     showSimpleModeHiddenPreferences: Boolean = false,
     onConfigurationClick: (() -> Unit)? = null
@@ -172,33 +174,12 @@ fun AllPreferencesScreen(
         LocalNavigateToCompose provides { screen -> composeScreen = screen }
     ) {
         ProvidePreferenceTheme {
-            Scaffold(
-                contentWindowInsets = if (showTopBar) ScaffoldDefaults.contentWindowInsets else WindowInsets(0),
-                topBar = {
-                    if (showTopBar) {
-                        AapsTopAppBar(
-                            title = {
-                                Text(
-                                    text = stringResource(CoreUiStrings.settings),
-                                    style = MaterialTheme.typography.titleLarge
-                                )
-                            },
-                            navigationIcon = {
-                                IconButton(onClick = onBackClick) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = stringResource(CoreUiStrings.back)
-                                    )
-                                }
-                            }
-                        )
-                    }
-                }
-            ) { paddingValues ->
+            val content: @Composable (PaddingValues) -> Unit = { paddingValues ->
                 val listState = rememberLazyListState()
                 val sectionState = rememberPreferenceSectionState()
                 LazyColumn(
                     modifier = Modifier
+                        .then(modifier)
                         .fillMaxSize()
                         .padding(paddingValues)
                         .verticalScrollIndicators(listState),
@@ -242,6 +223,32 @@ fun AllPreferencesScreen(
                         }
                     }
                 }
+            }
+            if (showTopBar) {
+                Scaffold(
+                    contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
+                    topBar = {
+                        AapsTopAppBar(
+                            title = {
+                                Text(
+                                    text = stringResource(CoreUiStrings.settings),
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                            },
+                            navigationIcon = {
+                                IconButton(onClick = onBackClick) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = stringResource(CoreUiStrings.back)
+                                    )
+                                }
+                            }
+                        )
+                    },
+                    content = content
+                )
+            } else {
+                content(PaddingValues())
             }
         }
     }

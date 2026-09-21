@@ -1,10 +1,7 @@
 package app.aaps.ui.compose.overview
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.RM
 import app.aaps.core.interfaces.notifications.AapsNotification
@@ -60,59 +57,56 @@ fun OverviewScreen(
     pumpEndTimeMillis: Long? = null,
     reservoirUnits: Double? = null,
     onBgSourceClick: () -> Unit = {},
-    timeInRangeTodayPercentFlow: StateFlow<Int?>,
-    modifier: Modifier = Modifier
+    timeInRangeTodayPercentFlow: StateFlow<Int?>
 ) {
     val runningModeSceneManaged = activeSceneState?.scopedRecords?.rmId
         ?.let { it == runningModeRecordId && it > 0 } == true
     val profileSceneManaged = activeSceneState?.scopedRecords?.psId
         ?.let { it == profilePsId && it > 0 } == true
 
-    Box(modifier = modifier.fillMaxSize()) {
-        trioOverview(
-            TrioOverviewModel(
-                    profileName = profileName,
-                    isProfileModified = isProfileModified,
-                    profileProgress = profileProgress,
-                    profileSceneManaged = profileSceneManaged,
-                    profilePercentage = profilePercentage,
-                    profileTargetRangeText = profileTargetRangeText,
-                    runningMode = runningMode,
-                    runningModeText = runningModeText,
-                    runningModeRemaining = runningModeRemaining,
-                    runningModeProgress = runningModeProgress,
-                    runningModeSceneManaged = runningModeSceneManaged,
-                    lastLoopAgeMillis = lastLoopAgeMillis,
-                    smbEnabled = smbEnabled,
-                    tbrState = tbrState,
-                    profileCardTempTargetStateFlow = profileCardTempTargetStateFlow,
-                    calcProgressFlow = calcProgressFlow,
-                    graphViewModel = graphViewModel,
-                    chipsViewModel = chipsViewModel,
-                    onNavigate = onNavigate,
-                    onTbrChipClick = onTbrChipClick,
-                    onIobChipClick = onIobChipClick,
-                    paddingValues = paddingValues,
-                    activeSceneState = activeSceneState,
-                    sceneExpired = sceneExpired,
-                    onEndScene = onEndScene,
-                    onDismissScene = onDismissScene,
-                    endSceneEnabled = endSceneEnabled,
-                    commandsAllowed = commandsAllowed,
-                    pumpNeedsSetup = pumpNeedsSetup,
-                    pumpEndTimeMillis = pumpEndTimeMillis,
-                    reservoirUnits = reservoirUnits,
-                    onBgSourceClick = onBgSourceClick,
-                    notificationsFlow = notificationsFlow,
-                    onDismissNotification = onDismissNotification,
-                    onNotificationActionClick = onNotificationActionClick,
-                    autoShowNotificationSheet = autoShowNotificationSheet,
-                    onAutoShowConsumed = onAutoShowConsumed,
-                    bolusStateFlow = bolusStateFlow,
-                    onStopBolus = onStopBolus,
-                    timeInRangeTodayPercentFlow = timeInRangeTodayPercentFlow,
-                    formatDuration = formatDuration
-            )
+    trioOverview(
+        TrioOverviewModel(
+                profileName = profileName,
+                isProfileModified = isProfileModified,
+                profileProgress = profileProgress,
+                profileSceneManaged = profileSceneManaged,
+                profilePercentage = profilePercentage,
+                profileTargetRangeText = profileTargetRangeText,
+                runningMode = runningMode,
+                runningModeText = runningModeText,
+                runningModeRemaining = runningModeRemaining,
+                runningModeProgress = runningModeProgress,
+                runningModeSceneManaged = runningModeSceneManaged,
+                lastLoopAgeMillis = lastLoopAgeMillis,
+                smbEnabled = smbEnabled,
+                tbrState = tbrState,
+                profileCardTempTargetStateFlow = profileCardTempTargetStateFlow,
+                calcProgressFlow = calcProgressFlow,
+                graphViewModel = graphViewModel,
+                chipsViewModel = chipsViewModel,
+                onNavigate = onNavigate,
+                onTbrChipClick = onTbrChipClick,
+                onIobChipClick = onIobChipClick,
+                paddingValues = paddingValues,
+                activeSceneState = activeSceneState,
+                sceneExpired = sceneExpired,
+                onEndScene = onEndScene,
+                onDismissScene = onDismissScene,
+                endSceneEnabled = endSceneEnabled,
+                commandsAllowed = commandsAllowed,
+                pumpNeedsSetup = pumpNeedsSetup,
+                pumpEndTimeMillis = pumpEndTimeMillis,
+                reservoirUnits = reservoirUnits,
+                onBgSourceClick = onBgSourceClick,
+                notificationsFlow = notificationsFlow,
+                onDismissNotification = onDismissNotification,
+                onNotificationActionClick = onNotificationActionClick,
+                autoShowNotificationSheet = autoShowNotificationSheet,
+                onAutoShowConsumed = onAutoShowConsumed,
+                bolusStateFlow = bolusStateFlow,
+                onStopBolus = onStopBolus,
+                timeInRangeTodayPercentFlow = timeInRangeTodayPercentFlow,
+                formatDuration = formatDuration
         )
-    }
+    )
 }

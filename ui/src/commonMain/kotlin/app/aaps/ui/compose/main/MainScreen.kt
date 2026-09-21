@@ -3,7 +3,6 @@ package app.aaps.ui.compose.main
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -11,10 +10,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.windowInsetsBottomHeight
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,7 +18,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -93,8 +87,7 @@ fun MainScreen(
     graphViewModel: GraphViewModel,
     chipsViewModel: ChipsViewModel,
     bolusStateFlow: StateFlow<BolusProgressState?>,
-    onStopBolus: () -> Unit = {},
-    modifier: Modifier = Modifier
+    onStopBolus: () -> Unit = {}
 ) {
     LocalDateUtil.current
     var showTrioAddSheet by rememberSaveable { mutableStateOf(false) }
@@ -105,8 +98,7 @@ fun MainScreen(
         mainViewModel.refreshOverviewState()
     }
 
-    val mainContent: @Composable () -> Unit = {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val previewMode = maxHeight < PREVIEW_MODE_MIN_HEIGHT
             var chromeVisible by remember { mutableStateOf(false) }
             val showChrome = !previewMode || chromeVisible
@@ -125,6 +117,7 @@ fun MainScreen(
             }
 
             Scaffold(
+                contentWindowInsets = WindowInsets(0),
                 bottomBar = {
                     AnimatedVisibility(
                         visible = showChrome,
@@ -199,15 +192,6 @@ fun MainScreen(
                         }
                     )
 
-                    // Navigation bar protection scrim
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .windowInsetsBottomHeight(WindowInsets.navigationBars)
-                            .background(MaterialTheme.colorScheme.surface)
-                    )
-
                     // Tap overlay to restore chrome in preview mode (only when hidden)
                     if (previewMode && !chromeVisible) {
                         Box(
@@ -221,10 +205,7 @@ fun MainScreen(
                     }
                 }
             }
-        }
     }
-
-    Box(modifier = modifier.fillMaxSize()) { mainContent() }
 
     if (showTrioAddSheet) {
         trioAddActionsSheet(
