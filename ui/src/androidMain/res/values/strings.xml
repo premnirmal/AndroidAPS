@@ -13,6 +13,8 @@
     <string name="trio_carbs_required_badge" comment="%1$d=grams of carbohydrates required. Example: 23 g">%1$dg</string>
     <string name="trio_tab_carbs_required" comment="%1$s=tab name, %2$d=grams of carbohydrates required. Example: Home, 23 g carbs required">%1$s, %2$dg carbs required</string>
     <string name="trio_bolusing_title">Bolusing</string>
+    <string name="trio_bolusing_title_smb" comment="SMB means Super Micro Bolus.">Bolusing - SMB</string>
+    <string name="trio_open_bolus_progress">Open bolus progress</string>
     <string name="trio_bolusing_progress" comment="%1$.2f=delivered insulin amount, %2$.2f=total insulin amount. Example: 0.05 of 0.10 U">%1$.2f of %2$.2f U</string>
     <string name="trio_time_in_range_percent" comment="%1$d=time in range percent. Example: 100%">%1$d%%</string>
     <string name="trio_time_in_range_today">Time in Range today</string>

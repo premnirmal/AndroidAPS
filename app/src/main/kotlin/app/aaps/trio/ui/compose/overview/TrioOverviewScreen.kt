@@ -98,6 +98,7 @@ import app.aaps.core.ui.compose.icons.IcPumpCartridge
 import app.aaps.core.ui.compose.loopColor
 import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.compose.navigation.icon
+import app.aaps.core.ui.compose.pump.PumpActivityDialog
 import app.aaps.ui.compose.notificationsSheet.toColor
 import app.aaps.ui.R
 import app.aaps.ui.compose.main.TempTargetChipState
@@ -133,6 +134,7 @@ fun TrioOverviewScreen(
     val profileCardTempTargetState by profileCardTempTargetStateFlow.collectAsStateWithLifecycle()
     var dismissedNotifications by remember { mutableStateOf(emptySet<Pair<Int, Long>>()) }
     var showNotificationSheet by remember { mutableStateOf(false) }
+    var showBolusDialog by remember { mutableStateOf(false) }
     val visibleNotifications = notifications.filterNot {
         it.instanceKey to it.date in dismissedNotifications
     }
@@ -146,6 +148,9 @@ fun TrioOverviewScreen(
             showNotificationSheet = true
             onAutoShowConsumed()
         }
+    }
+    LaunchedEffect(bolusState) {
+        if (bolusState == null) showBolusDialog = false
     }
     val pumpTimeRemainingText = pumpEndTimeMillis?.let { endTime ->
         val totalHours = ((endTime - now).coerceAtLeast(0L) / 3_600_000L).toInt()
@@ -200,7 +205,7 @@ fun TrioOverviewScreen(
         highestNotificationLevel = visibleNotifications.minByOrNull { it.level.ordinal }?.level,
         onNotificationClick = { showNotificationSheet = true },
         bolusState = bolusState,
-        onStopBolus = onStopBolus,
+        onBolusClick = { showBolusDialog = true },
         timeInRangeTodayPercent = timeInRangeTodayPercent,
         formatDuration = formatDuration,
         modifier = modifier,
@@ -222,6 +227,17 @@ fun TrioOverviewScreen(
                 onDismissNotification(notification)
             },
             onNotificationActionClick = onNotificationActionClick
+        )
+    }
+
+    bolusState?.takeIf { showBolusDialog }?.let { state ->
+        PumpActivityDialog(
+            bolusState = state,
+            pumpStatus = null,
+            queueStatus = null,
+            isModal = false,
+            onStop = onStopBolus,
+            onDismiss = { showBolusDialog = false }
         )
     }
 }
@@ -268,7 +284,7 @@ private fun TrioOverviewContent(
     highestNotificationLevel: NotificationLevel?,
     onNotificationClick: () -> Unit,
     bolusState: BolusProgressState?,
-    onStopBolus: () -> Unit,
+    onBolusClick: () -> Unit,
     timeInRangeTodayPercent: Int?,
     formatDuration: (Long) -> String,
     graphContent: @Composable (Dp) -> Unit,
@@ -448,7 +464,7 @@ private fun TrioOverviewContent(
             if (bolusState != null) {
                 TrioBolusingCard(
                     state = bolusState,
-                    onStopBolus = onStopBolus
+                    onClick = onBolusClick
                 )
             }
 
@@ -646,7 +662,7 @@ private fun TrioOverviewScreenPreview() {
             highestNotificationLevel = NotificationLevel.NORMAL,
             onNotificationClick = {},
             bolusState = null,
-            onStopBolus = {},
+            onBolusClick = {},
             timeInRangeTodayPercent = 82,
             formatDuration = { "30 min" },
             graphContent = { chartHeight ->
@@ -781,12 +797,17 @@ private fun TrioProfileCard(
 @Composable
 private fun TrioBolusingCard(
     state: BolusProgressState,
-    onStopBolus: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     OutlinedCard(
         colors = CardDefaults.elevatedCardColors().copy(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(
+                onClickLabel = stringResource(R.string.trio_open_bolus_progress),
+                onClick = onClick
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
     ) {
         Column(
@@ -815,7 +836,10 @@ private fun TrioBolusingCard(
                 }
                 Column(modifier = Modifier.weight(1.0f)) {
                     Text(
-                        text = stringResource(R.string.trio_bolusing_title),
+                        text = stringResource(
+                            if (state.isSMB) R.string.trio_bolusing_title_smb
+                            else R.string.trio_bolusing_title
+                        ),
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -830,13 +854,11 @@ private fun TrioBolusingCard(
                     )
                 }
                 if (state.stopDeliveryEnabled && !state.stopPressed && state.percent < 100) {
-                    IconButton(onClick = onStopBolus) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = stringResource(app.aaps.core.ui.R.string.cancel),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = stringResource(app.aaps.core.ui.R.string.cancel),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
             Box(
@@ -1249,14 +1271,14 @@ private fun TrioBolusingCardPreview() {
                     2.0, false, false, 20, TextRef.Literal(""), TextRef.Literal(""),
                     PumpInsulin(0.5), false, true, false,
                 ),
-                {},
+                onClick = {},
             )
             TrioBolusingCard(
                 state = BolusProgressState(
                     2.0, false, false, 0, TextRef.Literal(""), TextRef.Literal(""),
                     PumpInsulin(0.0), false, true, false,
                 ),
-                {},
+                onClick = {},
             )
         }
     }
