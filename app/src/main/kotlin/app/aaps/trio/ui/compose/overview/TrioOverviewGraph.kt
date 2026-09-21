@@ -85,7 +85,7 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.time.Duration.Companion.milliseconds
 
-private const val DEFAULT_WINDOW_MS = 6L * 60L * 60L * 1000L
+private const val DEFAULT_WINDOW_MS = 3L * 60L * 60L * 1000L
 private const val MIN_WINDOW_MS = 10L * 60L * 1000L
 private const val MAX_WINDOW_MS = 72L * 60L * 60L * 1000L
 private const val LIVE_EDGE_TOLERANCE_MS = 10L * 60L * 1000L
