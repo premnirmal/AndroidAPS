@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -85,7 +86,7 @@ import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.time.Duration.Companion.milliseconds
 
-private const val DEFAULT_WINDOW_MS = 3L * 60L * 60L * 1000L
+private const val DEFAULT_WINDOW_MS = 6L * 60L * 60L * 1000L
 private const val MIN_WINDOW_MS = 10L * 60L * 1000L
 private const val MAX_WINDOW_MS = 72L * 60L * 60L * 1000L
 private const val LIVE_EDGE_TOLERANCE_MS = 10L * 60L * 1000L
@@ -95,6 +96,7 @@ private const val DATA_GAP_MS = 17L * 60L * 1000L
 private const val DOUBLE_TAP_TIMEOUT_MS = 300L
 private const val INFO_BUTTON_SHOW_DELAY = 1500L
 internal const val BOLUS_VALUE_THRESHOLD_UNITS = 0.5
+internal val GRAPH_RANGE_HRS = intArrayOf(4, 6, 10, 12)
 
 private val GRID_INTERVALS_MS = longArrayOf(
     5L * 60L * 1000L,
@@ -174,40 +176,56 @@ fun TrioOverviewGraph(
         showInfoButton = false
     }
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(height)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
+            color = Color.Transparent,
+            shadowElevation = 0.dp
         ) {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                shape = RoundedCornerShape(AapsSpacing.chipCornerRadius),
-                color = Color.Transparent,
-                shadowElevation = 0.dp
-            ) {
-                InteractiveTrioGlucoseChart(
-                    history = history,
-                    predictions = visiblePredictions,
-                    boluses = treatments.boluses,
-                    fullRange = range,
-                    nowTimestamp = nowTimestamp,
-                    lowMark = chartConfig.lowMark,
-                    highMark = chartConfig.highMark,
-                    selectedRangeHours = selectedRangeHours,
-                    onRangeSelected = { selectedRangeHours = it },
-                    onInteraction = {
-                        graphViewModel.onGraphInteraction()
-                        infoButtonHideRequest++
-                    },
-                    onInteractingChanged = { isInteracting = it },
-                    modifier = Modifier.fillMaxSize()
-                )
+            InteractiveTrioGlucoseChart(
+                history = history,
+                predictions = visiblePredictions,
+                boluses = treatments.boluses,
+                fullRange = range,
+                nowTimestamp = nowTimestamp,
+                lowMark = chartConfig.lowMark,
+                highMark = chartConfig.highMark,
+                selectedRangeHours = selectedRangeHours,
+                onRangeSelected = { selectedRangeHours = it },
+                onInteraction = {
+                    graphViewModel.onGraphInteraction()
+                    infoButtonHideRequest++
+                },
+                onInteractingChanged = { isInteracting = it },
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        Box(Modifier.fillMaxWidth()) {
+            Row(Modifier.align(Alignment.Center)) {
+                GRAPH_RANGE_HRS.forEach { hours ->
+                    FilterChip(
+                        selected = hours == selectedRangeHours,
+                        onClick = { selectedRangeHours = hours },
+                        label = {
+                            Text(
+                                text = stringResource(CoreUiStrings.units_format_hours, hours),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
+                        border = null,
+                    )
+                }
             }
             GraphInfoButton(
                 visible = showInfoButton,
                 onClick = { showPredictionInfo = true },
-                modifier = Modifier.align(Alignment.TopEnd)
+                modifier = Modifier.align(Alignment.CenterEnd)
             )
         }
     }

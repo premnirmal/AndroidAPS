@@ -312,7 +312,7 @@ private fun TrioOverviewContent(
             .fillMaxSize()
             .padding(paddingValues)
     ) {
-        val chartHeight = maxHeight * 0.45f
+        val chartHeight = maxHeight * 0.47f
 
         TrioBgGlow(
             visible = bgInfo != null,
