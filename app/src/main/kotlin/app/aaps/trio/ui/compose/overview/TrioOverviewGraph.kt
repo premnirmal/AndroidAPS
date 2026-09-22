@@ -96,7 +96,7 @@ private const val DATA_GAP_MS = 17L * 60L * 1000L
 private const val DOUBLE_TAP_TIMEOUT_MS = 300L
 private const val INFO_BUTTON_SHOW_DELAY = 1500L
 internal const val BOLUS_VALUE_THRESHOLD_UNITS = 0.5
-internal val GRAPH_RANGE_HRS = intArrayOf(4, 6, 10, 12)
+internal val GRAPH_RANGE_HRS = intArrayOf(4, 6, 12, 24)
 
 private val GRID_INTERVALS_MS = longArrayOf(
     5L * 60L * 1000L,

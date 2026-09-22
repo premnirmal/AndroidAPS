@@ -117,6 +117,7 @@ fun TrioStatsScreen(
 
                 state.trioStatsData == null || state.trioStatsData?.readingCount == 0 ->
                     Text(
+                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(horizontal = 12.dp),
                         text = stringResource(UiStrings.trio_stats_no_data),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -124,6 +125,7 @@ fun TrioStatsScreen(
 
                 else -> state.trioStatsData?.let { data ->
                     TrioGlucoseProfileCard(
+                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(horizontal = 12.dp),
                         data = data,
                         lowMgdl = viewModel.trioLowMgdl,
                         highMgdl = viewModel.trioHighMgdl,
@@ -140,7 +142,8 @@ private fun TrioGlucoseProfileCard(
     data: TrioStatsData,
     lowMgdl: Double,
     highMgdl: Double,
-    glycemicMetricUnits: String
+    glycemicMetricUnits: String,
+    modifier: Modifier = Modifier
 ) {
     val percentiles = data.hourlyPercentiles
     val profileUtil = LocalProfileUtil.current
@@ -171,7 +174,7 @@ private fun TrioGlucoseProfileCard(
     )
 
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+        modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         TrioStatsCard {
@@ -609,7 +612,6 @@ private fun TrioStatsCard(
 ) {
     ElevatedCard(
         modifier = modifier,
-        shape = RoundedCornerShape(AapsSpacing.xxLarge),
     ) {
         Column(
             modifier = Modifier.padding(AapsSpacing.extraLarge),

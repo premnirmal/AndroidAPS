@@ -732,7 +732,7 @@ private fun TrioProfileCard(
         onClick = onClick,
         colors = CardDefaults.elevatedCardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        elevation = CardDefaults.elevatedCardElevation(),
     ) {
         Column(
             modifier = Modifier.padding(
@@ -808,7 +808,7 @@ private fun TrioBolusingCard(
                 onClickLabel = stringResource(R.string.trio_open_bolus_progress),
                 onClick = onClick
             ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        elevation = CardDefaults.elevatedCardElevation(),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(
@@ -890,7 +890,7 @@ private fun TimeInRangeTodayCard(
         onClick = onClick,
         colors = CardDefaults.elevatedCardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        elevation = CardDefaults.elevatedCardElevation(),
     ) {
         Column(
             modifier = Modifier.padding(
