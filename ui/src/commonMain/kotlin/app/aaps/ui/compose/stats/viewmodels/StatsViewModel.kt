@@ -38,7 +38,11 @@ import app.aaps.ui.compose.stats.TddCyclePatternData
 import app.aaps.ui.compose.stats.TddStatsData
 import app.aaps.ui.compose.stats.TirStatsData
 import app.aaps.ui.compose.stats.TrioStatsData
+import app.aaps.ui.compose.stats.TrioInsulinRange
+import app.aaps.ui.compose.stats.TrioInsulinStatsData
+import app.aaps.ui.compose.stats.TrioStatsSection
 import app.aaps.ui.compose.stats.TrioStatsRange
+import app.aaps.ui.compose.stats.calculateTrioInsulinStatsData
 import app.aaps.ui.compose.stats.calculateTrioStatsData
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
@@ -115,6 +119,7 @@ class StatsViewModel(
 
     private var cycleLoadJob: Job? = null
     private var trioStatsLoadJob: Job? = null
+    private var trioInsulinStatsLoadJob: Job? = null
 
     /**
      * Held so a reload can replace the one before it instead of racing it.
@@ -200,6 +205,66 @@ class StatsViewModel(
                     trioRange = range,
                     trioStatsLoading = true
                 )
+            }
+
+            fun selectTrioStatsSection(section: TrioStatsSection) {
+                _uiState.update { it.copy(trioStatsSection = section) }
+            }
+
+            fun loadTrioInsulinStats(range: TrioInsulinRange) {
+                if (
+                    uiState.value.trioInsulinRange == range &&
+                    uiState.value.trioInsulinStatsData != null
+                ) return
+
+                trioInsulinStatsLoadJob?.cancel()
+                trioInsulinStatsLoadJob = viewModelScope.launch {
+                    _uiState.update {
+                        it.copy(
+                            trioInsulinRange = range,
+                            trioInsulinStatsLoading = true
+                        )
+                    }
+                    val data = withContext(aapsIoDispatcher) {
+                        val endTime = dateUtil.now()
+                        val startTime = range.startTime(endTime)
+                        val tdds = if (range.usesHourlyBuckets) {
+                            val hour = 60L * 60L * 1000L
+                            generateSequence(startTime) { timestamp ->
+                                (timestamp + hour).takeIf { it < endTime }
+                            }
+                                .mapNotNull { timestamp ->
+                                    tddCalculator.calculateInterval(
+                                        startTime = timestamp,
+                                        endTime = minOf(timestamp + hour, endTime),
+                                        allowMissingData = true
+                                    )
+                                }
+                                .toList()
+                        } else {
+                            val days = when (range) {
+                                TrioInsulinRange.WEEK         -> 6L
+                                TrioInsulinRange.MONTH        -> 29L
+                                TrioInsulinRange.THREE_MONTHS -> 89L
+                                TrioInsulinRange.DAY          -> 0L
+                            }
+                            buildList {
+                                tddCalculator.calculate(days, allowMissingDays = true)?.let { calculated ->
+                                    for (index in 0 until calculated.size()) add(calculated.valueAt(index))
+                                }
+                                tddCalculator.calculateToday()?.let(::add)
+                            }
+                        }
+                        val boluses = persistenceLayer.getBolusesFromTimeToTime(startTime, endTime, true)
+                        calculateTrioInsulinStatsData(tdds, boluses, range)
+                    }
+                    _uiState.update {
+                        it.copy(
+                            trioInsulinStatsData = data,
+                            trioInsulinStatsLoading = false
+                        )
+                    }
+                }
             }
             val data = withContext(aapsIoDispatcher) {
                 val endTime = dateUtil.now()
@@ -474,6 +539,9 @@ data class StatsUiState(
     val dexcomTirData: DexcomTIR? = null,
     val trioStatsData: TrioStatsData? = null,
     val trioRange: TrioStatsRange = TrioStatsRange.TODAY,
+    val trioStatsSection: TrioStatsSection = TrioStatsSection.GLUCOSE,
+    val trioInsulinStatsData: TrioInsulinStatsData? = null,
+    val trioInsulinRange: TrioInsulinRange = TrioInsulinRange.DAY,
     val activityStatsData: List<ActivityStats>? = null,
     val tddCycleEntries: List<TDD> = emptyList(),
     val tddCyclePatternData: TddCyclePatternData? = null,
@@ -481,6 +549,7 @@ data class StatsUiState(
     val tirLoading: Boolean = true,
     val dexcomTirLoading: Boolean = true,
     val trioStatsLoading: Boolean = true,
+    val trioInsulinStatsLoading: Boolean = true,
     val activityLoading: Boolean = true,
     val tddCycleLoading: Boolean = true,
     val tddCycleProgress: Float = 0f,
