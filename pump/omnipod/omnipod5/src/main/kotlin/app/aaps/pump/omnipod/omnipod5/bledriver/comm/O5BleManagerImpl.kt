@@ -143,6 +143,7 @@ class O5BleManagerImpl @Inject constructor(
                         return@create
                     }
                 }
+                // Release the lock before onComplete: chained commands start from that callback.
                 busy.set(false)
                 emitter.onComplete()
             } catch (ex: Exception) {
@@ -202,6 +203,7 @@ class O5BleManagerImpl @Inject constructor(
                 connection = conn
                 if (conn.connectionState() is Connected && conn.session != null) {
                     emitter.onNext(PodEvent.AlreadyConnected(podAddress))
+                    // Release the lock before onComplete: chained commands start from that callback.
                     busy.set(false)
                     emitter.onComplete()
                     return@create
@@ -214,6 +216,7 @@ class O5BleManagerImpl @Inject constructor(
                 establishSession(1.toByte())
                 emitter.onNext(PodEvent.Connected)
 
+                // Release the lock before onComplete: chained commands start from that callback.
                 busy.set(false)
                 emitter.onComplete()
             } catch (ex: Exception) {
@@ -264,6 +267,13 @@ class O5BleManagerImpl @Inject constructor(
             throw BusyException()
         }
         try {
+            if (podState.ltk == null && podState.bluetoothAddress != null) {
+                aapsLogger.info(
+                    LTag.PUMPBTCOMM,
+                    "Forgetting saved O5 address ${podState.bluetoothAddress} of an unpaired pod - scanning instead"
+                )
+                podState.bluetoothAddress = null
+            }
             var lastError: Exception? = null
             for (attempt in 0..1) {
                 try {
