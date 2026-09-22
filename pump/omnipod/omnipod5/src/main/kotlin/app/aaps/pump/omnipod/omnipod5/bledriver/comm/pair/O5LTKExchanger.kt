@@ -283,12 +283,7 @@ class O5LTKExchanger(
         return encrypted
     }
 
-    /**
-     * Decrypts and validates the pod's SPS2 response (extended path: cert + signature),
-     * verifying the pod's ECDSA signature over its own channel-binding transcript variant.
-     * A signature mismatch is logged but does not abort pairing, matching the Swift
-     * original's "log and continue" behavior for this still-unverified O5 flow.
-     */
+    /** Decrypts and validates the pod's SPS2 response (extended path: cert + signature). */
     private fun o5ValidatePodSps2(msg: MessagePacket) {
         val payload = parseKeys(arrayOf(SPS2), msg.payload)[0]
         aapsLogger.debug(LTag.PUMPBTCOMM, "Received pod SPS2: ${payload.size} bytes")
@@ -313,19 +308,6 @@ class O5LTKExchanger(
         )
         aapsLogger.debug(LTag.PUMPBTCOMM, "Pod signature (${podSignature.size} bytes): ${podSignature.toHex()}")
 
-        val podPubKeyRaw = O5CertificateStore.extractP256PublicKey(podCertDER)
-        if (podPubKeyRaw != null) {
-            val transcript = keyExchange.buildPodChannelBindingTranscript()
-            aapsLogger.debug(LTag.PUMPBTCOMM, "Pod channel-binding transcript (${transcript.size} bytes): ${transcript.toHex()}")
-            val valid = O5CertificateStore.verifySignature(podSignature, transcript, podPubKeyRaw)
-            if (valid) {
-                aapsLogger.debug(LTag.PUMPBTCOMM, "Pod SPS2 signature verification PASSED")
-            } else {
-                aapsLogger.error(LTag.PUMPBTCOMM, "Pod SPS2 signature verification FAILED - transcript format may differ")
-            }
-        } else {
-            aapsLogger.error(LTag.PUMPBTCOMM, "Failed to extract P-256 public key from pod SPS2 certificate DER")
-        }
         aapsLogger.debug(LTag.PUMPBTCOMM, "=== SPS2 PHASE COMPLETE ===")
     }
 
