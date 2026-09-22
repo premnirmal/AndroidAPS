@@ -81,9 +81,6 @@
     <string name="trio_stats_insight_variability" comment="%1$.1f=coefficient of variation percentage. Example: Glucose variability is high at 42.0%.">Glucose variability is high at %1$.1f%%.</string>
     <string name="trio_stats_insight_lows" comment="%1$d=number of low episodes. Example: 2 low episodes were found.">%1$d low episodes were found.</string>
     <string name="trio_stats_insight_highs" comment="%1$d=number of high episodes. Example: 3 high episodes were found.">%1$d high episodes were found.</string>
-    <string name="health_connect">Health Connect</string>
-    <string name="health_connect_settings_subtitle">Manage health data sharing</string>
-    <string name="health_connect_not_available">Health Connect is not available on this device</string>
     <string name="no_temp_basal_running">No temp basal running</string>
     <string name="start_activity_tt">Start Activity TT</string>
     <string name="start_eating_soon_tt">Start Eating soon TT</string>

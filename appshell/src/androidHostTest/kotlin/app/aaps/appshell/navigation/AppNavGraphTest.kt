@@ -72,7 +72,6 @@ class AppNavGraphTest {
                 requestEditModeAuthorization = { onGranted -> onGranted() },
                 onRefreshPermissions = {},
                 onExecuteQuickWizard = {},
-                onOpenHealthConnect = {},
                 onNavigateToTrioTab = {},
                 trioTabScaffold = { _, _, _, _, _ -> },
 

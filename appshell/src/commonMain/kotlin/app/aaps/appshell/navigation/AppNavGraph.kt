@@ -172,7 +172,6 @@ fun NavGraphBuilder.appNavGraph(
     requestEditModeAuthorization: (onGranted: () -> Unit) -> Unit,
     onRefreshPermissions: () -> Unit,
     onExecuteQuickWizard: (guid: String) -> Unit,
-    onOpenHealthConnect: () -> Unit,
     onNavigateToTrioTab: (TrioNavTab) -> Unit,
     trioTabScaffold: @Composable (
         selectedTab: TrioNavTab,
@@ -720,8 +719,6 @@ fun NavGraphBuilder.appNavGraph(
             onNavigateToCategory = { type ->
                 navController.navigate(AppRoute.PluginCategory.createRoute(type.ordinal))
             },
-            onOpenHealthConnect = onOpenHealthConnect,
-            showHealthConnect = true,
             onConfirmHardwarePump = {
                 configurationViewModel.confirmHardwarePumpSwitch()
                 onRefreshPermissions()

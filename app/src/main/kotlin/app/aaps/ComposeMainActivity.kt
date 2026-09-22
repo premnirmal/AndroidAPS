@@ -581,13 +581,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 },
                 onRefreshPermissions = { permissionsViewModel.refresh() },
                 onExecuteQuickWizard = { guid -> mainViewModel.executeQuickWizard(guid) },
-                onOpenHealthConnect = {
-                    try {
-                        startActivity(Intent("androidx.health.ACTION_HEALTH_CONNECT_SETTINGS"))
-                    } catch (_: ActivityNotFoundException) {
-                        maintenanceViewModel.emitError(rh.gs(app.aaps.ui.R.string.health_connect_not_available))
-                    }
-                },
                 onNavigateToTrioTab = { tab -> navigateToTrioTab(tab, navController) },
                 trioTabScaffold = { selectedTab, title, showTopBar, topBarActions, content ->
                     trioUi.tabScaffold(

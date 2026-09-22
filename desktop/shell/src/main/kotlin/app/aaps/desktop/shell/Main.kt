@@ -387,7 +387,6 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter) {
                     },
                     onRefreshPermissions = { logger.debug(LTag.CORE, "No runtime permissions to refresh on desktop") },
                     onExecuteQuickWizard = { guid -> mainViewModel.executeQuickWizard(guid) },
-                    onOpenHealthConnect = { logger.debug(LTag.CORE, "Health Connect is not available on desktop") },
                     onNavigateToTrioTab = {},
                     trioTabScaffold = { _, _, _, _, content -> content(PaddingValues()) }
                 )

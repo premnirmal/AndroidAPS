@@ -35,7 +35,6 @@ import app.aaps.core.ui.compose.dialogs.OkCancelDialog
 import app.aaps.core.ui.compose.preference.SyncBadge
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.stringResource
-import app.aaps.ui.UiStrings
 import app.aaps.ui.plugin.HardwarePumpConfirmation
 
 @Composable
@@ -45,8 +44,6 @@ fun ConfigurationScreen(
     hardwarePumpConfirmation: HardwarePumpConfirmation?,
     onNavigateBack: () -> Unit,
     onNavigateToCategory: (PluginType) -> Unit,
-    onOpenHealthConnect: () -> Unit,
-    showHealthConnect: Boolean = false,
     showTopBar: Boolean = true,
     onConfirmHardwarePump: () -> Unit,
     onDismissHardwarePump: () -> Unit,
@@ -94,15 +91,6 @@ fun ConfigurationScreen(
                     CategoryRow(
                         category = category,
                         onClick = { onNavigateToCategory(category.type) }
-                    )
-                }
-            }
-            if (showHealthConnect) {
-                item(key = "health_connect") {
-                    ActionRow(
-                        title = stringResource(UiStrings.health_connect),
-                        subtitle = stringResource(UiStrings.health_connect_settings_subtitle),
-                        onClick = onOpenHealthConnect
                     )
                 }
             }
@@ -164,57 +152,6 @@ private fun CategoryRow(
     }
 }
 
-@Composable
-private fun ActionRow(
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(
-                start = AapsSpacing.xxLarge,
-                top = AapsSpacing.large,
-                bottom = AapsSpacing.large,
-                end = AapsSpacing.small
-            )
-    ) {
-        Icon(
-            imageVector = Icons.Default.Settings,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(AapsSpacing.xxLarge)
-        )
-        Spacer(modifier = Modifier.width(AapsSpacing.extraLarge))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(end = AapsSpacing.large)
-        )
-    }
-}
-
 @Preview(showBackground = true)
 @Composable
 private fun ConfigurationScreenPreview() {
@@ -234,8 +171,6 @@ private fun ConfigurationScreenPreview() {
             hardwarePumpConfirmation = null,
             onNavigateBack = {},
             onNavigateToCategory = {},
-            onOpenHealthConnect = {},
-            showHealthConnect = true,
             showTopBar = true,
             onConfirmHardwarePump = {},
             onDismissHardwarePump = {}

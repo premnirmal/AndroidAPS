@@ -348,7 +348,6 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                         },
                         onRefreshPermissions = { reportNotAvailable("permission refresh") },
                         onExecuteQuickWizard = { guid -> reportNotReady("quick wizard $guid") },
-                        onOpenHealthConnect = { reportNotAvailable("Health Connect") },
                         onNavigateToTrioTab = {},
                         trioTabScaffold = { _, _, _, _, content -> content(PaddingValues()) }
                     )
