@@ -54,7 +54,8 @@ import kotlinx.coroutines.runBlocking
 @ContributesIntoMap(AppScope::class, binding = binding<PluginBase>())
 @IntKey(360)
 @SingleIn(AppScope::class)
-class TizenPlugin @Inject constructor(
+@Inject
+class TizenPlugin(
     aapsLogger: AAPSLogger,
     override val rh: ResourceHelper,
     private val context: Context,
@@ -134,6 +135,9 @@ class TizenPlugin @Inject constructor(
     }
 
     private fun sendData(event: Event) {
+        // prepareData reads the active pump (basalStatus + pumpStatus). Until ConfigBuilder.initialize()
+        // has run verifySelectionInCategories() there is none and PluginStore throws "No pump selected".
+        if (!config.appInitialized) return
         val bundle = Bundle()
         prepareData(event, bundle)
 

@@ -120,7 +120,8 @@ import kotlinx.coroutines.SupervisorJob
 private const val HEALTH_EVENT_QUIET_PERIOD_MS = 500L
 
 @SingleIn(AppScope::class)
-class DataHandlerMobile @Inject constructor(
+@Inject
+class DataHandlerMobile(
     private val context: Context,
     private val rxBus: RxBus,
     private val aapsLogger: AAPSLogger,
@@ -218,6 +219,8 @@ class DataHandlerMobile @Inject constructor(
             (context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(Constants.NOTIFICATION_ID)
         }
         onEvent<EventData.ActionResendData> { resendData(it.from) }
+        // The watch's word on Watch Face Push, kept by WearPlugin for the wear screen
+        onEvent<EventData.WatchFacePushStatus> { rxBus.send(EventWearUpdateGui(watchFacePushStatus = it)) }
         onEvent<EventData.ActionPumpStatus> {
             sendToWear(
                 EventData.ConfirmAction(
@@ -284,8 +287,17 @@ class DataHandlerMobile @Inject constructor(
             contacting() // CLIENT: show the spinner during the commit round-trip too (no-op on master).
             onCommitResult(batchExecutor.commit(it.bolusId, Sources.Wear, rh.gs(CoreUiStrings.overview_treatment_label)))
         }
-        onEvent<EventData.ActionFillPresetPreCheck> { handleFillPresetPreCheck(it) }
-        onEvent<EventData.ActionFillPreCheck> { handleFillPreCheck(it) }
+        // Same pre-init gate as every other handler here. These reach the wizard/batch path, and before
+        // ConfigBuilder.initialize() has run verifySelectionInCategories() the active APS is still null, so a
+        // dose recompute would hit ProfileSealed's "APS not defined" guard.
+        onEvent<EventData.ActionFillPresetPreCheck> {
+            if (!config.appInitialized) return@onEvent
+            handleFillPresetPreCheck(it)
+        }
+        onEvent<EventData.ActionFillPreCheck> {
+            if (!config.appInitialized) return@onEvent
+            handleFillPreCheck(it)
+        }
         onEvent<EventData.ActionFillConfirmed> {
             if (!config.appInitialized) return@onEvent
             // Defense-in-depth: Fill is off-relay and delivered locally only — a client must never reach here.
@@ -294,10 +306,22 @@ class DataHandlerMobile @Inject constructor(
                 rxBus.send(EventShowSnackbar("aborting: previously applied constraint changed", EventShowSnackbar.Type.Warning))
                 sendError("aborting: previously applied constraint changed")
             } else
-                wizardBolusExecutor.deliverFillBolus(it.insulin, null, Sources.Wear, ::sendError)
+                // The executor already wrote the right sentence for both cases (a failure and a cancel), so the
+                // watch shows its comment as-is. The watch has no neutral terminal screen — a cancel still lands
+                // under the red "Error" heading — but the words are correct.
+                wizardBolusExecutor.deliverFillBolus(it.insulin, null, Sources.Wear, onError = { failure -> sendError(failure.comment) })
         }
-        onEvent<EventData.ActionQuickWizardPreCheck> { handleQuickWizardPreCheck(it) }
-        onEvent<EventData.ActionWizardPreCheck> { handleWizardPreCheck(it) }
+        // These two are the ones that actually recompute a dose. The executor they delegate to already
+        // refuses before init, so this is defence in depth - but it keeps the refusal in one place with the
+        // rest, so a later direct call here cannot bring back the "APS not defined" crash.
+        onEvent<EventData.ActionQuickWizardPreCheck> {
+            if (!config.appInitialized) return@onEvent
+            handleQuickWizardPreCheck(it)
+        }
+        onEvent<EventData.ActionWizardPreCheck> {
+            if (!config.appInitialized) return@onEvent
+            handleWizardPreCheck(it)
+        }
         onEvent<EventData.ActionWizardConfirmed> {
             // Commit the parked wizard/quick-wizard dose by id through the role-transparent relay (MASTER → local
             // deliver; CLIENT → signed BolusCommit; wear has no advisor fork → asAdvisor=false). Refresh the watch's
@@ -1089,7 +1113,8 @@ class DataHandlerMobile @Inject constructor(
                 insulinButtonIncrement1 = preferences.get(DoubleKey.OverviewInsulinButtonIncrement1),
                 insulinButtonIncrement2 = preferences.get(DoubleKey.OverviewInsulinButtonIncrement2),
                 carbsButtonIncrement1 = preferences.get(IntKey.OverviewCarbsButtonIncrement1),
-                carbsButtonIncrement2 = preferences.get(IntKey.OverviewCarbsButtonIncrement2)
+                carbsButtonIncrement2 = preferences.get(IntKey.OverviewCarbsButtonIncrement2),
+                pushedWatchface = preferences.get(StringKey.WearPushedWatchface)
             )
         )
         // QuickWizard

@@ -88,7 +88,8 @@ import org.json.JSONArray
 @ContributesBinding(AppScope::class, binding = binding<XDripBroadcast>())
 @IntKey(330)
 @SingleIn(AppScope::class)
-class XdripPlugin @Inject constructor(
+@Inject
+class XdripPlugin(
     aapsLogger: AAPSLogger,
     override val rh: ResourceHelper,
     preferences: Preferences,
@@ -159,8 +160,12 @@ class XdripPlugin @Inject constructor(
 
     override suspend fun onStop() {
         super.onStop()
-        handler?.looper?.quitSafely()
+        // Drop the queued work BEFORE quitting the looper. The other order does nothing: quitSafely()
+        // still delivers the messages that are already due, and removeCallbacksAndMessages then runs
+        // against a looper that is on its way out, so a pending send could still fire after onStop
+        // returned - inside the window an import uses to stop the plugins and write the store.
         handler?.removeCallbacksAndMessages(null)
+        handler?.looper?.quitSafely()
         handler = null
         eventWorker?.shutdown()
         eventWorker = null
@@ -175,6 +180,11 @@ class XdripPlugin @Inject constructor(
     }
 
     private fun sendStatusLine() {
+        // buildStatusLine below reads the active pump through ProcessedTbrEbData. Until
+        // ConfigBuilder.initialize() has run verifySelectionInCategories() there is no pump selected and
+        // PluginStore throws "No pump selected". onStart subscribes to every database change and startup
+        // writes to the database, so this really can fire inside that window.
+        if (!config.appInitialized) return
         if (preferences.get(BooleanKey.XdripSendStatus)) {
             val status = runBlocking { profileFunction.getProfile() }?.let { buildStatusLine(it) } ?: ""
             context.sendBroadcast(

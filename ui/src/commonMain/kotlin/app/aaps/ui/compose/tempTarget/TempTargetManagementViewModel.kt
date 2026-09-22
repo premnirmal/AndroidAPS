@@ -12,7 +12,7 @@ import app.aaps.core.interfaces.concurrent.aapsIoDispatcher
 import app.aaps.core.interfaces.bolus.BatchAction
 import app.aaps.core.interfaces.bolus.BatchExecutor
 import app.aaps.core.interfaces.clientcontrol.ActionProgress
-import app.aaps.core.interfaces.clientcontrol.FailureReason
+import app.aaps.core.interfaces.clientcontrol.isNotDeliveryError
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.db.observeChanges
@@ -71,7 +71,8 @@ import kotlinx.coroutines.withTimeoutOrNull
 @ContributesIntoMap(AppScope::class, binding = binding<ViewModel>())
 @ViewModelKey
 @Stable
-class TempTargetManagementViewModel @Inject constructor(
+@Inject
+class TempTargetManagementViewModel(
     private val persistenceLayer: PersistenceLayer,
     private val profileFunction: ProfileFunction,
     val profileUtil: ProfileUtil,
@@ -759,7 +760,7 @@ class TempTargetManagementViewModel @Inject constructor(
                     )
                 // Master-local failure (no modal) or a client offline pre-check; a client round-trip failure already showed on the app modal.
                 is ActionProgress.Rejected ->
-                    if (!config.AAPSCLIENT || prepared.reason == FailureReason.NotReachable || prepared.reason == FailureReason.ControlDisabled)
+                    if (!config.AAPSCLIENT || prepared.reason.isNotDeliveryError())
                         rxBus.send(EventShowDialog.Ok(title = rh.gs(CoreUiStrings.temporary_target), message = prepared.detail ?: rh.gs(prepared.reason.failText())))
 
                 else                       -> Unit
@@ -793,7 +794,7 @@ class TempTargetManagementViewModel @Inject constructor(
                     )
 
                 is ActionProgress.Rejected ->
-                    if (!config.AAPSCLIENT || prepared.reason == FailureReason.NotReachable || prepared.reason == FailureReason.ControlDisabled)
+                    if (!config.AAPSCLIENT || prepared.reason.isNotDeliveryError())
                         rxBus.send(EventShowDialog.Ok(title = rh.gs(CoreUiStrings.temporary_target), message = prepared.detail ?: rh.gs(prepared.reason.failText())))
 
                 else                       -> Unit

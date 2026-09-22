@@ -48,7 +48,8 @@ import dev.zacsweers.metro.SingleIn
  * Captures prior state before activation for revert on deactivation.
  */
 @SingleIn(AppScope::class)
-class SceneExecutor @Inject constructor(
+@Inject
+class SceneExecutor(
     private val persistenceLayer: PersistenceLayer,
     private val profileFunction: ProfileFunction,
     private val profileRepository: ProfileRepository,
@@ -147,10 +148,10 @@ class SceneExecutor @Inject constructor(
      * commit finds the slot drained → [WizardBolusExecutor.ConfirmResult.NoPending] (no double-activate). An activation
      * failure rides back through [onError]. Mirrors [WizardBolusExecutor.confirm].
      */
-    suspend fun commitScene(bolusId: Long, onError: (String) -> Unit): WizardBolusExecutor.ConfirmResult {
+    suspend fun commitScene(bolusId: Long, onError: (WizardBolusExecutor.Failure) -> Unit): WizardBolusExecutor.ConfirmResult {
         val parked = pendingScenes.take(bolusId) ?: return WizardBolusExecutor.ConfirmResult.NoPending
         val result = activate(parked.scene, parked.durationMinutes)
-        if (!result.success) onError(result.errorMessage ?: rh.gs(CoreUiStrings.scene_some_actions_failed))
+        if (!result.success) onError(WizardBolusExecutor.Failure(result.errorMessage ?: rh.gs(CoreUiStrings.scene_some_actions_failed)))
         return WizardBolusExecutor.ConfirmResult.Delivered
     }
 

@@ -41,7 +41,8 @@ import kotlinx.coroutines.runBlocking
  */
 @ContributesBinding(AppScope::class)
 @SingleIn(AppScope::class)
-class LoopHubImpl @Inject constructor(
+@Inject
+class LoopHubImpl(
     private val aapsLogger: AAPSLogger,
     private val commandQueue: CommandQueue,
     private val constraintChecker: ConstraintsChecker,
@@ -154,7 +155,7 @@ class LoopHubImpl @Inject constructor(
                 carbs = carbsAfterConstraints,
                 note = null,
                 source = Sources.Garmin,
-                onError = { aapsLogger.error(LTag.GARMIN, "carbs delivery failed: $it") }
+                onError = { aapsLogger.error(LTag.GARMIN, "carbs delivery failed: ${it.comment}") }
             )
         }
     }

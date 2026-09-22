@@ -16,13 +16,7 @@ import app.aaps.di.ResetGraphRule
 import app.aaps.di.testGraphs
 import app.aaps.ComposeMainActivity
 import app.aaps.core.interfaces.configuration.Config
-import app.aaps.core.interfaces.configuration.ConfigBuilder
-import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.keys.BooleanNonKey
-import app.aaps.core.keys.interfaces.Preferences
-import app.aaps.implementation.plugin.PluginStore
-import app.aaps.plugins.aps.utils.StaticInjector
-import app.aaps.plugins.constraints.objectives.ObjectivesPlugin
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -655,9 +649,15 @@ class SetupWizardE2ETest {
         error("Expected at least $count EditText fields")
     }
 
-    /** AAPS re-shows a "Permissions required" bottom sheet on resume until the directory is granted. */
+    /**
+     * AAPS re-shows a "Permissions required" bottom sheet on resume until the directory is granted.
+     *
+     * Back, not a tap on the scrim: "Close sheet" is Material3's description for the dim strip above the
+     * sheet, and a tap goes to that node's centre, which sits ON the sheet once it is tall enough. Back
+     * dismisses it at any height, and the find guards it so Back is never pressed without a sheet.
+     */
     private fun dismissBlockingSheetIfPresent() {
-        device.findObject(byDesc("Close sheet"))?.click()
+        if (device.findObject(byDesc("Close sheet")) != null) device.pressBack()
     }
 
     /**

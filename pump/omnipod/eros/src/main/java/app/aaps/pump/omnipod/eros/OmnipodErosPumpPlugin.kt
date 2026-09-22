@@ -134,7 +134,8 @@ import dev.zacsweers.metro.SingleIn
 @PumpDriver
 @MetroIntKey(1070)
 @SingleIn(AppScope::class)
-class OmnipodErosPumpPlugin @Inject constructor(
+@Inject
+class OmnipodErosPumpPlugin(
     aapsLogger: AAPSLogger,
     override val rh: ResourceHelper,
     preferences: Preferences,
@@ -400,6 +401,11 @@ class OmnipodErosPumpPlugin @Inject constructor(
         aapsLogger.debug(LTag.PUMP, "OmnipodPumpPlugin.onStop()")
         scope?.cancel()
         scope = null
+        // statusChecker re-posts itself every STATUS_CHECK_INTERVAL_MILLIS, so without this the chain
+        // kept running after the plugin stopped - reading pod status and touching the service this same
+        // method has just unbound. The looper is deliberately NOT quit: loopHandler is created once with
+        // the plugin, so a later onStart posts to this same handler and a dead looper would swallow it.
+        loopHandler.removeCallbacksAndMessages(null)
         serviceConnection?.let { context.unbindService(it) }
         serviceConnection = null
     }
