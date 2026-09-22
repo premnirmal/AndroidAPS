@@ -26,11 +26,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -56,8 +62,12 @@ import app.aaps.core.ui.compose.LocalProfileUtil
 import app.aaps.core.ui.compose.stringResource
 import app.aaps.core.ui.extensions.round
 import app.aaps.ui.UiStrings
+import app.aaps.ui.compose.stats.viewmodels.StatsUiState
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import kotlin.math.ceil
+import kotlin.time.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 
 private val trioStatsRanges = listOf(
     TrioStatsRange.TODAY,
@@ -98,43 +108,308 @@ fun TrioStatsScreen(
         Column(
             modifier = Modifier.fillMaxSize().padding(paddingValues).verticalScroll(rememberScrollState()),
         ) {
-            TrioStatsRangeSelector(
-                modifier = Modifier.padding(bottom = 8.dp),
-                selectedRange = state.trioRange,
-                onSelect = viewModel::loadTrioStats
+            TrioStatsSectionSelector(
+                selectedSection = state.trioStatsSection,
+                onSelect = viewModel::selectTrioStatsSection
             )
+            when (state.trioStatsSection) {
+                TrioStatsSection.GLUCOSE -> TrioGlucoseStatsContent(
+                    state = state,
+                    viewModel = viewModel
+                )
 
-            when {
-                state.trioStatsLoading                                                ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(AapsSpacing.bgCircleSize),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
-
-                state.trioStatsData == null || state.trioStatsData?.readingCount == 0 ->
-                    Text(
-                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(horizontal = 12.dp),
-                        text = stringResource(UiStrings.trio_stats_no_data),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                else -> state.trioStatsData?.let { data ->
-                    TrioGlucoseProfileCard(
-                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(horizontal = 12.dp),
-                        data = data,
-                        lowMgdl = viewModel.trioLowMgdl,
-                        highMgdl = viewModel.trioHighMgdl,
-                        glycemicMetricUnits = viewModel.trioGlycemicMetricUnits
-                    )
-                }
+                TrioStatsSection.INSULIN -> TrioInsulinStatsContent(
+                    state = state,
+                    viewModel = viewModel
+                )
             }
         }
     }
+}
+
+@Composable
+private fun TrioStatsSectionSelector(
+    selectedSection: TrioStatsSection,
+    onSelect: (TrioStatsSection) -> Unit
+) {
+    SingleChoiceSegmentedButtonRow(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = AapsSpacing.extraLarge, vertical = AapsSpacing.medium)
+    ) {
+        TrioStatsSection.entries.forEachIndexed { index, section ->
+            SegmentedButton(
+                selected = selectedSection == section,
+                onClick = { onSelect(section) },
+                shape = SegmentedButtonDefaults.itemShape(index, TrioStatsSection.entries.size),
+                label = {
+                    Text(
+                        when (section) {
+                            TrioStatsSection.GLUCOSE -> stringResource(UiStrings.trio_stats_glucose)
+                            TrioStatsSection.INSULIN -> stringResource(UiStrings.trio_stats_insulin)
+                        }
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun TrioGlucoseStatsContent(
+    state: StatsUiState,
+    viewModel: StatsViewModel
+) {
+    TrioStatsRangeSelector(
+        modifier = Modifier.padding(bottom = AapsSpacing.medium),
+        selectedRange = state.trioRange,
+        onSelect = viewModel::loadTrioStats
+    )
+    when {
+        state.trioStatsLoading ->
+            TrioStatsLoading()
+
+        state.trioStatsData == null || state.trioStatsData?.readingCount == 0 ->
+            TrioStatsEmptyState(stringResource(UiStrings.trio_stats_no_data))
+
+        else -> state.trioStatsData?.let { data ->
+            TrioGlucoseProfileCard(
+                modifier = Modifier.padding(horizontal = AapsSpacing.extraLarge),
+                data = data,
+                lowMgdl = viewModel.trioLowMgdl,
+                highMgdl = viewModel.trioHighMgdl,
+                glycemicMetricUnits = viewModel.trioGlycemicMetricUnits
+            )
+        }
+    }
+}
+
+@Composable
+private fun TrioStatsLoading() {
+    Box(
+        modifier = Modifier.fillMaxWidth().height(AapsSpacing.bgCircleSize),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
+@Composable
+private fun TrioStatsEmptyState(text: String) {
+    Text(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = AapsSpacing.extraLarge),
+        text = text,
+        style = MaterialTheme.typography.bodyLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+@Composable
+private fun TrioInsulinStatsContent(
+    state: StatsUiState,
+    viewModel: StatsViewModel
+) {
+    var chart by rememberSaveable { mutableStateOf(TrioInsulinChart.TOTAL_DAILY_DOSE.ordinal) }
+    val selectedChart = TrioInsulinChart.entries[chart]
+    LaunchedEffect(Unit) {
+        viewModel.loadTrioInsulinStats(state.trioInsulinRange)
+    }
+    TrioInsulinRangeSelector(
+        selectedRange = state.trioInsulinRange,
+        onSelect = viewModel::loadTrioInsulinStats
+    )
+    TrioInsulinChartSelector(
+        selectedChart = selectedChart,
+        onSelect = { chart = it.ordinal }
+    )
+    when {
+        state.trioInsulinStatsLoading ->
+            TrioStatsLoading()
+
+        selectedChart == TrioInsulinChart.TOTAL_DAILY_DOSE &&
+            state.trioInsulinStatsData?.tddPoints.isNullOrEmpty() ->
+            TrioStatsEmptyState(stringResource(UiStrings.trio_stats_no_tdd_data))
+
+        selectedChart == TrioInsulinChart.BOLUS_DISTRIBUTION &&
+            state.trioInsulinStatsData?.bolusPoints.isNullOrEmpty() ->
+            TrioStatsEmptyState(stringResource(UiStrings.trio_stats_no_bolus_data))
+
+        else -> state.trioInsulinStatsData?.let { data ->
+            TrioInsulinCard(
+                modifier = Modifier.padding(horizontal = AapsSpacing.extraLarge),
+                data = data,
+                chart = selectedChart
+            )
+        }
+    }
+}
+
+@Composable
+private fun TrioInsulinRangeSelector(
+    selectedRange: TrioInsulinRange,
+    onSelect: (TrioInsulinRange) -> Unit
+) {
+    SingleChoiceSegmentedButtonRow(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = AapsSpacing.extraLarge, vertical = AapsSpacing.medium)
+    ) {
+        TrioInsulinRange.entries.forEachIndexed { index, range ->
+            SegmentedButton(
+                selected = selectedRange == range,
+                onClick = { onSelect(range) },
+                shape = SegmentedButtonDefaults.itemShape(index, TrioInsulinRange.entries.size),
+                label = { Text(range.label()) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun TrioInsulinChartSelector(
+    selectedChart: TrioInsulinChart,
+    onSelect: (TrioInsulinChart) -> Unit
+) {
+    SingleChoiceSegmentedButtonRow(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = AapsSpacing.extraLarge, vertical = AapsSpacing.medium)
+    ) {
+        TrioInsulinChart.entries.forEachIndexed { index, chart ->
+            SegmentedButton(
+                selected = selectedChart == chart,
+                onClick = { onSelect(chart) },
+                shape = SegmentedButtonDefaults.itemShape(index, TrioInsulinChart.entries.size),
+                label = { Text(chart.label()) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun TrioInsulinRange.label(): String = when (this) {
+    TrioInsulinRange.DAY          -> stringResource(UiStrings.trio_stats_short_day)
+    TrioInsulinRange.WEEK         -> stringResource(UiStrings.trio_stats_short_days, 7)
+    TrioInsulinRange.MONTH        -> stringResource(UiStrings.trio_stats_short_days, 30)
+    TrioInsulinRange.THREE_MONTHS -> stringResource(UiStrings.trio_stats_short_days, 90)
+}
+
+@Composable
+private fun TrioInsulinChart.label(): String = when (this) {
+    TrioInsulinChart.TOTAL_DAILY_DOSE  -> stringResource(UiStrings.trio_stats_total_daily_dose)
+    TrioInsulinChart.BOLUS_DISTRIBUTION -> stringResource(UiStrings.trio_stats_bolus_distribution)
+}
+
+@Composable
+private fun TrioInsulinCard(
+    data: TrioInsulinStatsData,
+    chart: TrioInsulinChart,
+    modifier: Modifier = Modifier
+) {
+    val points = when (chart) {
+        TrioInsulinChart.TOTAL_DAILY_DOSE  -> data.tddPoints
+        TrioInsulinChart.BOLUS_DISTRIBUTION -> data.bolusPoints
+    }
+    TrioStatsCard(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = chart.label(),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        TrioInsulinSummary(data, chart)
+        TrioInsulinBarChart(
+            points = points,
+            chart = chart,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun TrioInsulinSummary(data: TrioInsulinStatsData, chart: TrioInsulinChart) {
+    val values = when (chart) {
+        TrioInsulinChart.TOTAL_DAILY_DOSE -> listOf(
+            stringResource(UiStrings.trio_stats_average) to stringResource(UiStrings.trio_stats_insulin_units, data.averageTdd),
+            stringResource(UiStrings.trio_stats_total) to stringResource(UiStrings.trio_stats_insulin_units, data.totalTdd)
+        )
+
+        TrioInsulinChart.BOLUS_DISTRIBUTION -> listOf(
+            stringResource(UiStrings.trio_stats_manual) to stringResource(UiStrings.trio_stats_insulin_units, data.averageManualBolus),
+            stringResource(UiStrings.trio_stats_smb) to stringResource(UiStrings.trio_stats_insulin_units, data.averageSmbBolus),
+            stringResource(UiStrings.trio_stats_total) to stringResource(UiStrings.trio_stats_insulin_units, data.totalBolus)
+        )
+    }
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        values.forEach { (label, value) ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrioInsulinBarChart(
+    points: List<TrioInsulinPoint>,
+    chart: TrioInsulinChart,
+    modifier: Modifier = Modifier
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.tertiary
+    val description = when (chart) {
+        TrioInsulinChart.TOTAL_DAILY_DOSE  -> stringResource(UiStrings.trio_stats_tdd_chart)
+        TrioInsulinChart.BOLUS_DISTRIBUTION -> stringResource(UiStrings.trio_stats_bolus_chart)
+    }
+    Canvas(
+        modifier = modifier.height(AapsSpacing.bgCircleSize + AapsSpacing.bgCircleSize / 2)
+            .semantics { contentDescription = description }
+    ) {
+        val maximum = points.maxOfOrNull {
+            when (chart) {
+                TrioInsulinChart.TOTAL_DAILY_DOSE  -> it.total
+                TrioInsulinChart.BOLUS_DISTRIBUTION -> it.manualBolus + it.smbBolus
+            }
+        }?.coerceAtLeast(1.0) ?: 1.0
+        val barWidth = size.width / points.size.coerceAtLeast(1) * 0.7f
+        points.forEachIndexed { index, point ->
+            val centerX = size.width * (index + 0.5f) / points.size
+            if (chart == TrioInsulinChart.TOTAL_DAILY_DOSE) {
+                val basalHeight = (point.basal / maximum * size.height).toFloat()
+                val bolusHeight = (point.bolus / maximum * size.height).toFloat()
+                drawRect(
+                    color = primary,
+                    topLeft = Offset(centerX - barWidth / 2, size.height - basalHeight),
+                    size = Size(barWidth, basalHeight)
+                )
+                drawRect(
+                    color = secondary,
+                    topLeft = Offset(centerX - barWidth / 2, size.height - basalHeight - bolusHeight),
+                    size = Size(barWidth, bolusHeight)
+                )
+            } else {
+                val manualHeight = (point.manualBolus / maximum * size.height).toFloat()
+                val smbHeight = (point.smbBolus / maximum * size.height).toFloat()
+                drawRect(
+                    color = primary,
+                    topLeft = Offset(centerX - barWidth / 2, size.height - manualHeight),
+                    size = Size(barWidth, manualHeight)
+                )
+                drawRect(
+                    color = secondary,
+                    topLeft = Offset(centerX - barWidth / 2, size.height - manualHeight - smbHeight),
+                    size = Size(barWidth, smbHeight)
+                )
+            }
+        }
+    }
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(trioInsulinPointLabel(points.first().timestamp), style = MaterialTheme.typography.labelSmall)
+        Text(trioInsulinPointLabel(points.last().timestamp), style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
+private fun trioInsulinPointLabel(timestamp: Long): String {
+    val time = Instant.fromEpochMilliseconds(timestamp).toLocalDateTime(TimeZone.currentSystemDefault())
+    return stringResource(UiStrings.trio_stats_time_label, time.monthNumber, time.dayOfMonth, time.hour)
 }
 
 @Composable
