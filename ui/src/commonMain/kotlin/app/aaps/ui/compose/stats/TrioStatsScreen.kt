@@ -172,7 +172,7 @@ private fun TrioGlucoseStatsContent(
 
         else -> state.trioStatsData?.let { data ->
             TrioGlucoseProfileCard(
-                modifier = Modifier.align(Alignment.CenterHorizontally).padding(horizontal = AapsSpacing.extraLarge),
+                modifier = Modifier.padding(horizontal = AapsSpacing.extraLarge),
                 data = data,
                 lowMgdl = viewModel.trioLowMgdl,
                 highMgdl = viewModel.trioHighMgdl,

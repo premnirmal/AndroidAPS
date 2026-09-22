@@ -207,65 +207,6 @@ class StatsViewModel(
                 )
             }
 
-            fun selectTrioStatsSection(section: TrioStatsSection) {
-                _uiState.update { it.copy(trioStatsSection = section) }
-            }
-
-            fun loadTrioInsulinStats(range: TrioInsulinRange) {
-                if (
-                    uiState.value.trioInsulinRange == range &&
-                    uiState.value.trioInsulinStatsData != null
-                ) return
-
-                trioInsulinStatsLoadJob?.cancel()
-                trioInsulinStatsLoadJob = viewModelScope.launch {
-                    _uiState.update {
-                        it.copy(
-                            trioInsulinRange = range,
-                            trioInsulinStatsLoading = true
-                        )
-                    }
-                    val data = withContext(aapsIoDispatcher) {
-                        val endTime = dateUtil.now()
-                        val startTime = range.startTime(endTime)
-                        val tdds = if (range.usesHourlyBuckets) {
-                            val hour = 60L * 60L * 1000L
-                            generateSequence(startTime) { timestamp ->
-                                (timestamp + hour).takeIf { it < endTime }
-                            }
-                                .mapNotNull { timestamp ->
-                                    tddCalculator.calculateInterval(
-                                        startTime = timestamp,
-                                        endTime = minOf(timestamp + hour, endTime),
-                                        allowMissingData = true
-                                    )
-                                }
-                                .toList()
-                        } else {
-                            val days = when (range) {
-                                TrioInsulinRange.WEEK         -> 6L
-                                TrioInsulinRange.MONTH        -> 29L
-                                TrioInsulinRange.THREE_MONTHS -> 89L
-                                TrioInsulinRange.DAY          -> 0L
-                            }
-                            buildList {
-                                tddCalculator.calculate(days, allowMissingDays = true)?.let { calculated ->
-                                    for (index in 0 until calculated.size()) add(calculated.valueAt(index))
-                                }
-                                tddCalculator.calculateToday()?.let(::add)
-                            }
-                        }
-                        val boluses = persistenceLayer.getBolusesFromTimeToTime(startTime, endTime, true)
-                        calculateTrioInsulinStatsData(tdds, boluses, range)
-                    }
-                    _uiState.update {
-                        it.copy(
-                            trioInsulinStatsData = data,
-                            trioInsulinStatsLoading = false
-                        )
-                    }
-                }
-            }
             val data = withContext(aapsIoDispatcher) {
                 val endTime = dateUtil.now()
                 val startTime = range.startTime(endTime)
@@ -282,6 +223,50 @@ class StatsViewModel(
                     trioStatsLoading = false
                 )
             }
+        }
+    }
+
+    fun selectTrioStatsSection(section: TrioStatsSection) {
+        _uiState.update { it.copy(trioStatsSection = section) }
+    }
+
+    fun loadTrioInsulinStats(range: TrioInsulinRange) {
+        if (uiState.value.trioInsulinRange == range && uiState.value.trioInsulinStatsData != null) return
+
+        trioInsulinStatsLoadJob?.cancel()
+        trioInsulinStatsLoadJob = viewModelScope.launch {
+            _uiState.update { it.copy(trioInsulinRange = range, trioInsulinStatsLoading = true) }
+            val data = withContext(aapsIoDispatcher) {
+                val endTime = dateUtil.now()
+                val startTime = range.startTime(endTime)
+                val tdds = if (range.usesHourlyBuckets) {
+                    val hour = 60L * 60L * 1000L
+                    val hourlyTdds = mutableListOf<TDD>()
+                    var timestamp = startTime
+                    while (timestamp < endTime) {
+                        tddCalculator.calculateInterval(timestamp, minOf(timestamp + hour, endTime), allowMissingData = true)
+                            ?.let(hourlyTdds::add)
+                        timestamp += hour
+                    }
+                    hourlyTdds
+                } else {
+                    val days = when (range) {
+                        TrioInsulinRange.WEEK         -> 6L
+                        TrioInsulinRange.MONTH        -> 29L
+                        TrioInsulinRange.THREE_MONTHS -> 89L
+                        TrioInsulinRange.DAY          -> 0L
+                    }
+                    val dailyTdds = mutableListOf<TDD>()
+                    tddCalculator.calculate(days, allowMissingDays = true)?.let { calculated ->
+                        for (index in 0 until calculated.size()) dailyTdds.add(calculated.valueAt(index))
+                    }
+                    tddCalculator.calculateToday()?.let(dailyTdds::add)
+                    dailyTdds
+                }
+                val boluses = persistenceLayer.getBolusesFromTimeToTime(startTime, endTime, true)
+                calculateTrioInsulinStatsData(tdds, boluses, range)
+            }
+            _uiState.update { it.copy(trioInsulinStatsData = data, trioInsulinStatsLoading = false) }
         }
     }
 
