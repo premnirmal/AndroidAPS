@@ -88,6 +88,7 @@ import app.aaps.core.objects.crypto.CryptoUtil
 import app.aaps.core.ui.compose.MetroAppCompatActivity
 import app.aaps.core.ui.compose.FallbackViewModelFactory
 import app.aaps.core.ui.compose.MetroViewModelFactoryOwner
+import app.aaps.core.ui.compose.LocalSnackbarHostState
 import app.aaps.core.ui.compose.dialogs.OkDialog
 import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.locale.LocaleHelper
@@ -421,6 +422,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         }
 
         val cobUiState by chipsViewModel.cobUiState.collectAsStateWithLifecycle()
+        val appSnackbarHostState = LocalSnackbarHostState.current
 
         NavHost(
             navController = navController,
@@ -601,6 +603,34 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                         content = content
                     )
                 },
+                maintenanceViewModel = maintenanceViewModel,
+                onMaintenanceDirectoryClick = {
+                    try {
+                        accessTree?.launch(null)
+                    } catch (_: Exception) {
+                        maintenanceViewModel.emitError("Unable to launch activity. This is an Android issue")
+                    }
+                },
+                onMaintenanceRecreateActivity = { recreate() },
+                onMaintenanceLaunchBrowser = { url ->
+                    try {
+                        CustomTabsIntent.Builder().setShowTitle(true).build()
+                            .launchUrl(this@ComposeMainActivity, url.toUri())
+                    } catch (_: Exception) {
+                        maintenanceViewModel.emitError("Unable to open browser")
+                    }
+                },
+                onMaintenanceBringToForeground = {
+                    startActivity(
+                        Intent(this@ComposeMainActivity, ComposeMainActivity::class.java).addFlags(
+                            Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
+                                Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                Intent.FLAG_ACTIVITY_NO_ANIMATION
+                        )
+                    )
+                },
+                onMaintenanceSnackbar = { message -> appSnackbarHostState.showSnackbar(message) },
             )
         }
 

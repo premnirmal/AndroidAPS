@@ -6,6 +6,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -16,6 +21,12 @@ import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.dialogs.OkCancelDialog
 import app.aaps.core.ui.compose.dialogs.OkDialog
 import app.aaps.core.ui.compose.dialogs.QueryAnyPasswordDialog
+import app.aaps.core.ui.compose.AapsTopAppBar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
 import app.aaps.core.ui.compose.stringResource
 import app.aaps.core.ui.compose.stringResource
 import app.aaps.ui.compose.maintenance.MaintenanceViewModel.ExportState
@@ -42,6 +53,8 @@ fun MaintenanceDialogs(
     onLaunchBrowser: (String) -> Unit,
     onBringToForeground: () -> Unit,
     onSnackbar: suspend (String) -> Unit,
+    showMaintenanceScreen: Boolean = false,
+    onMaintenanceScreenBack: () -> Unit = {}
 ) {
     // Confirmation dialog states
     var showLogSettings by remember { mutableStateOf(false) }
@@ -107,6 +120,56 @@ fun MaintenanceDialogs(
             onToggleCsvLocal = { maintenanceViewModel.toggleCsvLocal(it) },
             onToggleCsvCloud = { maintenanceViewModel.toggleCsvCloud(it) }
         )
+    }
+
+    if (showMaintenanceScreen) {
+        LaunchedEffect(Unit) {
+            maintenanceViewModel.refreshExportConfig()
+        }
+        Scaffold(
+            topBar = {
+                AapsTopAppBar(
+                    title = { Text(stringResource(CoreUiStrings.maintenance)) },
+                    navigationIcon = {
+                        IconButton(onClick = onMaintenanceScreenBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(CoreUiStrings.back)
+                            )
+                        }
+                    }
+                )
+            }
+        ) { paddingValues ->
+            Box(modifier = Modifier.padding(paddingValues)) {
+                MaintenanceContent(
+                    onLogSettingsClick = { showLogSettings = true },
+                    onSendLogsClick = { showConfirmSendLogs = true },
+                    onDeleteLogsClick = { maintenanceViewModel.deleteLogs() },
+                    onDirectoryClick = {
+                        maintenanceViewModel.logSelectDirectory()
+                        onDirectoryClick()
+                    },
+                    onCloudDirectoryClick = { maintenanceViewModel.showCloudDirectory() },
+                    onClearCloudClick = { maintenanceViewModel.requestClearCloud() },
+                    onExportSettingsClick = { maintenanceViewModel.startExport() },
+                    onImportSettingsClick = onImportSettingsNavigate,
+                    onExportCsvClick = { showConfirmExportCsv = true },
+                    onResetApsResultsClick = { showConfirmResetAps = true },
+                    onCleanupDbClick = { showConfirmCleanupDb = true },
+                    onResetDbClick = { showConfirmResetDb = true },
+                    exportConfig = exportConfig,
+                    isDirectoryAccessGranted = isDirectoryAccessGranted,
+                    onToggleSettingsLocal = { maintenanceViewModel.toggleSettingsLocal(it) },
+                    onToggleSettingsCloud = { maintenanceViewModel.toggleSettingsCloud(it) },
+                    onToggleLogEmail = { maintenanceViewModel.toggleLogEmail(it) },
+                    onToggleLogCloud = { maintenanceViewModel.toggleLogCloud(it) },
+                    onToggleCsvLocal = { maintenanceViewModel.toggleCsvLocal(it) },
+                    onToggleCsvCloud = { maintenanceViewModel.toggleCsvCloud(it) },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
     }
 
     // Log settings bottom sheet

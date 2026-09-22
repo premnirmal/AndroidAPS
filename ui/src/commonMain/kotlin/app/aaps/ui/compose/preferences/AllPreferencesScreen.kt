@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -77,7 +78,8 @@ fun AllPreferencesScreen(
     modifier: Modifier = Modifier,
     showTopBar: Boolean = true,
     showSimpleModeHiddenPreferences: Boolean = false,
-    onConfigurationClick: (() -> Unit)? = null
+    onConfigurationClick: (() -> Unit)? = null,
+    onMaintenanceClick: (() -> Unit)? = null
 ) {
     val preferences = LocalPreferences.current
     val config = LocalConfig.current
@@ -203,23 +205,32 @@ fun AllPreferencesScreen(
 
                     // Built-in: Alerts settings
                     addPreferenceContent(alertsPreferences, onShowMessage, sectionState)
+                    addPreferenceContent(maintenancePreferences, onShowMessage, sectionState)
 
                     // Built-in: Maintenance settings (always last)
-                    addPreferenceContent(maintenancePreferences, onShowMessage, sectionState)
+                    onMaintenanceClick?.let { onClick ->
+                        item {
+                            Preference(
+                                title = { Text(stringResource(CoreUiStrings.maintenance)) },
+                                summary = { Text(stringResource(CoreUiStrings.description_maintenance)) },
+                                onClick = onClick
+                            )
+                        }
+                        item {
+                            HorizontalDivider()
+                        }
+                    }
 
                     onConfigurationClick?.let { onClick ->
                         item {
                             Preference(
                                 title = { Text(stringResource(CoreUiStrings.nav_configuration)) },
                                 summary = { Text(stringResource(CoreUiStrings.nav_configuration_desc)) },
-                                icon = {
-                                    Icon(
-                                        imageVector = Icons.Default.Settings,
-                                        contentDescription = null
-                                    )
-                                },
                                 onClick = onClick
                             )
+                        }
+                        item {
+                            HorizontalDivider()
                         }
                     }
                 }

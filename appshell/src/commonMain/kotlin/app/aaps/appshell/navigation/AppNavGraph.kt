@@ -86,6 +86,8 @@ import app.aaps.ui.compose.main.TrioNavTab
 import app.aaps.ui.compose.maintenance.ImportSettingsScreen
 import app.aaps.ui.compose.maintenance.ImportSource
 import app.aaps.ui.compose.maintenance.ImportViewModel
+import app.aaps.ui.compose.maintenance.MaintenanceScreen
+import app.aaps.ui.compose.maintenance.MaintenanceViewModel
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.preferences.AllPreferencesScreen
 import app.aaps.ui.compose.preferences.PreferenceScreenView
@@ -179,6 +181,12 @@ fun NavGraphBuilder.appNavGraph(
         topBarActions: @Composable RowScope.() -> Unit,
         content: @Composable (PaddingValues) -> Unit
     ) -> Unit,
+    maintenanceViewModel: MaintenanceViewModel? = null,
+    onMaintenanceDirectoryClick: () -> Unit = {},
+    onMaintenanceRecreateActivity: () -> Unit = {},
+    onMaintenanceLaunchBrowser: (String) -> Unit = {},
+    onMaintenanceBringToForeground: () -> Unit = {},
+    onMaintenanceSnackbar: suspend (String) -> Unit = {},
     /**
      * The overview, which is the app home screen.
      *
@@ -607,8 +615,26 @@ fun NavGraphBuilder.appNavGraph(
             rh = rh,
             builtInSearchables = builtInSearchables,
             configBuilder = configBuilder,
-            onBackClick = { navController.safePopBackStack() }
+            onBackClick = { navController.safePopBackStack() },
+            onMaintenanceClick = maintenanceViewModel?.let { { navController.navigate(AppRoute.Maintenance.route) } }
         )
+    }
+
+    maintenanceViewModel?.let { viewModel ->
+        composable(AppRoute.Maintenance.route) {
+            MaintenanceScreen(
+                maintenanceViewModel = viewModel,
+                onDirectoryClick = onMaintenanceDirectoryClick,
+                onImportSettingsNavigate = { source ->
+                    navController.navigate(AppRoute.ImportSettings.createRoute(source.name))
+                },
+                onRecreateActivity = onMaintenanceRecreateActivity,
+                onLaunchBrowser = onMaintenanceLaunchBrowser,
+                onBringToForeground = onMaintenanceBringToForeground,
+                onSnackbar = onMaintenanceSnackbar,
+                onNavigateBack = { navController.safePopBackStack() }
+            )
+        }
     }
 
     composable(
@@ -726,7 +752,8 @@ fun NavGraphBuilder.appNavGraph(
                 showSimpleModeHiddenPreferences = true,
                 onConfigurationClick = {
                     navController.navigate(AppRoute.Configuration.route)
-                }
+                },
+                onMaintenanceClick = maintenanceViewModel?.let { { navController.navigate(AppRoute.Maintenance.route) } }
             )
         }
     }
