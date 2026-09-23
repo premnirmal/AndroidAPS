@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -33,7 +34,11 @@ import app.aaps.core.ui.compose.stringResource
 
 /**
  * Modal-style screen rendered over a scrim by [ErrorActivity] when an urgent alarm fires.
- * Displays the alarm title, status, and a dismiss action.
+ * Displays the alarm title/status and three actions: OK (dismiss), Mute, Mute 5 min.
+ *
+ * Audio (MediaPlayer + volume ramp) is owned by [ErrorActivity] itself — the [onStart]
+ * callback fires once on first composition so the activity can begin playback when the
+ * screen is shown.
  *
  * @see ErrorScreenPreview
  * @see ErrorScreenShortPreview
@@ -43,8 +48,16 @@ fun ErrorScreen(
     title: String,
     status: String,
     appIcon: Int,
-    onOk: () -> Unit
+    onOk: () -> Unit,
+    onMute: () -> Unit,
+    onMute5Min: () -> Unit,
+    onStart: () -> Unit
 ) {
+    DisposableEffect(Unit) {
+        onStart()
+        onDispose { }
+    }
+
     // Semi-transparent background
     Box(
         modifier = Modifier
@@ -118,6 +131,26 @@ fun ErrorScreen(
                 )
 
                 Spacer(modifier = Modifier.height(24.dp))
+
+                // Mute 5 min button
+                Button(
+                    onClick = onMute5Min,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(CoreUiStrings.mute5min))
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Mute button
+                Button(
+                    onClick = onMute,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(CoreUiStrings.mute))
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 // OK button
                 Button(

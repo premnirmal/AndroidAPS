@@ -27,6 +27,9 @@ enum class OmnipodBooleanPreferenceKey(
         summaryResId = R.string.omnipod_common_preferences_expiration_alarm_enabled_summary
     ),
     LowReservoirAlert("AAPS.Omnipod.low_reservoir_alert_enabled", true, titleResId = R.string.omnipod_common_preferences_low_reservoir_alert_enabled),
+    SoundUncertainTbrNotification("AAPS.Omnipod.notification_uncertain_tbr_sound_enabled", true, titleResId = R.string.omnipod_common_preferences_notification_uncertain_tbr_sound_enabled),
+    SoundUncertainSmbNotification("AAPS.Omnipod.notification_uncertain_smb_sound_enabled", true, titleResId = R.string.omnipod_common_preferences_notification_uncertain_smb_sound_enabled),
+    SoundUncertainBolusNotification("AAPS.Omnipod.notification_uncertain_bolus_sound_enabled", true, titleResId = R.string.omnipod_common_preferences_notification_uncertain_bolus_sound_enabled),
     AutomaticallyAcknowledgeAlerts("AAPS.Omnipod.automatically_acknowledge_alerts_enabled", false, titleResId = R.string.omnipod_common_preferences_automatically_silence_alerts);
 
     override val preferenceType: PreferenceType = PreferenceType.SWITCH

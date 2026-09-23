@@ -26,7 +26,6 @@ import app.aaps.core.interfaces.insulin.ConcentrationHelper
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.logging.UserEntryLogger
-import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.nsclient.ProcessedDeviceStatusData
@@ -58,7 +57,7 @@ import app.aaps.core.interfaces.utils.HardLimits
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
-import app.aaps.core.keys.LongNonKey
+import app.aaps.core.keys.IntNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.objects.constraints.ConstraintObject
 import app.aaps.core.objects.extensions.asAnnouncement
@@ -156,12 +155,7 @@ class LoopPlugin(
     @Volatile override var lastBgTriggeredRun: Long = 0
     private var carbsSuggestionsSuspendedUntil: Long = 0
     private var prevCarbsreq = 0
-    override var lastRun: LastRun? = preferences
-        .get(LongNonKey.LastLoopRunTimestamp)
-        .takeIf { it > 0L }
-        ?.let { timestamp ->
-            LastRun().apply { lastAPSRun = timestamp }
-        }
+    override var lastRun: LastRun? = null
     override var closedLoopEnabled: Constraint<Boolean>? = null
 
     // Debounces the device-status upload. Was a Handler on its own HandlerThread; a Job on the app
@@ -189,7 +183,6 @@ class LoopPlugin(
     @OptIn(FlowPreview::class)
     override suspend fun onStart() {
         super.onStart()
-        hydrateLastRunTimestamp()
         // TempTarget changes
         persistenceLayer.observeChanges(TT::class)
             // Skip db change of ending previous TT
@@ -229,25 +222,6 @@ class LoopPlugin(
         collectors.forEach { it.cancel() }
         collectors.clear()
         super.onStop()
-    }
-
-    private suspend fun hydrateLastRunTimestamp() {
-        val now = dateUtil.now()
-        val savedTimestamp = preferences.get(LongNonKey.LastLoopRunTimestamp)
-        val databaseTimestamp = persistenceLayer
-            .getApsResults(now - T.days(1).msecs(), now)
-            .maxOfOrNull { it.date }
-            ?: 0L
-        val timestamp = maxOf(savedTimestamp, databaseTimestamp)
-        if (timestamp <= 0L) return
-
-        lastRun = lastRun
-            ?.apply { lastAPSRun = maxOf(lastAPSRun, timestamp) }
-            ?: LastRun().apply { lastAPSRun = timestamp }
-        if (timestamp > savedTimestamp) {
-            preferences.put(LongNonKey.LastLoopRunTimestamp, timestamp)
-        }
-        rxBus.send(EventLoopUpdateGui())
     }
 
     override fun specialEnableCondition(): Boolean {
@@ -622,9 +596,7 @@ class LoopPlugin(
             lastRun?.let { lastRun ->
                 lastRun.request = apsResult
                 lastRun.constraintsProcessed = resultAfterConstraints
-                lastRun.lastAPSRun = dateUtil.now().also { timestamp ->
-                    preferences.put(LongNonKey.LastLoopRunTimestamp, timestamp)
-                }
+                lastRun.lastAPSRun = dateUtil.now()
                 lastRun.source = (usedAPS as PluginBase).name
                 lastRun.tbrSetByPump = null
                 lastRun.smbSetByPump = null
@@ -645,8 +617,9 @@ class LoopPlugin(
                     if (allowNotification) {
                         if (resultAfterConstraints.isCarbsRequired && carbsSuggestionsSuspendedUntil < dateUtil.now() && !treatmentTimeThreshold(-15)
                         ) {
-                            if (preferences.get(BooleanKey.AlertCarbsRequired)) {
-                                postMealNotification(resultAfterConstraints.carbsRequiredText)
+                            if (preferences.get(BooleanKey.AlertCarbsRequired) && !preferences.get(BooleanKey.AlertUrgentAsAndroidNotification)
+                            ) {
+                                notificationManager.post(NotificationId.CARBS_REQUIRED, resultAfterConstraints.carbsRequiredText)
                             }
                             if (preferences.get(BooleanKey.NsClientCreateAnnouncementsFromCarbsReq) && config.APS) {
                                 persistenceLayer.insertPumpTherapyEventIfNewByTimestamp(
@@ -682,7 +655,7 @@ class LoopPlugin(
                             //If carbs were required previously, but are no longer needed, dismiss notifications
                             if (prevCarbsreq > 0) {
                                 dismissSuggestion()
-                                notificationManager.dismiss(NotificationId.MEAL_TIME_TO_EAT)
+                                notificationManager.dismiss(NotificationId.CARBS_REQUIRED)
                             }
                         }
                     }
@@ -772,35 +745,13 @@ class LoopPlugin(
         dismissSuggestion()
     }
 
-    private fun postMealNotification(contentText: String) {
-        notificationManager.post(
-            id = NotificationId.MEAL_TIME_TO_EAT,
-            text = contentText,
-            actions = listOf(
-                NotificationAction(CoreUiStrings.dismiss) {
-                    notificationManager.dismiss(NotificationId.MEAL_TIME_TO_EAT)
-                }
-            )
-        )
-    }
-
     private fun presentSuggestion(contentText: String) {
-        notificationManager.post(
-            id = NotificationId.LOW_GLUCOSE_SUSPEND,
-            text = contentText,
-            actions = listOf(
-                NotificationAction(CoreUiStrings.dismiss) {
-                    notificationManager.dismiss(NotificationId.LOW_GLUCOSE_SUSPEND)
-                }
-            )
-        )
         loopNotifier.openLoopSuggestion(contentText, localOnly = preferences.get(BooleanKey.WearControl))
         rxBus.send(EventNewOpenLoopNotification())
         sendToWear(contentText)
     }
 
     private fun dismissSuggestion() {
-        notificationManager.dismiss(NotificationId.LOW_GLUCOSE_SUSPEND)
         loopNotifier.dismiss()
         rxBus.send(EventMobileToWear(EventData.CancelNotification(dateUtil.now())))
     }
@@ -836,6 +787,7 @@ class LoopPlugin(
                         lastRun.lastTBREnact = dateUtil.now()
                         lastRun.lastOpenModeAccept = dateUtil.now()
                         scheduleBuildAndStoreDeviceStatus("acceptChangeRequest")
+                        preferences.inc(IntNonKey.ObjectivesManualEnacts)
                     }
                     rxBus.send(EventAcceptOpenLoopChange())
                 }
@@ -1076,4 +1028,8 @@ class LoopPlugin(
         icon = pluginDescription.icon
     )
 
+    companion object {
+
+        private const val CHANNEL_ID = "AAPS-OpenLoop"
+    }
 }

@@ -28,6 +28,7 @@ import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.logging.UserEntryLogger
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.plugin.ActivePlugin
@@ -1314,7 +1315,7 @@ class WizardBolusExecutorImpl(
                     else rh.gs(CoreUiStrings.treatmentdeliveryerror) + "\n" + result.comment
                 if (detailedBolusInfo.bolusType != BS.Type.SMB) {
                     if (result.cancelled) notificationManager.post(NotificationId.BOLUS_CANCELLED, errorText)
-                    else notificationManager.post(NotificationId.BOLUS_DELIVERY_FAILED, errorText, validMinutes = 0)
+                    else notificationManager.post(NotificationId.BOLUS_DELIVERY_FAILED, errorText, validMinutes = 0, sound = AlarmSound.BOLUS_ERROR)
                 }
                 onError(WizardBolusExecutor.Failure(errorText, result.cancelled))
             } else

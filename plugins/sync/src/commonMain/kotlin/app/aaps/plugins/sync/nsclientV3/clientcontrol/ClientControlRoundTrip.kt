@@ -11,6 +11,7 @@ import app.aaps.core.interfaces.clientcontrol.PendingAction
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.nsclient.NSClientRepository
@@ -193,7 +194,7 @@ class ClientControlRoundTrip(
                 if (ack.reason.toFailureReason() == FailureReason.Cancelled)
                     notificationManager.post(NotificationId.BOLUS_CANCELLED, text)
                 else
-                    notificationManager.post(NotificationId.BOLUS_DELIVERY_FAILED, text, validMinutes = 0)
+                    notificationManager.post(NotificationId.BOLUS_DELIVERY_FAILED, text, validMinutes = 0, sound = AlarmSound.BOLUS_ERROR)
             }
             return
         }

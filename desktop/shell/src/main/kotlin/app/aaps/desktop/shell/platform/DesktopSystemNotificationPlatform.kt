@@ -3,17 +3,19 @@ package app.aaps.desktop.shell.platform
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.AapsNotification
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.SystemNotificationPlatform
 import java.awt.Image
 import java.awt.SystemTray
+import java.awt.Toolkit
 import java.awt.TrayIcon
 import java.awt.image.BufferedImage
 
 /**
  * The desktop half of notifications: the system tray.
  *
- * The shared notification manager decides which notifications exist. This only puts them in front
- * of the user.
+ * The shared notification manager decides which notifications exist and which alarm owns the sound.
+ * This only puts them in front of the user.
  *
  * ## What it does and does not do
  *
@@ -21,6 +23,9 @@ import java.awt.image.BufferedImage
  *   [cancel] and [cancelAll] have nothing to take back: a desktop toast is transient and gone by the
  *   time anything would cancel it. Both are recorded rather than silently ignored, so a caller
  *   expecting a notification to disappear can see that it never could.
+ * - **Makes a sound** with the platform beep, and only for an alarm that carries one. It does NOT
+ *   ramp the volume the way Android does. An alarm that is meant to escalate will not escalate here,
+ *   which matters for anything relying on being noticed while the user is away from the machine.
  * - **Reports no dismissals.** AWT cannot tell the app that a user dismissed a toast, so the callback
  *   registered by [onDismissed] is kept but never invoked. The shared registry then only ever clears
  *   a notification from inside the app, which is correct, just less than Android manages.
@@ -62,6 +67,12 @@ class DesktopSystemNotificationPlatform(
 
     override fun cancelAll() {
         aapsLogger.debug(LTag.CORE, "Cannot cancel desktop notifications: tray toasts are transient")
+    }
+
+    override fun setAudibleAlarm(instanceKey: Int?, sound: AlarmSound?) {
+        // Called again with the same key means "keep playing", and a single beep has already
+        // finished, so there is nothing to keep. Only a new alarm that carries a sound beeps.
+        if (instanceKey != null && sound != null) runCatching { Toolkit.getDefaultToolkit().beep() }
     }
 
     override fun onDismissed(callback: (instanceKey: Int) -> Unit) {

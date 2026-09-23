@@ -2,9 +2,9 @@ package app.aaps.core.interfaces.notifications
 
 enum class NotificationLevel(val priority: Int) {
     /**
-     * Alarm tier: takes over the screen with a full-screen alarm.
+     * Alarm tier: plays sound with volume ramp and takes over the screen (full-screen alarm).
      * Reserved for acute, active insulin-delivery failures, critical BG conditions, and
-     * user-configured alarms.
+     * user-configured alarms. This is the only level that makes noise.
      */
     URGENT(0),
 
