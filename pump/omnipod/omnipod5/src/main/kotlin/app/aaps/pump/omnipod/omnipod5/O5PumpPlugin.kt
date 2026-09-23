@@ -86,7 +86,7 @@ import app.aaps.pump.omnipod.common.queue.command.CommandUpdateAlertConfiguratio
 import app.aaps.pump.omnipod.omnipod5.keys.O5IntentKey
 import app.aaps.pump.omnipod.omnipod5.ui.O5CertificateStoreScreen
 import app.aaps.pump.omnipod.omnipod5.ui.compose.OmnipodO5ComposeContent
-import app.aaps.pump.omnipod.omnipod5.util.mapProfileToBasalProgram
+import app.aaps.pump.omnipod.common.util.mapProfileToBasalProgram
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Single
 import kotlinx.coroutines.CoroutineScope

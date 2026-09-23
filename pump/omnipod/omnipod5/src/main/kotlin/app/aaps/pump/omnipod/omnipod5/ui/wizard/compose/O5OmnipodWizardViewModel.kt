@@ -6,10 +6,8 @@ import app.aaps.pump.omnipod.common.R
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope
-import app.aaps.core.data.model.ICfg
 import app.aaps.core.data.model.TE
 import app.aaps.core.data.pump.defs.PumpType
-import app.aaps.core.data.time.T
 import app.aaps.core.data.ue.Sources
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.insulin.InsulinManager
@@ -54,7 +52,7 @@ import app.aaps.pump.omnipod.omnipod5.bledriver.pod.util.buildO5ExpirationAlerts
 import app.aaps.pump.omnipod.common.keys.OmnipodBooleanPreferenceKey
 import app.aaps.pump.omnipod.common.keys.OmnipodIntPreferenceKey
 import app.aaps.pump.omnipod.common.queue.command.CommandDeactivatePod
-import app.aaps.pump.omnipod.omnipod5.util.mapProfileToBasalProgram
+import app.aaps.pump.omnipod.common.util.mapProfileToBasalProgram
 import androidx.lifecycle.ViewModel
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
@@ -63,7 +61,6 @@ import dev.zacsweers.metro.binding
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import io.reactivex.rxjava3.core.Single
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.rx3.rxSingle
 import java.util.Date
@@ -95,31 +92,28 @@ class O5OmnipodWizardViewModel @Inject constructor(
     private val commandQueue: CommandQueue,
     private val notificationManager: NotificationManager,
     private val pumpSync: PumpSync,
-    private val insulinManager: InsulinManager,
-    private val persistenceLayer: PersistenceLayer,
+    insulinManager: InsulinManager,
+    persistenceLayer: PersistenceLayer,
     profileFunction: ProfileFunction,
     profileRepository: ProfileRepository,
     pumpEnactResultProvider: () -> PumpEnactResult,
     logger: AAPSLogger,
     aapsSchedulers: AapsSchedulers
-) : OmnipodWizardViewModel(logger, aapsSchedulers, pumpEnactResultProvider, profileFunction, profileRepository) {
-
-    private val _siteRotationEntries = MutableStateFlow<List<TE>>(emptyList())
-
-    init {
-        viewModelScope.launch {
-            val insulins = insulinManager.insulins.map { it.deepClone() }
-            val activeLabel = profileFunction.getProfile()?.iCfg?.insulinLabel
-            loadInsulins(insulins, activeLabel)
-            loadSiteRotationEntriesInternal()
-            resolveProfileGate()
-            _ready.value = true
-        }
-    }
+) : OmnipodWizardViewModel(
+    logger,
+    aapsSchedulers,
+    pumpEnactResultProvider,
+    profileFunction,
+    profileRepository,
+    insulinManager,
+    persistenceLayer
+) {
 
     public override val pumpSource: Sources = Sources.Omnipod5
 
-    override fun fallbackICfg(): ICfg? = insulinManager.insulins.firstOrNull()
+    init {
+        initializeWizard()
+    }
 
     override val concentrationEnabled: Boolean
         get() = preferences.get(BooleanKey.GeneralInsulinConcentration)
@@ -130,38 +124,6 @@ class O5OmnipodWizardViewModel @Inject constructor(
     override fun bodyType(): BodyType =
         BodyType.fromPref(preferences.get(IntKey.SiteRotationUserProfile))
 
-    override fun siteRotationEntries(): List<TE> = _siteRotationEntries.value
-
-    private suspend fun loadSiteRotationEntriesInternal() {
-        _siteRotationEntries.value = persistenceLayer.getTherapyEventDataFromTime(
-            System.currentTimeMillis() - T.days(45).msecs(), false
-        ).filter { it.type == TE.Type.CANNULA_CHANGE || it.type == TE.Type.SENSOR_CHANGE }
-    }
-
-    override fun executeInsulinProfileSwitch() {
-        val selected = selectedInsulin.value ?: return
-        val activeLabel = activeInsulinLabel.value
-        if (selected.insulinLabel == activeLabel) return
-        viewModelScope.launch {
-            profileFunction.createProfileSwitchWithNewInsulin(selected, Sources.Omnipod5)
-        }
-    }
-
-    override fun saveSiteLocation() {
-        val location = getSelectedSiteLocation().takeIf { it != TE.Location.NONE } ?: return
-        val arrow = getSelectedSiteArrow().takeIf { it != TE.Arrow.NONE }
-        viewModelScope.launch {
-            try {
-                val now = System.currentTimeMillis()
-                val entries = persistenceLayer.getTherapyEventDataFromToTime(now - 60_000, now)
-                    .filter { it.type == TE.Type.CANNULA_CHANGE }
-                entries.firstOrNull()?.let { te ->
-                    persistenceLayer.insertOrUpdateTherapyEvent(te.copy(location = location, arrow = arrow))
-                }
-            } catch (_: Exception) {
-            }
-        }
-    }
 
     private fun requirePodId(): Int =
         podStateManager.podId?.toInt() ?: throw IllegalStateException("O5 pod not paired")
