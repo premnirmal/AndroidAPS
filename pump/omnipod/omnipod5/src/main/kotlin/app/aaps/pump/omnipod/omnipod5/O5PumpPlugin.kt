@@ -1349,7 +1349,7 @@ class O5PumpPlugin @Inject constructor(
                 commandType = OmnipodCommandType.SET_BOLUS,
                 date = startedAt,
                 initialResult = InitialResult.NOT_SENT,
-                bolusRecord = BolusRecord(requestedInsulinAmount, BolusType.DEFAULT)
+                bolusRecord = BolusRecord(requestedInsulinAmount, BolusType.BASAL_DRIFT_COMPENSATION)
             ).blockingGet()
             val pendingDose = O5PodStateManager.PendingDoseCommand(
                 type = O5PodStateManager.PendingDoseType.BOLUS,
