@@ -15,6 +15,7 @@ import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
 import app.aaps.pump.omnipod.common.bledriver.pod.command.DeactivateCommand
 import app.aaps.pump.omnipod.common.bledriver.pod.command.GetStatusCommand
 import app.aaps.pump.omnipod.common.bledriver.pod.response.ResponseType
+import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.util.P256KeyGenerator
 import app.aaps.shared.tests.AAPSLoggerTest
 import com.google.common.truth.Truth.assertThat
@@ -59,7 +60,8 @@ class SessionSigningTest {
                 publicKeyHex = publicKey.toHex(),
                 intermediateCABase64 = "",
                 tlsCertificateBase64 = ""
-            )
+            ),
+            source = O5RegistrationData.O5RegistrationSource.DOWNLOADED,
         )
     }
 

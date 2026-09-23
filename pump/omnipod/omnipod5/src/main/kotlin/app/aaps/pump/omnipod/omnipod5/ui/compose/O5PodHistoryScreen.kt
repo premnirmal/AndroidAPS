@@ -90,6 +90,7 @@ private fun O5PodHistoryContent(
     profileUtil: ProfileUtil,
     modifier: Modifier = Modifier
 ) {
+    if (records.isEmpty()) return
     val groups = remember { PumpHistoryEntryGroup.getTranslatedList(rh) }
     var selectedGroup by remember { mutableStateOf(PumpHistoryEntryGroup.All) }
     val dateUtil = LocalDateUtil.current

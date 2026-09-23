@@ -85,7 +85,7 @@ data class O5RegistrationData(
         @Volatile
         private var optionalDataLoaded = false
 
-        fun install(value: O5RegistrationData, source: O5RegistrationSource = O5RegistrationSource.DOWNLOADED) {
+        fun install(value: O5RegistrationData, source: O5RegistrationSource) {
             registry[value.controllerId] = value
             sources[value.controllerId] = source
         }
