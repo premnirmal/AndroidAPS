@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="omnipod_o5_history_command_failed">Command failed</string>
+    <string name="omnipod_o5_history_tbr_value">%1$.2f U/h, %2$d minutes</string>
+    <string name="omnipod_o5_history_bolus_value">%1$.2f U</string>
+</resources>

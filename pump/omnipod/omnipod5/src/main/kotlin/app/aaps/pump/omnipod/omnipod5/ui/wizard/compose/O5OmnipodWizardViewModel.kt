@@ -53,6 +53,8 @@ import app.aaps.pump.omnipod.common.keys.OmnipodBooleanPreferenceKey
 import app.aaps.pump.omnipod.common.keys.OmnipodIntPreferenceKey
 import app.aaps.pump.omnipod.common.queue.command.CommandDeactivatePod
 import app.aaps.pump.omnipod.common.util.mapProfileToBasalProgram
+import app.aaps.pump.omnipod.common.definition.OmnipodCommandType
+import app.aaps.pump.omnipod.omnipod5.history.O5History
 import androidx.lifecycle.ViewModel
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
@@ -91,6 +93,7 @@ class O5OmnipodWizardViewModel @Inject constructor(
     private val rh: ResourceHelper,
     private val commandQueue: CommandQueue,
     private val notificationManager: NotificationManager,
+    private val history: O5History,
     private val pumpSync: PumpSync,
     insulinManager: InsulinManager,
     persistenceLayer: PersistenceLayer,
@@ -247,6 +250,7 @@ class O5OmnipodWizardViewModel @Inject constructor(
             }
 
             podStateManager.activationProgress = ActivationProgress.PHASE_1_COMPLETED
+            history.recordSuccess(OmnipodCommandType.INITIALIZE_POD)
             pumpEnactResultProvider().success(true)
         } catch (throwable: Throwable) {
             logger.error(LTag.PUMP, "Error in O5 Pod activation part 1", throwable)
@@ -338,6 +342,7 @@ class O5OmnipodWizardViewModel @Inject constructor(
             notificationManager.dismiss(NotificationId.OMNIPOD_POD_NOT_ATTACHED)
             podStateManager.activationProgress = ActivationProgress.COMPLETED
             podStateManager.cumulativeBolusPulsesDelivered = podStateManager.totalPulsesDelivered ?: 0
+            history.recordSuccess(OmnipodCommandType.INSERT_CANNULA)
             viewModelScope.launch { commandQueue.readStatus(rh.gs(CommonR.string.omnipod_common_pod_activation_wizard_pod_activated_title)) }
             pumpEnactResultProvider().success(true)
         } catch (throwable: Throwable) {

@@ -61,6 +61,7 @@ import app.aaps.pump.omnipod.common.bledriver.pod.definition.BeepType
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.definition.O5_FIXED_NONCE
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.PodConstants
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.ProgramReminder
+import app.aaps.pump.omnipod.common.definition.OmnipodCommandType
 import app.aaps.pump.omnipod.common.bledriver.pod.response.AlarmStatusResponse
 import app.aaps.pump.omnipod.common.bledriver.pod.response.DefaultStatusResponse
 import app.aaps.pump.omnipod.common.bledriver.pod.response.PodInfoActivationTimeResponse
@@ -71,6 +72,12 @@ import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.basalDrift
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.basalDelivered
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.expiry
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.util.buildO5ExpirationAlerts
+import app.aaps.pump.omnipod.omnipod5.history.O5History
+import app.aaps.pump.omnipod.omnipod5.history.data.BasalValuesRecord
+import app.aaps.pump.omnipod.omnipod5.history.data.BolusRecord
+import app.aaps.pump.omnipod.omnipod5.history.data.BolusType
+import app.aaps.pump.omnipod.omnipod5.history.data.InitialResult
+import app.aaps.pump.omnipod.omnipod5.history.data.TempBasalRecord
 import app.aaps.pump.omnipod.common.keys.DashBooleanPreferenceKey
 import app.aaps.pump.omnipod.common.keys.OmnipodBooleanPreferenceKey
 import app.aaps.pump.omnipod.common.keys.OmnipodIntPreferenceKey
@@ -147,6 +154,7 @@ class O5PumpPlugin @Inject constructor(
     commandQueue: CommandQueue,
     private val bleManager: O5BleManager,
     private val podStateManager: O5PodStateManager,
+    private val history: O5History,
     private val pumpSync: PumpSync,
     private val notificationManager: NotificationManager,
     private val pumpEnactResultProvider: () -> PumpEnactResult,
@@ -484,10 +492,13 @@ class O5PumpPlugin @Inject constructor(
                         timestamp = pending.startedAt,
                         amount = PumpInsulin(0.0),
                         type = pending.bolusType ?: BS.Type.NORMAL,
-                        pumpId = pending.startedAt,
+                        pumpId = pending.historyId ?: pending.startedAt,
                         pumpType = PumpType.OMNIPOD_5,
                         pumpSerial = serialNumber()
                     )
+                }
+                pending.historyId?.let {
+                    history.markSendingFailure(it).andThen(history.markFailure(it)).blockingAwait()
                 }
                 podStateManager.pendingDoseCommand = null
                 return
@@ -509,11 +520,13 @@ class O5PumpPlugin @Inject constructor(
 
             O5PodStateManager.PendingDoseType.TEMP_BASAL_START   ->
                 if (podStateManager.deliveryStatus?.tempBasalActive() == true) {
+                    pending.historyId?.let { history.markSent(it).andThen(history.markSuccess(it)).blockingAwait() }
                     podStateManager.pendingDoseCommand = null
                 }
 
             O5PodStateManager.PendingDoseType.TEMP_BASAL_CANCEL  ->
                 if (podStateManager.deliveryStatus?.tempBasalActive() != true) {
+                    pending.historyId?.let { history.markSent(it).andThen(history.markSuccess(it)).blockingAwait() }
                     podStateManager.activeTempBasalStartTime = null
                     podStateManager.activeTempBasalRate = null
                     podStateManager.activeTempBasalDurationMinutes = null
@@ -522,6 +535,7 @@ class O5PumpPlugin @Inject constructor(
 
             O5PodStateManager.PendingDoseType.BASAL_PROGRAM      ->
                 if (podStateManager.deliveryStatus?.basalActive() == true) {
+                    pending.historyId?.let { history.markSent(it).andThen(history.markSuccess(it)).blockingAwait() }
                     podStateManager.pendingDoseCommand = null
                 }
         }
@@ -590,12 +604,23 @@ class O5PumpPlugin @Inject constructor(
         podStateManager.podId?.toInt() ?: throw IllegalStateException("O5 pod not paired")
 
 
-    override suspend fun setNewBasalProfile(profile: PumpProfile): PumpEnactResult {
+    override suspend fun setNewBasalProfile(profile: PumpProfile): PumpEnactResult =
+        setNewBasalProfile(profile, OmnipodCommandType.SET_BASAL_PROFILE)
+
+    private suspend fun setNewBasalProfile(
+        profile: PumpProfile,
+        historyType: OmnipodCommandType = OmnipodCommandType.SET_BASAL_PROFILE
+    ): PumpEnactResult {
         if (podStateManager.ltk == null) {
             return pumpEnactResultProvider.get().success(true).enacted(true)
         }
         if (!pendingDoseResolved()) return unresolvedDoseResult()
         val basalProgram = mapProfileToBasalProgram(profile, PumpType.OMNIPOD_5)
+        val historyId = history.createRecord(
+            commandType = historyType,
+            initialResult = InitialResult.NOT_SENT,
+            basalProfileRecord = BasalValuesRecord(profile.getBasalValues().toList())
+        ).blockingGet()
         return try {
             if (podStateManager.deliveryStatus?.suspended() != true) {
                 val basalBeeps = preferences.get(OmnipodBooleanPreferenceKey.BasalBeepsEnabled)
@@ -612,7 +637,8 @@ class O5PumpPlugin @Inject constructor(
             podStateManager.pendingDoseCommand = O5PodStateManager.PendingDoseCommand(
                 type = O5PodStateManager.PendingDoseType.BASAL_PROGRAM,
                 startedAt = System.currentTimeMillis(),
-                sequenceNumber = podStateManager.msgSequenceNumber.toShort()
+                sequenceNumber = podStateManager.msgSequenceNumber.toShort(),
+                historyId = historyId
             )
             armStatusChecker()
             val basalBeeps = preferences.get(OmnipodBooleanPreferenceKey.BasalBeepsEnabled)
@@ -628,10 +654,12 @@ class O5PumpPlugin @Inject constructor(
             podStateManager.basalProgram = basalProgram
             podStateManager.deliverySuspended = false
             podStateManager.pendingDoseCommand = null
+            history.markSent(historyId).andThen(history.markSuccess(historyId)).blockingAwait()
             notificationManager.post(NotificationId.PROFILE_SET_OK, TextRef.AndroidRes(app.aaps.core.ui.R.string.profile_set_ok))
             disableSuspendAlerts()
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
+            history.markSendingFailure(historyId).andThen(history.markFailure(historyId)).blockingAwait()
             aapsLogger.error(LTag.PUMP, "Error in O5 setNewBasalProfile", e)
             notifyUncertain(NotificationId.FAILED_UPDATE_PROFILE, rh.gs(R.string.omnipod_5_error_setting_basal_profile_might_have_failed))
             pumpEnactResultProvider.get().success(false).enacted(false)
@@ -702,13 +730,23 @@ class O5PumpPlugin @Inject constructor(
             else OmnipodBooleanPreferenceKey.BolusBeepsEnabled
             val bolusBeeps = preferences.get(bolusBeepsKey)
             val startedAt = System.currentTimeMillis()
+            val historyId = history.createRecord(
+                commandType = OmnipodCommandType.SET_BOLUS,
+                date = startedAt,
+                initialResult = InitialResult.NOT_SENT,
+                bolusRecord = BolusRecord(
+                    requestedUnits,
+                    BolusType.fromBolusInfoBolusType(detailedBolusInfo.bolusType)
+                )
+            ).blockingGet()
 
             val pendingDose = O5PodStateManager.PendingDoseCommand(
                 type = O5PodStateManager.PendingDoseType.BOLUS,
                 requestedUnits = requestedUnits,
                 bolusType = detailedBolusInfo.bolusType,
                 startedAt = startedAt,
-                sequenceNumber = podStateManager.msgSequenceNumber.toShort()
+                sequenceNumber = podStateManager.msgSequenceNumber.toShort(),
+                historyId = historyId
             )
             podStateManager.pendingDoseCommand = pendingDose
 
@@ -736,7 +774,7 @@ class O5PumpPlugin @Inject constructor(
                                 timestamp = startedAt,
                                 amount = PumpInsulin(requestedUnits),
                                 type = detailedBolusInfo.bolusType,
-                                pumpId = startedAt,
+                                pumpId = pendingDose.historyId ?: startedAt,
                                 pumpType = PumpType.OMNIPOD_5,
                                 pumpSerial = serialNumber()
                             )
@@ -757,6 +795,9 @@ class O5PumpPlugin @Inject constructor(
                 aapsLogger.error(LTag.PUMP, "O5 deliverTreatment error: $throwable")
                 if (!commandMayHaveBeenSent) {
                     podStateManager.pendingDoseCommand = null
+                    pendingDose.historyId?.let {
+                        history.markSendingFailure(it).andThen(history.markFailure(it)).blockingAwait()
+                    }
                 } else {
                     armStatusChecker()
                 }
@@ -830,14 +871,22 @@ class O5PumpPlugin @Inject constructor(
 
     private suspend fun finalizeBolus(pending: O5PodStateManager.PendingDoseCommand, deliveredUnits: Double) {
         val finalUnits = deliveredUnits.coerceIn(0.0, pending.requestedUnits ?: deliveredUnits)
-        pumpSync.syncBolusWithPumpId(
-            timestamp = pending.startedAt,
-            amount = PumpInsulin(finalUnits),
-            type = pending.bolusType ?: BS.Type.NORMAL,
-            pumpId = pending.startedAt,
-            pumpType = PumpType.OMNIPOD_5,
-            pumpSerial = serialNumber()
-        )
+        pending.historyId?.let {
+            history.markSent(it)
+                .andThen(history.setTotalAmountDelivered(it, finalUnits))
+                .andThen(history.markSuccess(it))
+                .blockingAwait()
+        }
+        if (!pending.isBasalCorrection) {
+            pumpSync.syncBolusWithPumpId(
+                timestamp = pending.startedAt,
+                amount = PumpInsulin(finalUnits),
+                type = pending.bolusType ?: BS.Type.NORMAL,
+                pumpId = pending.historyId ?: pending.startedAt,
+                pumpType = PumpType.OMNIPOD_5,
+                pumpSerial = serialNumber()
+            )
+        }
         val deliveredPulses = if (pending.isBasalCorrection) {
             null
         } else {
@@ -853,6 +902,10 @@ class O5PumpPlugin @Inject constructor(
 
     private fun cancelBolus(): Completable = ensureConnected().andThen(Completable.defer {
         val bolusBeeps = preferences.get(OmnipodBooleanPreferenceKey.BolusBeepsEnabled)
+        val historyId = history.createRecord(
+            commandType = OmnipodCommandType.CANCEL_BOLUS,
+            initialResult = InitialResult.NOT_SENT
+        ).blockingGet()
         val cmd = StopDeliveryCommand.Builder()
             .setUniqueId(requirePodId())
             .setSequenceNumber(podStateManager.msgSequenceNumber.toShort())
@@ -861,6 +914,12 @@ class O5PumpPlugin @Inject constructor(
             .setBeepType(if (bolusBeeps) BeepType.LONG_SINGLE_BEEP else BeepType.SILENT)
             .build()
         bleManager.sendCommand(cmd, DefaultStatusResponse::class).ignoreElements()
+            .doOnComplete {
+                history.markSent(historyId).andThen(history.markSuccess(historyId)).blockingAwait()
+            }
+            .doOnError {
+                history.markSendingFailure(historyId).andThen(history.markFailure(historyId)).blockingAwait()
+            }
     })
 
     override fun stopBolusDelivering() {
@@ -879,18 +938,26 @@ class O5PumpPlugin @Inject constructor(
     ): PumpEnactResult {
         aapsLogger.info(LTag.PUMP, "O5 setTempBasalAbsolute: rate=$absoluteRate U/h duration=$durationInMinutes min enforce=$enforceNew type=$tbrType")
         if (!pendingDoseResolved()) return unresolvedDoseResult()
+        var historyId: Long? = null
         return try {
             if (podStateManager.deliveryStatus?.tempBasalActive() == true) {
                 cancelActiveTempBasal()
             }
             val tempBasalBeeps = preferences.get(OmnipodBooleanPreferenceKey.TbrBeepsEnabled)
             val startedAt = System.currentTimeMillis()
+            historyId = history.createRecord(
+                commandType = OmnipodCommandType.SET_TEMPORARY_BASAL,
+                date = startedAt,
+                initialResult = InitialResult.NOT_SENT,
+                tempBasalRecord = TempBasalRecord(durationInMinutes, absoluteRate)
+            ).blockingGet()
             podStateManager.pendingDoseCommand = O5PodStateManager.PendingDoseCommand(
                 type = O5PodStateManager.PendingDoseType.TEMP_BASAL_START,
                 requestedRate = absoluteRate,
                 requestedDurationMinutes = durationInMinutes.toShort(),
                 startedAt = startedAt,
-                sequenceNumber = podStateManager.msgSequenceNumber.toShort()
+                sequenceNumber = podStateManager.msgSequenceNumber.toShort(),
+                historyId = historyId
             )
             armStatusChecker()
             val cmd = ProgramTempBasalCommand.Builder()
@@ -909,7 +976,7 @@ class O5PumpPlugin @Inject constructor(
                 duration = T.mins(durationInMinutes.toLong()).msecs(),
                 isAbsolute = true,
                 type = tbrType,
-                pumpId = startedAt,
+                pumpId = historyId,
                 pumpType = PumpType.OMNIPOD_5,
                 pumpSerial = serialNumber()
             )
@@ -917,9 +984,11 @@ class O5PumpPlugin @Inject constructor(
             podStateManager.activeTempBasalRate = absoluteRate
             podStateManager.activeTempBasalDurationMinutes = durationInMinutes.toShort()
             podStateManager.pendingDoseCommand = null
+            history.markSent(historyId).andThen(history.markSuccess(historyId)).blockingAwait()
             if (needsBasalCorrection()) deliverBasalCorrection()
             pumpEnactResultProvider.get().success(true).enacted(true).isPercent(false).absolute(absoluteRate).duration(durationInMinutes)
         } catch (e: Exception) {
+            historyId?.let { history.markSendingFailure(it).andThen(history.markFailure(it)).blockingAwait() }
             aapsLogger.error(LTag.PUMP, "Error in O5 setTempBasalAbsolute", e)
             notifyUncertain(NotificationId.OMNIPOD_TBR_ALERTS, rh.gs(R.string.omnipod_5_error_setting_temp_basal_might_have_failed))
             pumpEnactResultProvider.get().success(false).enacted(false)
@@ -945,10 +1014,17 @@ class O5PumpPlugin @Inject constructor(
     }
 
     private fun cancelActiveTempBasal() {
+        val startedAt = System.currentTimeMillis()
+        val historyId = history.createRecord(
+            commandType = OmnipodCommandType.CANCEL_TEMPORARY_BASAL,
+            date = startedAt,
+            initialResult = InitialResult.NOT_SENT
+        ).blockingGet()
         podStateManager.pendingDoseCommand = O5PodStateManager.PendingDoseCommand(
             type = O5PodStateManager.PendingDoseType.TEMP_BASAL_CANCEL,
-            startedAt = System.currentTimeMillis(),
-            sequenceNumber = podStateManager.msgSequenceNumber.toShort()
+            startedAt = startedAt,
+            sequenceNumber = podStateManager.msgSequenceNumber.toShort(),
+            historyId = historyId
         )
         armStatusChecker()
         val tempBasalBeeps = preferences.get(OmnipodBooleanPreferenceKey.TbrBeepsEnabled)
@@ -960,6 +1036,7 @@ class O5PumpPlugin @Inject constructor(
             .setBeepType(if (tempBasalBeeps) BeepType.LONG_SINGLE_BEEP else BeepType.SILENT)
             .build()
         bleManager.sendCommand(cmd, DefaultStatusResponse::class).ignoreElements().blockingAwait()
+        history.markSent(historyId).andThen(history.markSuccess(historyId)).blockingAwait()
         podStateManager.activeTempBasalStartTime = null
         podStateManager.activeTempBasalRate = null
         podStateManager.activeTempBasalDurationMinutes = null
@@ -1013,9 +1090,11 @@ class O5PumpPlugin @Inject constructor(
     private fun pairNewPod(): PumpEnactResult =
         try {
             bleManager.pairNewPod().ignoreElements().blockingAwait()
+            history.recordSuccess(OmnipodCommandType.INITIALIZE_POD)
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "Error pairing new O5 pod", e)
+            history.recordFailure(OmnipodCommandType.INITIALIZE_POD)
             pumpEnactResultProvider.get().success(false).enacted(false)
         }
 
@@ -1029,6 +1108,7 @@ class O5PumpPlugin @Inject constructor(
             bleManager.sendCommand(cmd, DefaultStatusResponse::class).ignoreElements().blockingAwait()
             bleManager.removeBond()
             podStateManager.reset()
+            history.recordSuccess(OmnipodCommandType.DEACTIVATE_POD)
             notificationManager.dismiss(NotificationId.OMNIPOD_POD_FAULT)
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
@@ -1046,6 +1126,7 @@ class O5PumpPlugin @Inject constructor(
                     .setAlertTypes(alerts)
                     .build()
                 bleManager.sendCommand(cmd, DefaultStatusResponse::class).ignoreElements().blockingAwait()
+                history.recordSuccess(OmnipodCommandType.ACKNOWLEDGE_ALERTS)
                 pumpEnactResultProvider.get().success(true).enacted(true)
             } catch (e: Exception) {
                 aapsLogger.error(LTag.PUMP, "Error silencing O5 alerts", e)
@@ -1065,6 +1146,7 @@ class O5PumpPlugin @Inject constructor(
             bleManager.sendCommand(cmd, DefaultStatusResponse::class).ignoreElements().blockingAwait()
             podStateManager.deliverySuspended = true
             podStateManager.suspendAlertsEnabled = true
+            history.recordSuccess(OmnipodCommandType.SUSPEND_DELIVERY)
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "Error suspending O5 delivery", e)
@@ -1083,6 +1165,7 @@ class O5PumpPlugin @Inject constructor(
                 .setBolusReminder(silentReminder)
                 .build()
             bleManager.sendCommand(cmd, DefaultStatusResponse::class).ignoreElements().blockingAwait()
+            history.recordSuccess(OmnipodCommandType.PLAY_TEST_BEEP)
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "Error playing O5 test beep", e)
@@ -1093,7 +1176,7 @@ class O5PumpPlugin @Inject constructor(
      *  basal profile" - [ProgramBasalCommand] always sets the pod's current time and
      *  implicitly resumes delivery, same as Dash's identical handling of both. */
     private suspend fun resumeOrHandleTimeChange(): PumpEnactResult =
-        pumpSync.expectedPumpState().profile?.let { setNewBasalProfile(it) }
+        pumpSync.expectedPumpState().profile?.let { setNewBasalProfile(it, OmnipodCommandType.RESUME_DELIVERY) }
             ?: pumpEnactResultProvider.get().success(false).enacted(false).comment(rh.gs(R.string.omnipod_5_error_no_active_profile))
 
     private fun notifyUncertain(id: NotificationId, message: String) {
@@ -1146,6 +1229,7 @@ class O5PumpPlugin @Inject constructor(
                 .build()
             bleManager.sendCommand(cmd, DefaultStatusResponse::class).ignoreElements().blockingAwait()
             podStateManager.syncedAlertSettings = current
+            history.recordSuccess(OmnipodCommandType.CONFIGURE_ALERTS)
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "Error updating O5 alert configuration", e)
@@ -1175,6 +1259,7 @@ class O5PumpPlugin @Inject constructor(
                 .build()
             bleManager.sendCommand(cmd, DefaultStatusResponse::class).ignoreElements().blockingAwait()
             podStateManager.suspendAlertsEnabled = false
+            history.recordSuccess(OmnipodCommandType.CONFIGURE_ALERTS)
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "Error disabling O5 suspend alerts", e)
@@ -1243,19 +1328,27 @@ class O5PumpPlugin @Inject constructor(
         }
 
         var commandMayHaveBeenSent = false
+        var historyId: Long? = null
         return try {
             bolusDeliveryInProgress = true
             podStateManager.basalCorrectionInProgress = true
             aapsLogger.info(LTag.PUMP, "Delivering O5 basal correction")
 
             val startedAt = System.currentTimeMillis()
+            historyId = history.createRecord(
+                commandType = OmnipodCommandType.SET_BOLUS,
+                date = startedAt,
+                initialResult = InitialResult.NOT_SENT,
+                bolusRecord = BolusRecord(requestedInsulinAmount, BolusType.DEFAULT)
+            ).blockingGet()
             val pendingDose = O5PodStateManager.PendingDoseCommand(
                 type = O5PodStateManager.PendingDoseType.BOLUS,
                 requestedUnits = requestedInsulinAmount,
                 bolusType = BS.Type.NORMAL,
                 startedAt = startedAt,
                 isBasalCorrection = true,
-                sequenceNumber = podStateManager.msgSequenceNumber.toShort()
+                sequenceNumber = podStateManager.msgSequenceNumber.toShort(),
+                historyId = historyId
             )
             podStateManager.pendingDoseCommand = pendingDose
 
@@ -1277,16 +1370,6 @@ class O5PumpPlugin @Inject constructor(
                 .ignoreElements()
                 .blockingAwait()
             armStatusChecker()
-            runBlocking {
-                pumpSync.syncBolusWithPumpId(
-                    timestamp = startedAt,
-                    amount = PumpInsulin(requestedInsulinAmount),
-                    type = BS.Type.NORMAL,
-                    pumpId = startedAt,
-                    pumpType = PumpType.OMNIPOD_5,
-                    pumpSerial = serialNumber()
-                )
-            }
             val completion = waitForBolusDeliveryToComplete(requestedInsulinAmount).blockingGet()
             val deliveredUnits = completion.deliveredUnits
             if (deliveredUnits != null) {
@@ -1301,6 +1384,7 @@ class O5PumpPlugin @Inject constructor(
             aapsLogger.error(LTag.PUMP, "O5 basal correction delivery failed", e)
             if (!commandMayHaveBeenSent) {
                 podStateManager.pendingDoseCommand = null
+                historyId?.let { history.markSendingFailure(it).andThen(history.markFailure(it)).blockingAwait() }
             } else {
                 armStatusChecker()
             }

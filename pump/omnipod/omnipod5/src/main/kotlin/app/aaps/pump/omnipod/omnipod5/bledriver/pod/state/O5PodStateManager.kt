@@ -152,7 +152,8 @@ interface O5PodStateManager {
          *  (the whole point of the correction is to true up basal drift). */
         val isBasalCorrection: Boolean = false,
         val bolusRecordExpected: Boolean = false,
-        val confirmedByStatus: Boolean = false
+        val confirmedByStatus: Boolean = false,
+        val historyId: Long? = null
     ) : Serializable
 
 
