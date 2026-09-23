@@ -3,6 +3,7 @@ package app.aaps.pump.omnipod.omnipod5.ui.compose
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -73,8 +74,7 @@ import app.aaps.pump.omnipod.common.R as CommonR
  * connection-quality counters, no timezone-drift tracking) - those are approximated here
  * from O5's own flat fields ([O5PodStateManager.pendingDoseCommand] in place of Dash's
  * `activeCommand`, the [expiry] extension in place of Dash's `expiry` property, etc.)
- * rather than adding matching complexity to the state manager. No pod-history feature
- * exists for O5 (no `DashHistory` equivalent), so there is no History action/screen here.
+ * rather than adding matching complexity to the state manager.
  */
 @Stable
 @ContributesIntoMap(AppScope::class, binding = binding<ViewModel>())
@@ -300,6 +300,12 @@ class O5OverviewViewModel @Inject constructor(
                 enabled = podStateManager.activationProgress.isAtLeast(ActivationProgress.PHASE_1_COMPLETED) && !commandQueue.isCustomCommandInQueue(CommandPlayTestBeep::class),
                 visible = podStateManager.activationProgress.isAtLeast(ActivationProgress.PHASE_1_COMPLETED),
                 onClick = { runCustomCommandWithErrorDialog(CommandPlayTestBeep(), rh.gs(CommonR.string.omnipod_common_error_failed_to_play_test_beep)) }
+            ),
+            PumpAction(
+                label = rh.gs(CommonR.string.omnipod_common_pod_management_button_pod_history),
+                icon = Icons.Filled.History,
+                category = ActionCategory.MANAGEMENT,
+                onClick = { _events.tryEmit(OmnipodOverviewEvent.ShowHistory) }
             ),
             PumpAction(
                 label = rh.gs(CommonR.string.omnipod_common_pod_management_button_discard_pod),
