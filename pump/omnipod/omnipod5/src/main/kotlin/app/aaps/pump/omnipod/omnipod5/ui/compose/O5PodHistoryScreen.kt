@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,11 +17,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -38,6 +43,7 @@ import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.ui.compose.AapsCard
 import app.aaps.core.ui.compose.AapsSpacing
+import app.aaps.core.ui.compose.AapsTopAppBar
 import app.aaps.core.ui.compose.LocalDateUtil
 import app.aaps.pump.common.defs.PumpHistoryEntryGroup
 import app.aaps.pump.omnipod.common.definition.OmnipodCommandType
@@ -49,7 +55,41 @@ import app.aaps.pump.omnipod.omnipod5.history.data.TempBasalRecord
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
-fun O5PodHistoryScreen(records: List<HistoryRecord>, rh: ResourceHelper, profileUtil: ProfileUtil) {
+fun O5PodHistoryScreen(
+    records: List<HistoryRecord>,
+    rh: ResourceHelper, profileUtil: ProfileUtil,
+    onBack: (() -> Unit)? = null,
+) {
+    if (onBack != null) {
+        Scaffold(
+            topBar = {
+                AapsTopAppBar(
+                    title = { Text(stringResource(app.aaps.pump.omnipod.common.R.string.omnipod_common_pod_management_button_pod_history)) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(app.aaps.core.ui.R.string.back)
+                            )
+                        }
+                    }
+                )
+            }
+        ) { paddingValues ->
+            O5PodHistoryContent(rh, records, profileUtil, Modifier.padding(paddingValues))
+        }
+    } else {
+        O5PodHistoryContent(rh, records, profileUtil, Modifier)
+    }
+}
+
+@Composable
+private fun O5PodHistoryContent(
+    rh: ResourceHelper,
+    records: List<HistoryRecord>,
+    profileUtil: ProfileUtil,
+    modifier: Modifier = Modifier
+) {
     val groups = remember { PumpHistoryEntryGroup.getTranslatedList(rh) }
     var selectedGroup by remember { mutableStateOf(PumpHistoryEntryGroup.All) }
     val dateUtil = LocalDateUtil.current
@@ -58,37 +98,42 @@ fun O5PodHistoryScreen(records: List<HistoryRecord>, rh: ResourceHelper, profile
     }
     val grouped = filtered.groupBy { dateUtil.dateString(it.displayTimestamp()) }
 
-    Column(Modifier.fillMaxSize()) {
-        FlowRow(
-            Modifier.fillMaxWidth().padding(horizontal = AapsSpacing.extraLarge, vertical = AapsSpacing.medium),
-            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
-        ) {
-            groups.forEach { group ->
-                FilterChip(
-                    selected = selectedGroup == group,
-                    onClick = { selectedGroup = group },
-                    label = { Text(group.translated ?: "") }
-                )
-            }
-        }
-        LazyColumn(
-            Modifier.fillMaxSize().padding(horizontal = AapsSpacing.extraLarge),
-            verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
-        ) {
-            grouped.forEach { (date, dayRecords) ->
-                stickyHeader(key = date) {
-                    Text(
-                        text = dateUtil.dateStringRelative(dayRecords.first().displayTimestamp(), rh),
-                        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(vertical = AapsSpacing.medium),
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+    LazyColumn(
+        modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
+    ) {
+        item {
+            FlowRow(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = AapsSpacing.extraLarge, vertical = AapsSpacing.medium),
+                horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
+            ) {
+                groups.forEach { group ->
+                    FilterChip(
+                        selected = selectedGroup == group,
+                        onClick = { selectedGroup = group },
+                        label = { Text(group.translated ?: "") }
                     )
                 }
-                items(dayRecords, key = { it.id }) { record ->
-                    O5HistoryCard(record, rh, profileUtil, dateUtil)
-                }
+            }
+        }
+        grouped.forEach { (date, dayRecords) ->
+            stickyHeader(key = date) {
+                Text(
+                    text = dateUtil.dateStringRelative(dayRecords.first().displayTimestamp(), rh),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(vertical = AapsSpacing.medium),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+            items(dayRecords, key = { it.id }) { record ->
+                O5HistoryCard(record, rh, profileUtil, dateUtil)
             }
         }
     }
@@ -101,7 +146,9 @@ private fun O5HistoryCard(record: HistoryRecord, rh: ResourceHelper, profileUtil
             Icon(
                 imageVector = if (record.isSuccess()) Icons.Filled.CheckCircle else Icons.Filled.Error,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp).padding(top = 2.dp),
+                modifier = Modifier
+                    .size(20.dp)
+                    .padding(top = 2.dp),
                 tint = if (record.isSuccess()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
             )
             Spacer(Modifier.width(AapsSpacing.large))
