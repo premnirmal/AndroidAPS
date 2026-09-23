@@ -7,6 +7,7 @@ import app.aaps.pump.omnipod.common.bledriver.pod.definition.AlarmType
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.AlertType
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.PodStatus
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.BasalProgram
+import app.aaps.pump.omnipod.common.bledriver.pod.definition.PodConstants
 import app.aaps.pump.omnipod.common.bledriver.pod.response.AlarmStatusResponse
 import app.aaps.pump.omnipod.common.bledriver.pod.response.DefaultStatusResponse
 import app.aaps.pump.omnipod.common.bledriver.pod.response.PodInfoActivationTimeResponse
@@ -303,6 +304,20 @@ class PersistedO5PodStateManagerTest : TestBase() {
         assertThat(reader.totalPulsesDelivered).isEqualTo(response.totalPulsesDelivered)
         assertThat(reader.reservoirPulsesRemaining).isEqualTo(response.reservoirPulsesRemaining)
         assertThat(reader.minutesSinceActivation).isEqualTo(response.minutesSinceActivation)
+    }
+
+    @Test
+    fun `updateFromDefaultStatusResponse seeds basal expected from the new pulse count`() {
+        val response = DefaultStatusResponse(hexToBytes("1D1800A02800000463FF"))
+        val manager = newManager()
+        manager.activationProgress = ActivationProgress.COMPLETED
+        manager.cumulativeBolusPulsesDelivered = 0
+
+        manager.updateFromDefaultStatusResponse(response)
+
+        assertThat(manager.basalExpected).isEqualTo(
+            response.totalPulsesDelivered * PodConstants.POD_PULSE_BOLUS_UNITS
+        )
     }
 
 

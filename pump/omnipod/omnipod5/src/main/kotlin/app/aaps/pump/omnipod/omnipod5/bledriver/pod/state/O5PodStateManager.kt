@@ -159,6 +159,15 @@ interface O5PodStateManager {
     val podStatus: PodStatus?
     val deliveryStatus: DeliveryStatus?
 
+    val isActivationCompleted: Boolean
+        get() = activationProgress == ActivationProgress.COMPLETED
+
+    val isSuspended: Boolean
+        get() = deliveryStatus?.equals(DeliveryStatus.SUSPENDED) == true
+
+    val isPodRunning: Boolean
+        get() = podStatus?.isRunning() == true
+
     /**
      * The pod has stopped delivering for good - it faulted or was deactivated.
      *

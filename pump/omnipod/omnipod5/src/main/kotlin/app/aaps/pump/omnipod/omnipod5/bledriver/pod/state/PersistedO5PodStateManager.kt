@@ -10,6 +10,7 @@ import app.aaps.pump.omnipod.common.bledriver.pod.definition.AlarmType
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.AlertType
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.BasalProgram
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.DeliveryStatus
+import app.aaps.pump.omnipod.common.bledriver.pod.definition.PodConstants
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.PodStatus
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.SoftwareVersion
 import app.aaps.pump.omnipod.common.bledriver.pod.response.AlarmStatusResponse
@@ -251,6 +252,24 @@ class PersistedO5PodStateManager @Inject constructor(
     override val podStatusWhenAlarmOccurred: PodStatus? get() = podState.podStatusWhenAlarmOccurred
     override val rssi: Short? get() = podState.rssi
 
+    private inline fun logBasalTracking(block: () -> Unit) {
+        val driftBefore = basalDrift.takeIf { isActivationCompleted } ?: 0.0
+        block()
+        if (isActivationCompleted) {
+            logger.info(
+                LTag.PUMP,
+                "PUMP_BASAL act=%.2fU (tot=%.2fU bol=%.2fU) exp=%.4fU err=%+.4fU dErr=%+.4fU".format(
+                    basalDelivered,
+                    (podState.totalPulsesDelivered ?: 0) * PodConstants.POD_PULSE_BOLUS_UNITS,
+                    (podState.cumulativeBolusPulsesDelivered ?: 0) * PodConstants.POD_PULSE_BOLUS_UNITS,
+                    podState.basalExpected ?: 0.0,
+                    basalDrift,
+                    basalDrift - driftBefore
+                )
+            )
+        }
+    }
+
     override var alarmSynced: Boolean
         get() = podState.alarmSynced
         set(value) {
@@ -338,34 +357,67 @@ class PersistedO5PodStateManager @Inject constructor(
     override fun updateFromDefaultStatusResponse(response: DefaultStatusResponse) {
         val previousUpdate = podState.lastStatusResponseReceived
         val now = System.currentTimeMillis()
-        podState.totalPulsesDelivered = response.totalPulsesDelivered
-        podState.basalExpected = nextBasalExpected(previousUpdate, now)
-        podState.podStatus = response.podStatus
-        podState.deliveryStatus = response.deliveryStatus
-        podState.bolusPulsesRemaining = response.bolusPulsesRemaining
-        podState.reservoirPulsesRemaining = response.reservoirPulsesRemaining
-        podState.activeAlerts = response.activeAlerts
-        podState.minutesSinceActivation = response.minutesSinceActivation
-        podState.sequenceNumberOfLastProgrammingCommand = response.sequenceNumberOfLastProgrammingCommand
-        podState.lastStatusResponseReceived = now
+        logger.debug(LTag.PUMPCOMM, "Default status response :$response")
+        logBasalTracking {
+            podState.totalPulsesDelivered = response.totalPulsesDelivered
+            podState.basalExpected = nextBasalExpected(previousUpdate, now)
+            updatePodState(
+                response.totalPulsesDelivered,
+                response.podStatus,
+                response.deliveryStatus,
+                response.bolusPulsesRemaining,
+                response.reservoirPulsesRemaining,
+                response.activeAlerts,
+                response.minutesSinceActivation,
+                response.sequenceNumberOfLastProgrammingCommand,
+                now
+            )
+        }
         store()
     }
 
+    private fun updatePodState(
+        totalPulsesDelivered: Short,
+        podStatus: PodStatus,
+        deliveryStatus: DeliveryStatus,
+        bolusPulsesRemaining: Short,
+        reservoirPulsesRemaining: Short,
+        activeAlerts: EnumSet<AlertType>,
+        minutesSinceActivation: Short,
+        sequenceNumberOfLastProgrammingCommand: Short,
+        now: Long
+    ) {
+        podState.totalPulsesDelivered = totalPulsesDelivered
+        podState.podStatus = podStatus
+        podState.deliveryStatus = deliveryStatus
+        podState.bolusPulsesRemaining = bolusPulsesRemaining
+        podState.reservoirPulsesRemaining = reservoirPulsesRemaining
+        podState.activeAlerts = activeAlerts
+        podState.minutesSinceActivation = minutesSinceActivation
+        podState.sequenceNumberOfLastProgrammingCommand = sequenceNumberOfLastProgrammingCommand
+        podState.lastStatusResponseReceived = now
+    }
+
     override fun updateFromAlarmStatusResponse(response: AlarmStatusResponse) {
-        podState.podStatus = response.podStatus
-        podState.deliveryStatus = response.deliveryStatus
-        podState.totalPulsesDelivered = response.totalPulsesDelivered
-        podState.bolusPulsesRemaining = response.bolusPulsesRemaining
-        podState.reservoirPulsesRemaining = response.reservoirPulsesRemaining
-        podState.activeAlerts = response.activeAlerts
-        podState.minutesSinceActivation = response.minutesSinceActivation
-        podState.sequenceNumberOfLastProgrammingCommand = response.sequenceNumberOfLastProgrammingCommand
+        logger.info(LTag.PUMPCOMM, "Received AlarmStatusResponse: $response")
+        logBasalTracking {
+            updatePodState(
+                response.totalPulsesDelivered,
+                response.podStatus,
+                response.deliveryStatus,
+                response.bolusPulsesRemaining,
+                response.reservoirPulsesRemaining,
+                response.activeAlerts,
+                response.minutesSinceActivation,
+                response.sequenceNumberOfLastProgrammingCommand,
+                System.currentTimeMillis()
+            )
+        }
         podState.alarmType = response.alarmType
         podState.alarmTime = response.alarmTime
         podState.occlusionAlarm = response.occlusionAlarm
         podState.podStatusWhenAlarmOccurred = response.podStatusWhenAlarmOccurred
         podState.rssi = response.rssi
-        podState.lastStatusResponseReceived = System.currentTimeMillis()
         store()
     }
 
