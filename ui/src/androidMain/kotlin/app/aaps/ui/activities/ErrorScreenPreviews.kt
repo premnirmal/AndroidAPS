@@ -13,7 +13,10 @@ internal fun ErrorScreenPreview() {
             title = "Pump unreachable",
             status = "Last successful communication 25 minutes ago. Check Bluetooth and pump status.",
             appIcon = R.mipmap.ic_launcher,
-            onOk = {}
+            onOk = {},
+            onMute = {},
+            onMute5Min = {},
+            onStart = {}
         )
     }
 }
@@ -26,7 +29,10 @@ internal fun ErrorScreenShortPreview() {
             title = "Bolus error",
             status = "Delivery failed.",
             appIcon = R.mipmap.ic_launcher,
-            onOk = {}
+            onOk = {},
+            onMute = {},
+            onMute5Min = {},
+            onStart = {}
         )
     }
 }

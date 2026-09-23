@@ -124,6 +124,7 @@ fun TrioStatsScreen(
                     viewModel = viewModel
                 )
             }
+            Spacer(modifier = Modifier.fillMaxWidth().height(8.dp))
         }
     }
 }
@@ -134,7 +135,7 @@ private fun TrioStatsSectionSelector(
     onSelect: (TrioStatsSection) -> Unit
 ) {
     SingleChoiceSegmentedButtonRow(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = AapsSpacing.extraLarge, vertical = AapsSpacing.medium)
+        modifier = Modifier.fillMaxWidth().padding(horizontal = AapsSpacing.extraLarge)
     ) {
         TrioStatsSection.entries.forEachIndexed { index, section ->
             SegmentedButton(
@@ -884,7 +885,7 @@ private fun TrioStatsCard(
     ) {
         Column(
             modifier = Modifier.padding(AapsSpacing.extraLarge),
-            verticalArrangement = Arrangement.spacedBy(AapsSpacing.extraLarge),
+            verticalArrangement = Arrangement.spacedBy(AapsSpacing.large),
             content = content
         )
     }
