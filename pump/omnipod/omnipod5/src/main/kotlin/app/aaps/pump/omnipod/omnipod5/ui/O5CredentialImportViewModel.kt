@@ -1,7 +1,10 @@
 package app.aaps.pump.omnipod.omnipod5.ui
 
-import androidx.compose.runtime.Stable
+import android.app.Application
+import android.content.Context
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.security.SecureO5RegistrationStorage
 import dev.zacsweers.metro.AppScope
@@ -9,10 +12,16 @@ import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import org.json.JSONException
 import org.json.JSONObject
+import java.lang.ref.WeakReference
+import kotlin.collections.filter
+import kotlin.collections.isNotEmpty
+import kotlin.collections.orEmpty
 
 /** One row of the "currently installed credentials" list shown in the import screen. */
 data class InstalledCredentialRow(
@@ -44,6 +53,8 @@ sealed class ImportResult {
 @ContributesIntoMap(AppScope::class, binding = binding<ViewModel>())
 @ViewModelKey
 class O5CredentialImportViewModel @Inject constructor(
+    context: Context,
+    private val aapsLogger: AAPSLogger,
     private val secureO5RegistrationStorage: SecureO5RegistrationStorage
 ) : ViewModel() {
 
@@ -55,6 +66,11 @@ class O5CredentialImportViewModel @Inject constructor(
 
     private val _installedCredentials = MutableStateFlow<List<InstalledCredentialRow>>(emptyList())
     val installedCredentials: StateFlow<List<InstalledCredentialRow>> = _installedCredentials
+
+    private val _allowImportFromAssets = MutableStateFlow<Boolean>(false)
+    val allowImportFromAssets: StateFlow<Boolean> = _allowImportFromAssets
+
+    private val contextRef = WeakReference(context)
 
     init {
         refreshInstalledCredentials()
@@ -80,6 +96,10 @@ class O5CredentialImportViewModel @Inject constructor(
             return
         }
 
+        importText(text)
+    }
+
+    private fun importText(text: String) {
         val controllerId = if (text.startsWith("{")) importJsonCredential(text) else importPackedCredential(text)
         if (controllerId == null) {
             _importResult.value = ImportResult.Failure(
@@ -135,11 +155,44 @@ class O5CredentialImportViewModel @Inject constructor(
         refreshInstalledCredentials()
     }
 
+    fun importCredentialFromAssets() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val context = contextRef.get() ?: return@launch
+            val certificatesList = context.assets.list("certificates").orEmpty().filter { it.endsWith(".json") || it.endsWith(".o5keypair") }
+            certificatesList.first().let { certFile ->
+                try {
+                    context.assets.open("certificates/$certFile").use { inputStream ->
+                        val json = inputStream.bufferedReader().use { it.readText() }
+                        importText(json)
+                    }
+                } catch(e: Exception) {
+                    aapsLogger.error("Failed to read certificate from assets", e)
+                    _importResult.value = ImportResult.Failure("Import failed unexpectedly")
+                }
+            }
+        }
+    }
+
     private fun refreshInstalledCredentials() {
         _installedCredentials.value = O5RegistrationData.allValues.mapNotNull { data ->
             O5RegistrationData.source(data.controllerId)?.let { source ->
                 InstalledCredentialRow(data.controllerId, source)
             }
+        }
+        checkAssets()
+    }
+
+    private fun checkAssets() {
+        if (_installedCredentials.value.isNotEmpty()) {
+            _allowImportFromAssets.value = false
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val context = contextRef.get() ?: return@launch
+            val certificatesList = context.assets.list("certificates").orEmpty().filter { it.endsWith(".json") || it.endsWith(".o5keypair") }
+            aapsLogger.debug("Certificates: " + certificatesList.joinToString(", "))
+            val foundCertificate = certificatesList.isNotEmpty()
+            _allowImportFromAssets.value = foundCertificate
         }
     }
 

@@ -22,6 +22,7 @@ import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.configuration.ExternalOptions
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.di.PumpDriver
@@ -37,7 +38,6 @@ import app.aaps.core.interfaces.pump.PumpPluginBase
 import app.aaps.core.interfaces.pump.PumpProfile
 import app.aaps.core.interfaces.pump.PumpRate
 import app.aaps.core.interfaces.pump.PumpSync
-import app.aaps.core.interfaces.pump.PumpTimeRemaining
 import app.aaps.core.interfaces.pump.defs.fillFor
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.queue.CommandQueue
@@ -81,7 +81,6 @@ import app.aaps.pump.omnipod.common.bledriver.pod.response.ResponseType
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.O5PodStateManager
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.basalDrift
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.basalDelivered
-import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.expiry
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.util.buildO5ExpirationAlerts
 import app.aaps.pump.omnipod.omnipod5.history.O5History
 import app.aaps.pump.omnipod.omnipod5.history.data.BasalValuesRecord
@@ -193,7 +192,7 @@ class O5PumpPlugin @Inject constructor(
     ownPreferences = OmnipodBooleanPreferenceKey.entries + OmnipodIntPreferenceKey.entries +
         DashBooleanPreferenceKey.entries + O5IntentKey.entries,
     aapsLogger, rh, preferences, commandQueue
-), Pump, PumpTimeRemaining {
+), Pump {
 
     @Volatile private var bolusCanceled = false
     @Volatile private var bolusDeliveryInProgress = false
@@ -357,11 +356,11 @@ class O5PumpPlugin @Inject constructor(
     }
 
     /**
-     * Posts a user-facing [NotificationId.OMNIPOD_POD_FAULT] alert plus a
+     * Posts a user-facing [NotificationId.OMNIPOD_POD_FAULT] alert (with sound) plus a
      * [PumpSync.insertAnnouncement] entry the first time [O5PodStateManager.alarmType]
      * is seen non-null, mirroring Dash's `OmnipodDashPumpPlugin.checkPodKaput()` handling -
      * without this, a faulted O5 pod only shows CRITICAL status on
-     * the Omnipod overview screen with no system notification, so a fault could go
+     * the Omnipod overview screen with no system notification/sound, so a fault could go
      * unnoticed if the user isn't actively looking at that screen. [O5PodStateManager
      * .alarmSynced] makes this idempotent across repeated status polls of the same fault;
      * the notification is skipped (but the announcement/sync flag are not) if a pod
@@ -394,7 +393,8 @@ class O5PumpPlugin @Inject constructor(
         if (!commandQueue.isCustomCommandInQueue(CommandDeactivatePod::class)) {
             notificationManager.post(
                 NotificationId.OMNIPOD_POD_FAULT,
-                description
+                description,
+                sound = AlarmSound.BOLUS_ERROR
             )
         }
         pumpSync.insertAnnouncement(
@@ -1068,9 +1068,6 @@ class O5PumpPlugin @Inject constructor(
     override val pumpDescription: PumpDescription = Companion.pumpDescription
     override fun manufacturer(): ManufacturerType = ManufacturerType.Insulet
     override fun model(): PumpType = pumpDescription.pumpType
-
-    override fun expectedEndTimeMillis(): Long? =
-        podStateManager.expiry?.toInstant()?.toEpochMilli()
     override fun serialNumber(): String = podStateManager.podId?.toString() ?: "O5-unpaired"
     override val isFakingTempsByExtendedBoluses: Boolean = false
 
@@ -1194,7 +1191,7 @@ class O5PumpPlugin @Inject constructor(
 
     private fun notifyUncertain(id: NotificationId, message: String) {
         if (podStateManager.pendingDoseCommand != null) {
-            notificationManager.post(id, message)
+            notificationManager.post(id, message, sound = AlarmSound.BOLUS_ERROR)
         }
     }
 
@@ -1352,7 +1349,7 @@ class O5PumpPlugin @Inject constructor(
                 commandType = OmnipodCommandType.SET_BOLUS,
                 date = startedAt,
                 initialResult = InitialResult.NOT_SENT,
-                bolusRecord = BolusRecord(requestedInsulinAmount, BolusType.DEFAULT)
+                bolusRecord = BolusRecord(requestedInsulinAmount, BolusType.BASAL_DRIFT_COMPENSATION)
             ).blockingGet()
             val pendingDose = O5PodStateManager.PendingDoseCommand(
                 type = O5PodStateManager.PendingDoseType.BOLUS,
@@ -1432,6 +1429,16 @@ class O5PumpPlugin @Inject constructor(
                     OmnipodIntPreferenceKey.ExpirationAlarmHours,
                     OmnipodBooleanPreferenceKey.LowReservoirAlert,
                     OmnipodIntPreferenceKey.LowReservoirAlertUnits
+                )
+            ),
+            PreferenceSubScreenDef(
+                key = "omnipod_5_notifications",
+                titleResId = app.aaps.pump.omnipod.common.R.string.omnipod_common_preferences_category_notifications,
+                items = listOf(
+                    OmnipodBooleanPreferenceKey.SoundUncertainTbrNotification,
+                    OmnipodBooleanPreferenceKey.SoundUncertainSmbNotification,
+                    OmnipodBooleanPreferenceKey.SoundUncertainBolusNotification,
+                    DashBooleanPreferenceKey.SoundDeliverySuspendedNotification
                 )
             ),
             O5IntentKey.CertificateStore.withCompose(

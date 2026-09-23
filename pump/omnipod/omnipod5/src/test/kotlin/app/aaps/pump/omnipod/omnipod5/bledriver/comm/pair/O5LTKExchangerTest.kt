@@ -97,7 +97,8 @@ class O5LTKExchangerTest {
                 publicKeyHex = publicKey.joinToString("") { "%02x".format(it) },
                 intermediateCABase64 = if (withIntermediateCA) Base64.getEncoder().encodeToString(byteArrayOf(1, 2, 3, 4)) else "",
                 tlsCertificateBase64 = if (withTlsCertificate) Base64.getEncoder().encodeToString(byteArrayOf(5, 6, 7, 8)) else ""
-            )
+            ),
+            source = O5RegistrationData.O5RegistrationSource.DOWNLOADED,
         )
         return O5CertificateStore(aapsLogger, p256KeyGenerator, controllerId)
     }

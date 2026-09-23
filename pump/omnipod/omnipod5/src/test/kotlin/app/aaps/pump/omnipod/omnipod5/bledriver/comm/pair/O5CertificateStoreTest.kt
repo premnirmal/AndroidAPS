@@ -42,7 +42,7 @@ class O5CertificateStoreTest {
             intermediateCABase64 = "",
             tlsCertificateBase64 = ""
         )
-        O5RegistrationData.install(data)
+        O5RegistrationData.install(data, O5RegistrationData.O5RegistrationSource.DOWNLOADED)
         return data
     }
 
@@ -89,7 +89,8 @@ class O5CertificateStoreTest {
                 publicKeyHex = unrelatedPublicKey.toHex(),
                 intermediateCABase64 = "",
                 tlsCertificateBase64 = ""
-            )
+            ),
+            source = O5RegistrationData.O5RegistrationSource.DOWNLOADED,
         )
 
         assertThrows(PairingException::class.java) {

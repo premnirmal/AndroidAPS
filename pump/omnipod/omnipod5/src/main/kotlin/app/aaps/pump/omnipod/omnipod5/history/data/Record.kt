@@ -12,11 +12,12 @@ data class TempBasalRecord(val duration: Int, val rate: Double) : Record()
 data class BasalValuesRecord(val segments: List<Profile.ProfileValue>) : Record()
 
 enum class BolusType {
-    DEFAULT, SMB;
+    DEFAULT, SMB, BASAL_DRIFT_COMPENSATION;
 
     fun toBolusInfoBolusType(): BS.Type = when (this) {
         DEFAULT -> BS.Type.NORMAL
         SMB -> BS.Type.SMB
+        BASAL_DRIFT_COMPENSATION -> BS.Type.NORMAL
     }
 
     companion object {

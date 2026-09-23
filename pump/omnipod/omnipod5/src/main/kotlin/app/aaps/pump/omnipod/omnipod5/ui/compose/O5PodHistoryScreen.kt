@@ -50,6 +50,7 @@ import app.aaps.pump.omnipod.common.definition.OmnipodCommandType
 import app.aaps.pump.omnipod.omnipod5.R
 import app.aaps.pump.omnipod.omnipod5.history.data.BasalValuesRecord
 import app.aaps.pump.omnipod.omnipod5.history.data.BolusRecord
+import app.aaps.pump.omnipod.omnipod5.history.data.BolusType
 import app.aaps.pump.omnipod.omnipod5.history.data.HistoryRecord
 import app.aaps.pump.omnipod.omnipod5.history.data.TempBasalRecord
 
@@ -90,6 +91,7 @@ private fun O5PodHistoryContent(
     profileUtil: ProfileUtil,
     modifier: Modifier = Modifier
 ) {
+    if (records.isEmpty()) return
     val groups = remember { PumpHistoryEntryGroup.getTranslatedList(rh) }
     var selectedGroup by remember { mutableStateOf(PumpHistoryEntryGroup.All) }
     val dateUtil = LocalDateUtil.current
@@ -173,7 +175,11 @@ private fun formatValue(record: HistoryRecord, rh: ResourceHelper, profileUtil: 
     if (!record.isSuccess()) return rh.gs(R.string.omnipod_o5_history_command_failed)
     return when (val value = record.record) {
         is TempBasalRecord -> rh.gs(R.string.omnipod_o5_history_tbr_value, value.rate, value.duration)
-        is BolusRecord -> rh.gs(R.string.omnipod_o5_history_bolus_value, value.amount)
+        is BolusRecord -> when (value.bolusType) {
+            BolusType.BASAL_DRIFT_COMPENSATION ->
+                rh.gs(R.string.omnipod_o5_history_basal_drift_compensation_bolus_value, value.amount)
+            else -> rh.gs(R.string.omnipod_o5_history_bolus_value, value.amount)
+        }
         is BasalValuesRecord -> profileUtil.getBasalProfilesDisplayable(value.segments.toTypedArray(), PumpType.OMNIPOD_5)
         null -> null
     }
