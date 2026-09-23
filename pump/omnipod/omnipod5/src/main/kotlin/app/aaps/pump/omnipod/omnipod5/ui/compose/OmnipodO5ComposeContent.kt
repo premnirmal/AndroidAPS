@@ -76,7 +76,7 @@ class OmnipodO5ComposeContent(
                 val historyViewModel: O5PodHistoryViewModel = metroViewModel()
                 val records by historyViewModel.records.collectAsStateWithLifecycle()
                 Column(Modifier.fillMaxSize()) {
-                    Box(Modifier.weight(1f)) {
+                    Box {
                         O5CredentialImportScreen(viewModel = credentialViewModel, rh = rh)
                     }
                     HorizontalDivider()
