@@ -1,5 +1,6 @@
 package app.aaps.pump.omnipod.omnipod5.ui.compose
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.interfaces.protection.ProtectionCheck
@@ -23,6 +25,7 @@ import app.aaps.core.ui.compose.metroViewModel
 import app.aaps.pump.omnipod.common.R
 import app.aaps.pump.omnipod.common.ui.compose.OmnipodComposeHost
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
+import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialImportBottomSheet
 import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialImportScreen
 import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialImportViewModel
 import app.aaps.pump.omnipod.omnipod5.ui.wizard.compose.O5OmnipodWizardViewModel
@@ -42,6 +45,7 @@ class OmnipodO5ComposeContent(
         onSettings: (() -> Unit)?
     ) {
         val overviewViewModel: O5OverviewViewModel = metroViewModel()
+        val credentialViewModel: O5CredentialImportViewModel = metroViewModel()
         OmnipodComposeHost(
             pluginName = pluginName,
             blePreCheck = blePreCheck,
@@ -57,6 +61,22 @@ class OmnipodO5ComposeContent(
             onConfirmDiscardPod = overviewViewModel::confirmDiscardPod,
             activationNeedsExtraContent = { O5RegistrationData.pickControllerId == 0L },
             showExtraContentForHistory = true,
+            credentialImportSheet = { onImported, onDismiss ->
+                val context = LocalContext.current
+                O5CredentialImportBottomSheet(
+                    url = stringResource(R.string.omnipod_5_login),
+                    onImportCredential = credentialViewModel::importFromWebMessage,
+                    onImported = {
+                        Toast.makeText(context, "Omnipod 5 credential imported", Toast.LENGTH_LONG).show()
+                        onImported()
+                    },
+                    onFailed = { throwable ->
+                        credentialViewModel.importError(throwable)
+                        Toast.makeText(context, "Error importing certificate", Toast.LENGTH_LONG).show()
+                    },
+                    onDismiss = onDismiss
+                )
+            },
             extraContent = { onBack ->
                 val title = stringResource(R.string.omnipod_5_name)
                 LaunchedEffect(title) {
@@ -72,13 +92,10 @@ class OmnipodO5ComposeContent(
                         )
                     )
                 }
-                val credentialViewModel: O5CredentialImportViewModel = metroViewModel()
                 val historyViewModel: O5PodHistoryViewModel = metroViewModel()
                 val records by historyViewModel.records.collectAsStateWithLifecycle()
                 Column(Modifier.fillMaxSize()) {
-                    Box {
-                        O5CredentialImportScreen(viewModel = credentialViewModel, rh = rh)
-                    }
+                    O5CredentialImportScreen(viewModel = credentialViewModel, rh = rh)
                     HorizontalDivider()
                     Box(Modifier.weight(1f)) {
                         O5PodHistoryScreen(

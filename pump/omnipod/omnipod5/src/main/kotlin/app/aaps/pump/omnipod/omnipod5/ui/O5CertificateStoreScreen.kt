@@ -5,11 +5,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import app.aaps.core.interfaces.resources.ResourceHelper
@@ -23,16 +29,33 @@ fun O5CertificateStoreScreen(
     onBack: () -> Unit
 ) {
     val viewModel: O5CredentialImportViewModel = metroViewModel()
+    var showManualImport by remember { mutableStateOf(false) }
     Scaffold(
         topBar = {
             AapsTopAppBar(
-                title = { Text(stringResource(R.string.omnipod_5_certificate_store)) },
+                title = {
+                    Text(
+                        stringResource(
+                            if (showManualImport) R.string.omnipod_5_certificate_store_import
+                            else R.string.omnipod_5_certificate_store
+                        )
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { if (showManualImport) showManualImport = false else onBack() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(app.aaps.core.ui.R.string.back)
                         )
+                    }
+                },
+                actions = {
+                    if (!showManualImport) {
+                        TextButton(onClick = { showManualImport = true }) {
+                            Text(
+                                text = stringResource(app.aaps.core.ui.R.string.import_btn)
+                            )
+                        }
                     }
                 }
             )
@@ -43,7 +66,11 @@ fun O5CertificateStoreScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            O5CredentialImportScreen(viewModel = viewModel, rh = rh)
+            if (showManualImport) {
+                O5CredentialManualImportScreen(viewModel = viewModel, rh = rh)
+            } else {
+                O5CredentialImportScreen(viewModel = viewModel, rh = rh)
+            }
         }
     }
 }
