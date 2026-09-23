@@ -62,6 +62,7 @@ import app.aaps.core.ui.compose.LocalProfileUtil
 import app.aaps.core.ui.compose.stringResource
 import app.aaps.core.ui.extensions.round
 import app.aaps.ui.UiStrings
+import app.aaps.ui.compose.stats.trioStatsRanges
 import app.aaps.ui.compose.stats.viewmodels.StatsUiState
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import kotlin.math.ceil
@@ -167,18 +168,16 @@ private fun TrioGlucoseStatsContent(
         state.trioStatsLoading ->
             TrioStatsLoading()
 
-        state.trioStatsData == null || state.trioStatsData?.readingCount == 0 ->
+        state.trioStatsData == null || state.trioStatsData.readingCount == 0 ->
             TrioStatsEmptyState(stringResource(UiStrings.trio_stats_no_data))
 
-        else -> state.trioStatsData?.let { data ->
-            TrioGlucoseProfileCard(
-                modifier = Modifier.padding(horizontal = AapsSpacing.extraLarge),
-                data = data,
-                lowMgdl = viewModel.trioLowMgdl,
-                highMgdl = viewModel.trioHighMgdl,
-                glycemicMetricUnits = viewModel.trioGlycemicMetricUnits
-            )
-        }
+        else -> TrioGlucoseProfileCard(
+            modifier = Modifier.padding(horizontal = AapsSpacing.extraLarge),
+            data = state.trioStatsData,
+            lowMgdl = viewModel.trioLowMgdl,
+            highMgdl = viewModel.trioHighMgdl,
+            glycemicMetricUnits = viewModel.trioGlycemicMetricUnits
+        )
     }
 }
 
@@ -244,19 +243,22 @@ private fun TrioInsulinStatsContent(
 
 @Composable
 private fun TrioInsulinRangeSelector(
-    selectedRange: TrioInsulinRange,
-    onSelect: (TrioInsulinRange) -> Unit
+    selectedRange: TrioStatsRange,
+    onSelect: (TrioStatsRange) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    SingleChoiceSegmentedButtonRow(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = AapsSpacing.extraLarge, vertical = AapsSpacing.medium)
-    ) {
-        TrioInsulinRange.entries.forEachIndexed { index, range ->
-            SegmentedButton(
-                selected = selectedRange == range,
-                onClick = { onSelect(range) },
-                shape = SegmentedButtonDefaults.itemShape(index, TrioInsulinRange.entries.size),
-                label = { Text(range.label()) }
-            )
+    Box(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small)
+        ) {
+            trioStatsRanges.forEach { range ->
+                FilterChip(
+                    selected = selectedRange == range,
+                    onClick = { onSelect(range) },
+                    label = { Text(range.label()) }
+                )
+            }
         }
     }
 }
@@ -278,14 +280,6 @@ private fun TrioInsulinChartSelector(
             )
         }
     }
-}
-
-@Composable
-private fun TrioInsulinRange.label(): String = when (this) {
-    TrioInsulinRange.DAY          -> stringResource(UiStrings.trio_stats_short_day)
-    TrioInsulinRange.WEEK         -> stringResource(UiStrings.trio_stats_short_days, 7)
-    TrioInsulinRange.MONTH        -> stringResource(UiStrings.trio_stats_short_days, 30)
-    TrioInsulinRange.THREE_MONTHS -> stringResource(UiStrings.trio_stats_short_days, 90)
 }
 
 @Composable

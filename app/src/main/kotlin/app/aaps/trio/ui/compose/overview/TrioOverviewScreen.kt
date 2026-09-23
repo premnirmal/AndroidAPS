@@ -313,11 +313,12 @@ private fun TrioOverviewContent(
             .padding(paddingValues)
     ) {
         val chartHeight = maxHeight * 0.47f
+        val bgGlowSize = (AapsSpacing.bgCircleSize.value * LocalAapsScale.current * 1.5).dp
 
         TrioBgGlow(
             visible = bgInfo != null,
             center = bgGlowCenter,
-            modifier = Modifier.size(width = AapsSpacing.bgCircleSize * 2, height = AapsSpacing.bgCircleSize * 2)
+            modifier = Modifier.size(bgGlowSize)
         )
 
         Column(

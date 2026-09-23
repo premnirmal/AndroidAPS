@@ -38,7 +38,6 @@ import app.aaps.ui.compose.stats.TddCyclePatternData
 import app.aaps.ui.compose.stats.TddStatsData
 import app.aaps.ui.compose.stats.TirStatsData
 import app.aaps.ui.compose.stats.TrioStatsData
-import app.aaps.ui.compose.stats.TrioInsulinRange
 import app.aaps.ui.compose.stats.TrioInsulinStatsData
 import app.aaps.ui.compose.stats.TrioStatsSection
 import app.aaps.ui.compose.stats.TrioStatsRange
@@ -230,7 +229,7 @@ class StatsViewModel(
         _uiState.update { it.copy(trioStatsSection = section) }
     }
 
-    fun loadTrioInsulinStats(range: TrioInsulinRange) {
+    fun loadTrioInsulinStats(range: TrioStatsRange) {
         if (uiState.value.trioInsulinRange == range && uiState.value.trioInsulinStatsData != null) return
 
         trioInsulinStatsLoadJob?.cancel()
@@ -251,10 +250,11 @@ class StatsViewModel(
                     hourlyTdds
                 } else {
                     val days = when (range) {
-                        TrioInsulinRange.WEEK         -> 6L
-                        TrioInsulinRange.MONTH        -> 29L
-                        TrioInsulinRange.THREE_MONTHS -> 89L
-                        TrioInsulinRange.DAY          -> 0L
+                        TrioStatsRange.DAYS_7       -> 7L
+                        TrioStatsRange.DAYS_30      -> 30L
+                        TrioStatsRange.DAYS_90      -> 90L
+                        TrioStatsRange.TODAY        -> 0L
+                        TrioStatsRange.HOURS_24     -> 1L
                     }
                     val dailyTdds = mutableListOf<TDD>()
                     tddCalculator.calculate(days, allowMissingDays = true)?.let { calculated ->
@@ -526,7 +526,7 @@ data class StatsUiState(
     val trioRange: TrioStatsRange = TrioStatsRange.TODAY,
     val trioStatsSection: TrioStatsSection = TrioStatsSection.GLUCOSE,
     val trioInsulinStatsData: TrioInsulinStatsData? = null,
-    val trioInsulinRange: TrioInsulinRange = TrioInsulinRange.DAY,
+    val trioInsulinRange: TrioStatsRange = TrioStatsRange.TODAY,
     val activityStatsData: List<ActivityStats>? = null,
     val tddCycleEntries: List<TDD> = emptyList(),
     val tddCyclePatternData: TddCyclePatternData? = null,

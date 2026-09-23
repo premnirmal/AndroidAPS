@@ -15,23 +15,6 @@ enum class TrioInsulinChart {
     BOLUS_DISTRIBUTION
 }
 
-enum class TrioInsulinRange {
-    DAY,
-    WEEK,
-    MONTH,
-    THREE_MONTHS;
-
-    fun startTime(now: Long): Long = when (this) {
-        DAY          -> MidnightTime.calc(now)
-        WEEK         -> now - T.days(7).msecs()
-        MONTH        -> now - T.days(30).msecs()
-        THREE_MONTHS -> now - T.days(90).msecs()
-    }
-
-    val usesHourlyBuckets: Boolean
-        get() = this == DAY
-}
-
 data class TrioInsulinPoint(
     val timestamp: Long,
     val total: Double,
@@ -60,7 +43,7 @@ data class TrioInsulinStatsData(
 internal fun calculateTrioInsulinStatsData(
     tdds: List<TDD>,
     boluses: List<BS>,
-    range: TrioInsulinRange
+    range: TrioStatsRange
 ): TrioInsulinStatsData {
     val tddPoints = tdds
         .groupBy { it.timestamp.bucket(range) }
@@ -88,7 +71,7 @@ internal fun calculateTrioInsulinStatsData(
     return TrioInsulinStatsData(tddPoints = tddPoints, bolusPoints = bolusPoints)
 }
 
-private fun Long.bucket(range: TrioInsulinRange): Long =
+private fun Long.bucket(range: TrioStatsRange): Long =
     if (range.usesHourlyBuckets) this - this % T.hours(1).msecs() else MidnightTime.calc(this)
 
 private fun List<Double>.averageOrZero(): Double = ifEmpty { listOf(0.0) }.average()

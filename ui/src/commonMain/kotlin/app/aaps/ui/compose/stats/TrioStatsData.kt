@@ -22,6 +22,9 @@ enum class TrioStatsRange {
         DAYS_30  -> now - T.days(30).msecs()
         DAYS_90  -> now - T.days(90).msecs()
     }
+
+    val usesHourlyBuckets: Boolean
+        get() = this == TODAY || this == HOURS_24
 }
 
 data class TrioTirBreakdown(

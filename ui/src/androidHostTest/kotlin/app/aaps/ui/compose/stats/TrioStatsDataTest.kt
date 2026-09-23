@@ -91,7 +91,7 @@ internal class TrioStatsDataTest {
                 bolus(day + T.hours(2).msecs(), 1.0, BS.Type.SMB),
                 bolus(day + T.hours(3).msecs(), 3.0, BS.Type.PRIMING)
             ),
-            range = TrioInsulinRange.WEEK
+            range = TrioStatsRange.DAYS_7
         )
 
         assertThat(data.tddPoints).hasSize(1)
@@ -112,7 +112,7 @@ internal class TrioStatsDataTest {
                 TDD(timestamp = day + T.hours(2).msecs(), totalAmount = 2.0)
             ),
             boluses = emptyList(),
-            range = TrioInsulinRange.DAY
+            range = TrioStatsRange.TODAY
         )
 
         assertThat(data.tddPoints).hasSize(2)
