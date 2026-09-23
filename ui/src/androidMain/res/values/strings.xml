@@ -64,6 +64,8 @@
     <string name="trio_stats_no_tdd_data">No total daily dose data is available for this range.</string>
     <string name="trio_stats_no_bolus_data">No bolus data is available for this range.</string>
     <string name="trio_stats_total">Total</string>
+    <string name="trio_stats_basal">Basal</string>
+    <string name="trio_stats_bolus">Bolus</string>
     <string name="trio_stats_manual">Manual</string>
     <string name="trio_stats_smb">SMB</string>
     <string name="trio_stats_insulin_units" comment="%1$.1f=insulin amount in units. Example: 24.5 U">%1$.1f U</string>

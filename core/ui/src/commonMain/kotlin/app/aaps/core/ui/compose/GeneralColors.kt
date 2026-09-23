@@ -83,6 +83,10 @@ data class GeneralColors(
     val trioBgRingIndigo: Color,
     val trioBgRingBlue: Color,
     val trioBgCircle: Color,
+    val trioInsulin: Color,
+    val trioBasal: Color,
+    val trioSmb: Color,
+    val trioManualBolus: Color,
     val originalBgValue: Color,
     val iobPrediction: Color,
     val cobPrediction: Color,
@@ -151,6 +155,10 @@ val LightGeneralColors = GeneralColors(
     trioBgRingIndigo = Color(0xFF7C8BF3),
     trioBgRingBlue = Color(0xFF57AAEC),
     trioBgCircle = Color(0xFFFFFFFF),
+    trioInsulin = Color(0xFF1E96FC),
+    trioBasal = Color(0x801E96FC),
+    trioSmb = Color(0xFF007AFF),
+    trioManualBolus = Color(0xFF00C7BE),
     originalBgValue = Color(0xFFFFFFFF),     // white for regular CGM readings (matches originalBgValueColor attr)
     iobPrediction = Color(0xFF1E88E5),       // blue for IOB predictions (matches iobColor attr)
     cobPrediction = Color(0xFFFB8C00),       // orange for COB predictions (matches cobColor attr)
@@ -215,6 +223,10 @@ val DarkGeneralColors = GeneralColors(
     trioBgRingIndigo = Color(0xFF7C8BF3),
     trioBgRingBlue = Color(0xFF57AAEC),
     trioBgCircle = Color(0xFF21212E),
+    trioInsulin = Color(0xFF1E96FC),
+    trioBasal = Color(0x801E96FC),
+    trioSmb = Color(0xFF007AFF),
+    trioManualBolus = Color(0xFF00C7BE),
     originalBgValue = Color(0xFFFFFFFF),     // white for regular CGM readings (same in both modes)
     iobPrediction = Color(0xFF64B5F6),       // lighter blue for IOB predictions (dark mode)
     cobPrediction = Color(0xFFFFB74D),       // lighter orange for COB predictions (dark mode)

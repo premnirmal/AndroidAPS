@@ -295,6 +295,7 @@ private fun TrioInsulinCard(
     chart: TrioInsulinChart,
     modifier: Modifier = Modifier
 ) {
+    val colors = AapsTheme.generalColors
     val points = when (chart) {
         TrioInsulinChart.TOTAL_DAILY_DOSE  -> data.tddPoints
         TrioInsulinChart.BOLUS_DISTRIBUTION -> data.bolusPoints
@@ -311,6 +312,25 @@ private fun TrioInsulinCard(
             chart = chart,
             modifier = Modifier.fillMaxWidth()
         )
+        val legendItems = when (chart) {
+            TrioInsulinChart.TOTAL_DAILY_DOSE -> listOf(
+                stringResource(UiStrings.trio_stats_basal) to colors.trioBasal,
+                stringResource(UiStrings.trio_stats_bolus) to colors.trioInsulin
+            )
+
+            TrioInsulinChart.BOLUS_DISTRIBUTION -> listOf(
+                stringResource(UiStrings.trio_stats_manual) to colors.trioManualBolus,
+                stringResource(UiStrings.trio_stats_smb) to colors.trioSmb
+            )
+        }
+        Row(
+            modifier = Modifier.align(Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
+        ) {
+            legendItems.forEach { (label, color) ->
+                TrioChartLegendItem(label, color)
+            }
+        }
     }
 }
 
@@ -347,8 +367,11 @@ private fun TrioInsulinBarChart(
     chart: TrioInsulinChart,
     modifier: Modifier = Modifier
 ) {
-    val primary = MaterialTheme.colorScheme.primary
-    val secondary = MaterialTheme.colorScheme.tertiary
+    val colors = AapsTheme.generalColors
+    val basalColor = colors.trioBasal
+    val bolusColor = colors.trioInsulin
+    val manualBolusColor = colors.trioManualBolus
+    val smbColor = colors.trioSmb
     val description = when (chart) {
         TrioInsulinChart.TOTAL_DAILY_DOSE  -> stringResource(UiStrings.trio_stats_tdd_chart)
         TrioInsulinChart.BOLUS_DISTRIBUTION -> stringResource(UiStrings.trio_stats_bolus_chart)
@@ -370,12 +393,12 @@ private fun TrioInsulinBarChart(
                 val basalHeight = (point.basal / maximum * size.height).toFloat()
                 val bolusHeight = (point.bolus / maximum * size.height).toFloat()
                 drawRect(
-                    color = primary,
+                    color = basalColor,
                     topLeft = Offset(centerX - barWidth / 2, size.height - basalHeight),
                     size = Size(barWidth, basalHeight)
                 )
                 drawRect(
-                    color = secondary,
+                    color = bolusColor,
                     topLeft = Offset(centerX - barWidth / 2, size.height - basalHeight - bolusHeight),
                     size = Size(barWidth, bolusHeight)
                 )
@@ -383,12 +406,12 @@ private fun TrioInsulinBarChart(
                 val manualHeight = (point.manualBolus / maximum * size.height).toFloat()
                 val smbHeight = (point.smbBolus / maximum * size.height).toFloat()
                 drawRect(
-                    color = primary,
+                    color = manualBolusColor,
                     topLeft = Offset(centerX - barWidth / 2, size.height - manualHeight),
                     size = Size(barWidth, manualHeight)
                 )
                 drawRect(
-                    color = secondary,
+                    color = smbColor,
                     topLeft = Offset(centerX - barWidth / 2, size.height - manualHeight - smbHeight),
                     size = Size(barWidth, smbHeight)
                 )
