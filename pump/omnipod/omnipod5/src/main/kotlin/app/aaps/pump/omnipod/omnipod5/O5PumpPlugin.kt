@@ -3,6 +3,15 @@ import app.aaps.pump.omnipod.common.R
 
 import android.os.Handler
 import android.os.Looper
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.data.model.BS
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.data.pump.defs.ManufacturerType
@@ -38,8 +47,10 @@ import app.aaps.core.interfaces.rx.collectResilient
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.keys.interfaces.withCompose
+import app.aaps.core.ui.compose.AapsTopAppBar
 import app.aaps.core.ui.compose.ComposeScreenContent
 import app.aaps.core.ui.compose.icons.IcPluginOmnipod
+import app.aaps.core.ui.compose.metroViewModel
 import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.O5BleManager
 import app.aaps.pump.omnipod.common.bledriver.pod.command.DeactivateCommand
@@ -95,6 +106,8 @@ import app.aaps.pump.omnipod.omnipod5.keys.O5IntentKey
 import app.aaps.pump.omnipod.omnipod5.ui.O5CertificateStoreScreen
 import app.aaps.pump.omnipod.omnipod5.ui.compose.OmnipodO5ComposeContent
 import app.aaps.pump.omnipod.common.util.mapProfileToBasalProgram
+import app.aaps.pump.omnipod.omnipod5.ui.compose.O5PodHistoryScreen
+import app.aaps.pump.omnipod.omnipod5.ui.compose.O5PodHistoryViewModel
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Single
 import kotlinx.coroutines.CoroutineScope
@@ -1424,6 +1437,18 @@ class O5PumpPlugin @Inject constructor(
             O5IntentKey.CertificateStore.withCompose(
                 ComposeScreenContent { onBack ->
                     O5CertificateStoreScreen(rh = rh, onBack = onBack)
+                }
+            ),
+            O5IntentKey.PodHistory.withCompose(
+                ComposeScreenContent { onBack ->
+                    val historyViewModel: O5PodHistoryViewModel = metroViewModel()
+                    val records by historyViewModel.records.collectAsStateWithLifecycle()
+                    O5PodHistoryScreen(
+                        records = records,
+                        rh = historyViewModel.rh,
+                        profileUtil = historyViewModel.profileUtil,
+                        onBack = onBack
+                    )
                 }
             )
         ),
