@@ -424,7 +424,7 @@ private fun TrioOverviewContent(
                         MetricRow(
                             label = stringResource(app.aaps.core.ui.R.string.cob),
                             value = cobUiState.baseText.ifEmpty { cobUiState.text },
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier,
                             trailingContent = {
                                 if (cobUiState.carbsReq > 0) {
                                     Badge(
@@ -647,7 +647,7 @@ private fun TrioOverviewScreenPreview() {
                 hasData = true
             ),
             iobUiState = IobUiState(text = "1.25 U", iobTotal = 1.25),
-            cobUiState = CobUiState(text = "18g", cobValue = 18.0),
+            cobUiState = CobUiState(text = "18g", cobValue = 18.0, carbsReq = 22),
             predictedText = "132",
             onNavigate = {},
             onTbrChipClick = {},
