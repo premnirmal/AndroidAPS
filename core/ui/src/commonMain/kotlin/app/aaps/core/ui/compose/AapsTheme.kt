@@ -62,8 +62,6 @@ val LocalDateUtil = compositionLocalOf<DateUtil> { error("No DateUtil provided")
  */
 val LocalConfig = compositionLocalOf<Config> { error("No Config provided") }
 
-val LocalAapsIsDark = compositionLocalOf { false }
-
 /**
  * CompositionLocal providing number formatting.
  *
@@ -114,11 +112,6 @@ val LocalMasterControlAllowed = compositionLocalOf { true }
 @Composable
 fun masterEditingEnabled(): Boolean =
     LocalInspectionMode.current || !(LocalConfig.current.AAPSCLIENT && !LocalMasterReachable.current)
-
-@Composable
-fun AapsSystemBarStyleEffect() {
-    SystemBarAppearance(isDark = LocalAapsIsDark.current)
-}
 
 /**
  * CompositionLocal providing access to ProfileUtil for glucose unit conversions.
@@ -241,17 +234,6 @@ object AapsTheme {
     val spacing: AapsSpacing get() = AapsSpacing
 }
 
-@Composable
-fun AapsTheme(
-    useSystemTheme: Boolean = false,
-    content: @Composable () -> Unit
-) {
-    val preferences = LocalPreferences.current
-    val darkModeValue by preferences.observe(StringKey.GeneralDarkMode).collectAsState()
-    val uiMode = if (useSystemTheme) UiMode.SYSTEM else UiMode.fromString(darkModeValue)
-    AapsTheme(useSystemTheme, uiMode, content)
-}
-
 /**
  * Main AndroidAPS theme wrapper that applies Material 3 theming with custom extensions.
  * Wraps content with Material 3 ColorScheme and provides AndroidAPS-specific theme values.
@@ -278,27 +260,19 @@ fun AapsTheme(
  * }
  * ```
  *
- * @param useSystemTheme When true, ignore the stored theme preference and follow the system theme.
- * @param uiMode The UI mode [UiMode].
  * @param content The composable content to wrap with the theme
  */
 @Composable
 fun AapsTheme(
-    useSystemTheme: Boolean = false,
-    uiMode: UiMode,
     content: @Composable () -> Unit
 ) {
+    val preferences = LocalPreferences.current
+    val darkModeValue by preferences.observe(StringKey.GeneralDarkMode).collectAsState()
+    val uiMode = UiMode.fromString(darkModeValue)
 
-    val lightColors = lightColorScheme(
-        primary = Color(0xFF0F766E),
-        secondary = Color(0xFF0D9488),
-        background = Color(0xFFF8FAFC),
-        surface = Color(0xFFF8FAFC)
-    )
+    val lightColors = lightColorScheme()
     val darkColors = darkColorScheme(
-        secondary = Color(0xFF2DD4BF),
-        secondaryContainer = Color(0xFF635F6A),
-        surface = Color(0xFF0B1220)
+        secondaryContainer = Color(0xFF635F6A)
     )
 
     val isDark = when (uiMode) {
@@ -312,8 +286,7 @@ fun AapsTheme(
     // colorScheme.surface). Reactive — no activity recreate needed.
     SystemBarAppearance(isDark)
 
-    val fallbackScheme = if (isDark) darkColors else lightColors
-    val scheme = platformColorScheme(isDark = isDark, fallback = fallbackScheme)
+    val scheme = if (isDark) darkColors else lightColors
     val profileViewerColors = if (isDark) DarkProfileHelperColors else LightProfileHelperColors
     val treatmentIconColors = if (isDark) DarkElementColors else LightElementColors
     val generalColors = if (isDark) DarkGeneralColors else LightGeneralColors
@@ -330,7 +303,6 @@ fun AapsTheme(
         LocalGeneralColors provides generalColors,
         LocalSnackbarColors provides snackbarColors,
         LocalAapsScale provides typographyScale,
-        LocalAapsIsDark provides isDark,
     ) {
         MaterialTheme(
             colorScheme = scheme,

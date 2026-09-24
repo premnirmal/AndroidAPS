@@ -61,6 +61,7 @@
     <string name="goingtodeliver">Leverer %1$.2f IE</string>
     <string name="androidaps_start">AAPS startet</string>
     <string name="format_hours">%1$.2f t</string>
+    <string name="objectives">Mål</string>
     <string name="please_wait">Vent venligst…</string>
     <string name="stop">Stop</string>
     <string name="invalid_profile">Ugyldig profil!</string>

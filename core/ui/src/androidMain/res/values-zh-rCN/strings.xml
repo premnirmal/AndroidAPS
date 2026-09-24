@@ -107,6 +107,7 @@
     <string name="format_hours">%1$.2f 小时</string>
     <string name="format_mins">%1$d min</string>
     <string name="value_with_unit" comment="A numeric value followed by its unit, when no dedicated value template exists. %1$s = value, %2$s = unit. Example: 120 mg/dl">%1$s %2$s</string>
+    <string name="objectives">目标</string>
     <string name="please_wait">请稍等...</string>
     <string name="stop">停止</string>
     <string name="stop_pressed">已按下停止</string>
@@ -975,6 +976,14 @@
     <!--    Search-->
     <string name="search">搜索</string>
     <string name="clear">清除</string>
+    <string name="search_category_categories">首选项类别</string>
+    <string name="search_category_preferences">首选项设置</string>
+    <string name="search_category_dialogs">对话框</string>
+    <string name="search_category_plugins">插件</string>
+    <string name="search_category_wiki">文档</string>
+    <string name="wiki_search_offline">文档搜索需要互联网连接</string>
+    <string name="no_search_results">未找到结果</string>
+    <string name="search_plugin_disabled">插件 %1$s 已禁用</string>
     <!--    Food Management -->
     <string name="food_management">食物</string>
     <string name="food_deleted">食物已删除</string>

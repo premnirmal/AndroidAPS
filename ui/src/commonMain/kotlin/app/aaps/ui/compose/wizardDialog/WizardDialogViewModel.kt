@@ -136,6 +136,7 @@ class WizardDialogViewModel(
         // Load saved preferences
         val useTrend = preferences.get(BooleanNonKey.WizardIncludeTrend)
         val useCOB = preferences.get(BooleanNonKey.WizardIncludeCob)
+        val showNotes = preferences.get(BooleanKey.OverviewShowNotesInDialogs)
         val useBolusAdvisor = preferences.get(BooleanKey.OverviewUseBolusAdvisor)
 
         // Percentage: reset to 100% if last BG is too old
@@ -188,6 +189,7 @@ class WizardDialogViewModel(
                 bolusStep = bolusStep,
                 units = units,
                 profileNames = profileList,
+                showNotes = showNotes,
                 hasTempTarget = tempTarget != null,
                 useBolusAdvisor = useBolusAdvisor,
                 defaultPercentage = percentage,

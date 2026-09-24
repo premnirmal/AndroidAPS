@@ -45,8 +45,9 @@ class SnackbarNotificationFallback(
                 notificationManager.post(
                     id = NotificationId.SNACKBAR_FALLBACK,
                     text = event.message,
-                    // URGENT is reserved for pump and loop alarms that can wake users. Generic
-                    // snackbar errors route through NORMAL instead.
+                    // URGENT is reserved for pump/loop alarms that play alarm-stream sounds and
+                    // wake users. Generic snackbar errors - "failed to save preference", etc. -
+                    // route through NORMAL instead.
                     level = when (event.type) {
                         EventShowSnackbar.Type.Error   -> NotificationLevel.NORMAL
                         EventShowSnackbar.Type.Warning -> NotificationLevel.NORMAL

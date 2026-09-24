@@ -4,6 +4,7 @@ import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.aps.APS
 import app.aaps.core.interfaces.aps.Sensitivity
 import app.aaps.core.interfaces.calibration.Calibration
+import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.constraints.Safety
 import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.pump.Pump
@@ -57,6 +58,11 @@ interface ActivePlugin {
      *  Always IobCobCalculatorPlugin
      */
     val activeIobCobCalculator: IobCobCalculator
+
+    /**
+     *  Objectives plugin
+     */
+    val activeObjectives: Objectives?
 
     /**
      *  Smoothing plugin

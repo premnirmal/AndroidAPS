@@ -8,9 +8,11 @@ import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import platform.UserNotifications.UNAuthorizationOptionAlert
+import platform.UserNotifications.UNAuthorizationOptionSound
 import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotificationInterruptionLevel.UNNotificationInterruptionLevelTimeSensitive
 import platform.UserNotifications.UNNotificationRequest
+import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNTimeIntervalNotificationTrigger
 import platform.UserNotifications.UNUserNotificationCenter
 
@@ -57,6 +59,7 @@ class IosReminderScheduler(
 
         val content = UNMutableNotificationContent().apply {
             setBody(text)
+            setSound(UNNotificationSound.defaultSound())
             // Breaks through Focus, which is what an alarm the user set is for.
             setInterruptionLevel(UNNotificationInterruptionLevelTimeSensitive)
         }
@@ -76,7 +79,7 @@ class IosReminderScheduler(
     private fun requestAuthorizationOnce() {
         if (authorizationAsked) return
         authorizationAsked = true
-        center.requestAuthorizationWithOptions(UNAuthorizationOptionAlert) { granted, _ ->
+        center.requestAuthorizationWithOptions(UNAuthorizationOptionAlert or UNAuthorizationOptionSound) { granted, _ ->
             // Worth logging loudly: without permission the reminder is scheduled and never seen.
             if (!granted) aapsLogger.error(LTag.AUTOMATION, "Notifications not permitted, reminders will not appear")
         }

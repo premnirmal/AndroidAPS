@@ -27,6 +27,7 @@
     <string name="setupwizard_sensitivity_description">תוסף רגישות משמש לזיהוי רגישות וחישוב הפחמ\' הפעילות. לקבלת מידע נוסף, בקרו בכתובת:</string>
     <string name="setupwizard_pump_waiting_for_riley_link_connection">הגדירו את תצורת הריילילינק מטה. לאחר שתבחרו באפשרות ריילילינק, ניתן יהיה להמשיך בהתקנה אחרי שסטטוס הריילילינק יהיה \"מחובר\". פעולה זו עשויה להימשך דקה.\n</string>
     <string name="setupwizard_pump_pump_not_initialized"><b>הערה:</b> ניתן יהיה להמשיך בהתקנה לאחר חיבור ההמשאבה.\n</string>
+    <string name="startobjective">התחלת המשימה הראשונה שלכם</string>
     <string name="setupwizard_pump_riley_link_status">מצב ריילילינק:</string>
     <string name="readstatus">קרא סטטוס</string>
     <!-- Provider-agnostic cloud export/import strings -->

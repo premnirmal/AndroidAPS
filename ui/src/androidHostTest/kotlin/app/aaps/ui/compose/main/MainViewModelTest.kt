@@ -2,7 +2,6 @@ package app.aaps.ui.compose.main
 
 import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.RM
-import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.ui.UrlOpener
 import app.aaps.core.interfaces.aps.Loop
 import app.aaps.core.interfaces.automation.Automation
@@ -20,9 +19,7 @@ import app.aaps.core.interfaces.overview.graph.RunningModeDisplayData
 import app.aaps.core.interfaces.overview.graph.TbrDisplayData
 import app.aaps.core.interfaces.overview.graph.TempTargetDisplayData
 import app.aaps.core.interfaces.plugin.ActivePlugin
-import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.profile.ProfileFunction
-import app.aaps.core.interfaces.profile.ProfileUtil
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.bus.RxBus
@@ -34,17 +31,11 @@ import app.aaps.core.interfaces.ui.IconsProvider
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
-import app.aaps.core.keys.BooleanNonKey
-import app.aaps.core.keys.DoubleNonKey
-import app.aaps.core.keys.IntNonKey
-import app.aaps.core.keys.LongNonKey
 import app.aaps.core.keys.StringNonKey
 import app.aaps.core.keys.interfaces.AppPlatform
 import app.aaps.core.keys.interfaces.Preferences
-import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.keys.interfaces.VisibilityContext
 import app.aaps.core.objects.wizard.QuickWizard
-import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.ui.compose.quickLaunch.QuickLaunchResolver
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
@@ -67,7 +58,6 @@ import org.mockito.kotlin.whenever
 internal class MainViewModelTest {
 
     @Mock private lateinit var activePlugin: ActivePlugin
-    @Mock private lateinit var bgSourcePlugin: PluginBase
     @Mock private lateinit var config: Config
     @Mock private lateinit var urlOpener: UrlOpener
     @Mock private lateinit var preferences: Preferences
@@ -77,7 +67,6 @@ internal class MainViewModelTest {
     @Mock private lateinit var overviewDataCache: OverviewDataCache
     @Mock private lateinit var iobCobCalculator: IobCobCalculator
     @Mock private lateinit var profileFunction: ProfileFunction
-    @Mock private lateinit var profileUtil: ProfileUtil
     @Mock private lateinit var constraintChecker: ConstraintsChecker
     @Mock private lateinit var quickWizard: QuickWizard
     @Mock private lateinit var automation: Automation
@@ -125,66 +114,29 @@ internal class MainViewModelTest {
         whenever(preferences.observe(BooleanKey.GeneralSimpleMode)).thenReturn(MutableStateFlow(true))
         whenever(preferences.observe(BooleanKey.ApsUseSmb)).thenReturn(MutableStateFlow(false))
         whenever(preferences.observe(StringNonKey.QuickLaunchActions)).thenReturn(MutableStateFlow(""))
-        whenever(preferences.get(StringNonKey.LastOverviewProfileName)).thenReturn("")
-        whenever(preferences.get(BooleanNonKey.LastOverviewProfileModified)).thenReturn(false)
-        whenever(preferences.get(IntNonKey.LastOverviewProfilePercentage)).thenReturn(100)
-        whenever(preferences.get(StringNonKey.LastOverviewProfileTargetRange)).thenReturn("")
-        whenever(preferences.get(StringNonKey.LastOverviewRunningMode)).thenReturn("")
-        whenever(preferences.get(LongNonKey.LastPumpExpectedEndTimeMillis)).thenReturn(0L)
-        whenever(preferences.get(LongNonKey.LastLoopRunTimestamp)).thenReturn(0L)
-        whenever(preferences.get(DoubleNonKey.LastPumpReservoirUnits)).thenReturn(-1.0)
-        whenever(rh.gs(any<TextRef>())).thenReturn("")
 
-        sut = createViewModel()
+        sut = MainViewModel(
+            activePlugin, config, urlOpener, preferences, fabricPrivacy, rh, dateUtil,
+            overviewDataCache, iobCobCalculator, profileFunction, constraintChecker, quickWizard,
+            automation, persistenceLayer, aapsLogger, quickLaunchResolver, wizardExecutor,
+            batchExecutor, uel, loop, protectionCheck, sceneActions, sceneChainTargetResolver,
+            activeSceneManager, rxBus, nsClient, visibilityContext,
+            CoroutineScope(UnconfinedTestDispatcher())
+        )
     }
-
-    private fun createViewModel() = MainViewModel(
-        activePlugin, config, urlOpener, preferences, fabricPrivacy, rh, dateUtil,
-        overviewDataCache, iobCobCalculator, profileFunction, profileUtil, constraintChecker, quickWizard,
-        automation, persistenceLayer, aapsLogger, quickLaunchResolver, wizardExecutor,
-        batchExecutor, uel, loop, protectionCheck, sceneActions, sceneChainTargetResolver,
-        activeSceneManager, rxBus, nsClient, visibilityContext,
-        CoroutineScope(UnconfinedTestDispatcher())
-    )
 
     @AfterEach
     fun tearDown() = Dispatchers.resetMain()
 
     @Test
     fun `default uiState exposes initial values`() {
-        // The first value is the cached startup snapshot before asynchronous hydration runs.
+        // uiState is WhileSubscribed with no collector → stays at the MainUiState() initialValue.
         val state = sut.uiState.value
         assertThat(state.isSimpleMode).isTrue()
+        assertThat(state.isDrawerOpen).isFalse()
         assertThat(state.runningMode).isEqualTo(RM.Mode.DISABLED_LOOP)
         assertThat(state.tempTargetState).isEqualTo(TempTargetChipState.None)
         assertThat(state.quickWizardItems).isEmpty()
-    }
-
-    @Test
-    fun `initial uiState restores cached Trio status`() {
-        whenever(dateUtil.now()).thenReturn(10_000L)
-        whenever(preferences.get(StringNonKey.LastOverviewProfileName)).thenReturn("Workday")
-        whenever(preferences.get(BooleanNonKey.LastOverviewProfileModified)).thenReturn(true)
-        whenever(preferences.get(IntNonKey.LastOverviewProfilePercentage)).thenReturn(80)
-        whenever(preferences.get(StringNonKey.LastOverviewProfileTargetRange)).thenReturn("90-110")
-        whenever(preferences.get(StringNonKey.LastOverviewRunningMode)).thenReturn(RM.Mode.CLOSED_LOOP.name)
-        whenever(preferences.get(LongNonKey.LastLoopRunTimestamp)).thenReturn(7_000L)
-        whenever(preferences.get(LongNonKey.LastPumpExpectedEndTimeMillis)).thenReturn(20_000L)
-        whenever(preferences.get(DoubleNonKey.LastPumpReservoirUnits)).thenReturn(42.0)
-        whenever(rh.gs(any<TextRef>())).thenReturn("Closed loop")
-
-        sut = createViewModel()
-
-        val state = sut.uiState.value
-        assertThat(state.profileName).isEqualTo("Workday")
-        assertThat(state.isProfileModified).isTrue()
-        assertThat(state.profilePercentage).isEqualTo(80)
-        assertThat(state.profileTargetRangeText).isEqualTo("90-110")
-        assertThat(state.runningMode).isEqualTo(RM.Mode.CLOSED_LOOP)
-        assertThat(state.runningModeText).isEqualTo("Closed loop")
-        assertThat(state.lastLoopAgeMillis).isEqualTo(3_000L)
-        assertThat(state.pumpEndTimeMillis).isEqualTo(20_000L)
-        assertThat(state.reservoirUnits).isEqualTo(42.0)
     }
 
     @Test
@@ -204,29 +156,6 @@ internal class MainViewModelTest {
     fun `formatDuration delegates to dateUtil`() {
         whenever(dateUtil.timeRemainingString(any(), any())).thenReturn("1h 30m")
         assertThat(sut.formatDuration(5_400_000L)).isEqualTo("1h 30m")
-    }
-
-    @Test
-    fun `BG circle opens the active BG source plugin`() {
-        whenever(activePlugin.getSpecificPluginsList(PluginType.BGSOURCE))
-            .thenReturn(arrayListOf(bgSourcePlugin))
-        whenever(bgSourcePlugin.isEnabled(PluginType.BGSOURCE)).thenReturn(true)
-
-        val request = sut.bgSourceNavigationRequest()
-
-        assertThat(request).isEqualTo(
-            NavigationRequest.Plugin(bgSourcePlugin::class.simpleName.orEmpty())
-        )
-    }
-
-    @Test
-    fun `BG circle opens BG source selection when none is active`() {
-        whenever(activePlugin.getSpecificPluginsList(PluginType.BGSOURCE))
-            .thenReturn(arrayListOf())
-
-        assertThat(sut.bgSourceNavigationRequest()).isEqualTo(
-            NavigationRequest.PluginCategory(PluginType.BGSOURCE)
-        )
     }
 
     /**

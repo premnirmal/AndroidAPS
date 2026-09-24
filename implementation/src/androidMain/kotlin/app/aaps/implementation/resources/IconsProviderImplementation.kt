@@ -19,7 +19,7 @@ class IconsProviderImplementation(private val config: Config) : IconsProvider {
             config.AAPSCLIENT2 -> app.aaps.core.ui.R.mipmap.ic_blueowl
             config.AAPSCLIENT1 -> app.aaps.core.ui.R.mipmap.ic_yellowowl
             config.PUMPCONTROL -> app.aaps.core.ui.R.mipmap.ic_pumpcontrol
-            else               -> app.aaps.core.ui.R.mipmap.ic_launcher_round
+            else               -> app.aaps.core.ui.R.mipmap.ic_launcher
         }
 
     override fun getNotificationIcon(): Int =

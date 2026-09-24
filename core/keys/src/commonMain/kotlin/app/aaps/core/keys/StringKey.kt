@@ -45,16 +45,6 @@ enum class StringKey(
         ),
         sync = SyncSpec(SyncChannel.Cold, SyncDirection.Bidirectional)
     ),
-    TrioGlycemicMetricUnits(
-        key = "trio_glycemic_metric_units",
-        defaultValue = "percent",
-        title = KeysStrings.pref_title_trio_glycemic_metric_units,
-        preferenceType = PreferenceType.LIST,
-        entriesLiterals = mapOf(
-            "percent" to "%",
-            "mmol/mol" to "mmol/mol"
-        )
-    ),
     GeneralLanguage(
         key = "language",
         defaultValue = "default",
@@ -99,7 +89,7 @@ enum class StringKey(
     ),
     GeneralDarkMode(
         key = "use_dark_mode",
-        defaultValue = "system",
+        defaultValue = "dark",
         title = KeysStrings.pref_title_app_color_scheme,
         summary = KeysStrings.pref_summary_theme_switcher,
         preferenceType = PreferenceType.LIST,

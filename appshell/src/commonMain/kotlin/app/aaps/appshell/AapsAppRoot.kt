@@ -48,7 +48,6 @@ import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.VisibilityContext
 import app.aaps.core.ui.CoreUiStrings
-import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.LocalAppIcon
 import app.aaps.core.ui.compose.LocalConfig
@@ -182,15 +181,7 @@ fun AapsAppRoot(
                         rxBus = rxBus,
                         snackbarHostPresence = snackbarHostPresence,
                         hostState = rootSnackbarHostState,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(
-                                bottom = if (initProgress.done) {
-                                    AapsSpacing.xxLarge * 3 + AapsSpacing.medium
-                                } else {
-                                    0.dp
-                                }
-                            )
+                        modifier = Modifier.align(Alignment.BottomCenter)
                     )
 
                     // Root-level dialog host — subscribes to EventShowDialog and

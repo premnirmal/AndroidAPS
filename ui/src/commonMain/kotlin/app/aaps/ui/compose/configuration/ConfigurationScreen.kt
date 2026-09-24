@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -19,41 +18,31 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import app.aaps.core.data.plugin.PluginType
-import app.aaps.core.ui.compose.AapsSpacing
-import app.aaps.core.ui.compose.AapsTheme
+import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.AapsTopAppBar
 import app.aaps.core.ui.compose.dialogs.OkCancelDialog
 import app.aaps.core.ui.compose.preference.SyncBadge
-import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.stringResource
+import app.aaps.ui.UiStrings
 import app.aaps.ui.plugin.HardwarePumpConfirmation
 
 @Composable
 fun ConfigurationScreen(
     categories: List<ConfigCategoryUiModel>,
-    visibleTypes: Set<PluginType>? = null,
     hardwarePumpConfirmation: HardwarePumpConfirmation?,
     onNavigateBack: () -> Unit,
     onNavigateToCategory: (PluginType) -> Unit,
-    showTopBar: Boolean = true,
     onConfirmHardwarePump: () -> Unit,
     onDismissHardwarePump: () -> Unit,
 ) {
-    val visibleCategories = if (visibleTypes == null) {
-        categories
-    } else {
-        categories.filter { it.type in visibleTypes }
-    }
-
     if (hardwarePumpConfirmation != null) {
         OkCancelDialog(
             title = stringResource(CoreUiStrings.confirmation),
@@ -64,21 +53,18 @@ fun ConfigurationScreen(
     }
 
     Scaffold(
-        contentWindowInsets = if (showTopBar) ScaffoldDefaults.contentWindowInsets else WindowInsets(0),
         topBar = {
-            if (showTopBar) {
-                AapsTopAppBar(
-                    title = { Text(stringResource(CoreUiStrings.nav_configuration)) },
-                    navigationIcon = {
-                        IconButton(onClick = onNavigateBack) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(CoreUiStrings.back)
-                            )
-                        }
+            AapsTopAppBar(
+                title = { Text(stringResource(CoreUiStrings.nav_configuration)) },
+                navigationIcon = {
+                    IconButton(onClick = onNavigateBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(CoreUiStrings.back)
+                        )
                     }
-                )
-            }
+                }
+            )
         }
     ) { paddingValues ->
         LazyColumn(
@@ -86,7 +72,7 @@ fun ConfigurationScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            visibleCategories.forEach { category ->
+            categories.forEach { category ->
                 item(key = "cat_${category.type}") {
                     CategoryRow(
                         category = category,
@@ -112,20 +98,15 @@ private fun CategoryRow(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(
-                start = AapsSpacing.xxLarge,
-                top = AapsSpacing.large,
-                bottom = AapsSpacing.large,
-                end = AapsSpacing.small
-            )
+            .padding(start = 24.dp, top = 12.dp, bottom = 12.dp, end = 4.dp)
     ) {
         Icon(
             painter = iconPainter,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(AapsSpacing.xxLarge)
+            modifier = Modifier.size(24.dp)
         )
-        Spacer(modifier = Modifier.width(AapsSpacing.extraLarge))
+        Spacer(modifier = Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = categoryName,
@@ -142,38 +123,13 @@ private fun CategoryRow(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        SyncBadge(visible = category.synced, modifier = Modifier.padding(end = AapsSpacing.medium))
+        // Synced (master-linked) category: the same PhonelinkRing badge used on synced preference rows.
+        SyncBadge(visible = category.synced, modifier = Modifier.padding(end = 8.dp))
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(end = AapsSpacing.large)
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun ConfigurationScreenPreview() {
-    AapsTheme {
-        ConfigurationScreen(
-            categories = listOf(
-                ConfigCategoryUiModel(
-                    type = PluginType.GENERAL,
-                    titleRes = CoreUiStrings.configbuilder_general,
-                    plugins = emptyList(),
-                    isMultiSelect = true,
-                    subtitle = "General plugins",
-                    categoryIcon = Icons.Default.Settings
-                )
-            ),
-            visibleTypes = setOf(PluginType.GENERAL, PluginType.PUMP, PluginType.BGSOURCE, PluginType.SYNC),
-            hardwarePumpConfirmation = null,
-            onNavigateBack = {},
-            onNavigateToCategory = {},
-            showTopBar = true,
-            onConfirmHardwarePump = {},
-            onDismissHardwarePump = {}
+            modifier = Modifier.padding(end = 12.dp)
         )
     }
 }

@@ -13,8 +13,6 @@ enum class LongNonKey(
     BtWatchdogLastBark("bt_watchdog_last", 0L),
     ActivePumpChangeTimestamp("active_pump_change_timestamp", 0L),
     LastCleanupRun("last_cleanup_run", 0L),
-    LastLoopRunTimestamp("last_loop_run_timestamp", 0L, exportable = false),
-    LastPumpExpectedEndTimeMillis("last_pump_expected_end_time_millis", 0L, exportable = false),
 
     // NSCv3 client-control pairing (excluded from export — replay protection regresses if restored)
     NsClientControlCounterSent("nsclient_control_counter_sent", 0L, exportable = false),
@@ -25,3 +23,4 @@ enum class LongNonKey(
     NsClientControlPairedAt("nsclient_control_paired_at", 0L, exportable = false),
     LastVacuumRun("last_vacuum_run", 0L),
 }
+

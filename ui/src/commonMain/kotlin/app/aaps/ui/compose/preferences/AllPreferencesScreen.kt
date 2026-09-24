@@ -1,20 +1,16 @@
 package app.aaps.ui.compose.preferences
 
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -42,7 +38,6 @@ import app.aaps.core.ui.compose.LocalSnackbarHostState
 import app.aaps.core.ui.compose.MasterOfflineBanner
 import app.aaps.core.ui.compose.masterEditingEnabled
 import app.aaps.core.ui.compose.preference.LocalNavigateToCompose
-import app.aaps.core.ui.compose.preference.Preference
 import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
 import app.aaps.core.ui.compose.preference.ProvidePreferenceTheme
 import app.aaps.core.ui.compose.preference.addPreferenceContent
@@ -64,8 +59,6 @@ import kotlinx.coroutines.launch
  * @param builtInSearchables BuiltInSearchables instance (single source of truth for built-in screens)
  * @param configBuilder ConfigBuilder for the synced-selection gate (client APS visibility)
  * @param onBackClick Callback when back button is clicked
- * @param modifier Modifier applied to the preference list
- * @param onConfigurationClick Optional action shown at the bottom of the settings list
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,12 +67,7 @@ fun AllPreferencesScreen(
     rh: TextResolver,
     builtInSearchables: BuiltInSearchables,
     configBuilder: ConfigBuilder,
-    onBackClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    showTopBar: Boolean = true,
-    showSimpleModeHiddenPreferences: Boolean = false,
-    onConfigurationClick: (() -> Unit)? = null,
-    onMaintenanceClick: (() -> Unit)? = null
+    onBackClick: () -> Unit
 ) {
     val preferences = LocalPreferences.current
     val config = LocalConfig.current
@@ -98,7 +86,7 @@ fun AllPreferencesScreen(
     fun getPreferenceContentIfEnabled(plugin: PluginBase?, enabledCondition: Boolean = true): Any? {
         if (plugin == null) return null
         // Check simple mode visibility
-        if (!showSimpleModeHiddenPreferences && preferences.simpleMode && !plugin.pluginDescription.preferencesVisibleInSimpleMode && !config.isDev()) {
+        if (preferences.simpleMode && !plugin.pluginDescription.preferencesVisibleInSimpleMode && !config.isDev()) {
             return null
         }
         // Check if plugin is enabled
@@ -176,12 +164,30 @@ fun AllPreferencesScreen(
         LocalNavigateToCompose provides { screen -> composeScreen = screen }
     ) {
         ProvidePreferenceTheme {
-            val content: @Composable (PaddingValues) -> Unit = { paddingValues ->
+            Scaffold(
+                topBar = {
+                    AapsTopAppBar(
+                        title = {
+                            Text(
+                                text = stringResource(CoreUiStrings.settings),
+                                style = MaterialTheme.typography.titleLarge
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = onBackClick) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = stringResource(CoreUiStrings.back)
+                                )
+                            }
+                        }
+                    )
+                }
+            ) { paddingValues ->
                 val listState = rememberLazyListState()
                 val sectionState = rememberPreferenceSectionState()
                 LazyColumn(
                     modifier = Modifier
-                        .then(modifier)
                         .fillMaxSize()
                         .padding(paddingValues)
                         .verticalScrollIndicators(listState),
@@ -205,61 +211,10 @@ fun AllPreferencesScreen(
 
                     // Built-in: Alerts settings
                     addPreferenceContent(alertsPreferences, onShowMessage, sectionState)
-                    addPreferenceContent(maintenancePreferences, onShowMessage, sectionState)
 
                     // Built-in: Maintenance settings (always last)
-                    onMaintenanceClick?.let { onClick ->
-                        item {
-                            Preference(
-                                title = { Text(stringResource(CoreUiStrings.maintenance)) },
-                                summary = { Text(stringResource(CoreUiStrings.description_maintenance)) },
-                                onClick = onClick
-                            )
-                        }
-                        item {
-                            HorizontalDivider()
-                        }
-                    }
-
-                    onConfigurationClick?.let { onClick ->
-                        item {
-                            Preference(
-                                title = { Text(stringResource(CoreUiStrings.nav_configuration)) },
-                                summary = { Text(stringResource(CoreUiStrings.nav_configuration_desc)) },
-                                onClick = onClick
-                            )
-                        }
-                        item {
-                            HorizontalDivider()
-                        }
-                    }
+                    addPreferenceContent(maintenancePreferences, onShowMessage, sectionState)
                 }
-            }
-            if (showTopBar) {
-                Scaffold(
-                    contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
-                    topBar = {
-                        AapsTopAppBar(
-                            title = {
-                                Text(
-                                    text = stringResource(CoreUiStrings.settings),
-                                    style = MaterialTheme.typography.titleLarge
-                                )
-                            },
-                            navigationIcon = {
-                                IconButton(onClick = onBackClick) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = stringResource(CoreUiStrings.back)
-                                    )
-                                }
-                            }
-                        )
-                    },
-                    content = content
-                )
-            } else {
-                content(PaddingValues())
             }
         }
     }

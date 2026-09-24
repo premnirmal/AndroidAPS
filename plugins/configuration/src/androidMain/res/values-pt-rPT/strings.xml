@@ -27,6 +27,7 @@
     <string name="setupwizard_sensitivity_description">Plugin de Sensibilidade é usado para deteção de sensibilidade e cálculos HCA. Para mais info visite:</string>
     <string name="setupwizard_pump_waiting_for_riley_link_connection">Por favor, configure o seu RileyLink abaixo. Depois de seleccionar um RileyLink, será possível continuar a configuração quando o estado do RileyLink estiver \"Conectado\". Isso pode levar um minuto.\n</string>
     <string name="setupwizard_pump_pump_not_initialized"><b>Nota:</b> Pode continuar a configuração assim que a bomba for configurada.\n</string>
+    <string name="startobjective">Iniciar primeiro objectivo</string>
     <string name="setupwizard_pump_riley_link_status">Estado RileyLink:</string>
     <string name="readstatus">Ler estado</string>
     <!-- Provider-agnostic cloud export/import strings -->

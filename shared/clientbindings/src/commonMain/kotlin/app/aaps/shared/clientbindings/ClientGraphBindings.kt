@@ -1,5 +1,6 @@
 package app.aaps.shared.clientbindings
 
+import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.db.ProcessedTbrEbData
 import app.aaps.core.interfaces.di.ApplicationScope
@@ -38,6 +39,10 @@ import app.aaps.core.ui.compose.pump.PumpCommunicationStatus
 import app.aaps.implementation.notifications.CommonNotificationManager
 import app.aaps.implementation.resources.GeneratedTextResolver
 import app.aaps.implementation.resources.isCompactScreen
+import app.aaps.plugins.constraints.objectives.ObjectivesPlugin
+import app.aaps.plugins.constraints.objectives.objectives.DurationText
+import app.aaps.plugins.constraints.objectives.objectives.Objective
+import app.aaps.plugins.constraints.objectives.objectives.PlainDurationText
 import app.aaps.plugins.main.iob.iobCobCalculator.IobCobCalculatorPlugin
 import app.aaps.plugins.sync.nsclientV3.NSClientV3Plugin
 import app.aaps.plugins.sync.nsclientV3.ws.NsConnection
@@ -64,7 +69,7 @@ import kotlinx.coroutines.SupervisorJob
  * Every provider here is **real AAPS code, not a placeholder**. They exist because the classes
  * behind them are built by hand rather than by annotation, so each graph has to say so: the
  * calculator is deliberately built twice at different scopes, the Nightscout plugin defeats the
- * annotation processor, and a qualifier on a contributed plugin would leak into the
+ * annotation processor, and the objectives plugin carries a qualifier that would leak into the
  * interface.
  *
  * Android says the same things in `:app`. This is the copy for the platforms that are not Android.
@@ -217,7 +222,36 @@ object ClientGraphBindings {
     @IntKey(10)
     fun iobCobCalculatorEntry(plugin: IobCobCalculatorPlugin): PluginBase = plugin
 
+    /** The ten objectives in order, for `ObjectivesPlugin` to read. */
+    @Provides
+    fun objectivesList(objectives: Map<Int, Objective>): List<Objective> =
+        objectives.toList().sortedBy { it.first }.map { it.second }
 
+    /**
+     * The `Objectives` interface, unqualified.
+     *
+     * `ObjectivesPlugin` carries `@APS` on the class for the plugin-list multibinding, and a second
+     * `@ContributesBinding` there would inherit it - the interface would then only be readable as
+     * `@APS Objectives`, which is not what a reader asks for.
+     *
+     * Metro documents the way out: put the qualifier on the bound type instead, `binding<@APS
+     * PluginBase>()`. The version pinned here rejects that form outright -
+     * `Inapplicable candidate(s): constructor(scope: KClass<*>, binding: binding<*> = ...)` - which is
+     * the same wall `SyncPluginsBindings` hits for its qualified entry. So this stays stated, and
+     * hands out the same scoped instance either way. Retry both when Metro leaves the snapshot.
+     */
+    @Provides
+    fun objectives(plugin: ObjectivesPlugin): Objectives = plugin
+
+    /**
+     * Durations without plural forms.
+     *
+     * Android has real plural resources and keeps them; nothing off Android has a plural table, so
+     * both platforms here say it plainly.
+     */
+    @Provides
+    @SingleIn(AppScope::class)
+    fun durationText(): DurationText = PlainDurationText()
 
     // ---- Things a service would own on Android ----
 

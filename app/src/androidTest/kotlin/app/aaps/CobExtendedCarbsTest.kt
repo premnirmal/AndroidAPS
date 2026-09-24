@@ -49,6 +49,7 @@ class CobExtendedCarbsTest : AapsInstrumentedTest() {
     private val l get() = testGraphs.l
     private val config get() = testGraphs.config
     private val loop get() = testGraphs.loop
+    private val objectivesPlugin get() = testGraphs.objectivesPlugin
     private val commandQueue get() = testGraphs.commandQueue
 
     private val profileData = "{\"_id\":\"653f90bc89f99714b4635b33\",\"defaultProfile\":\"U200_32\",\"date\":1695655201449,\"created_at\":\"2023-09-25T15:20:01.449Z\"," +
@@ -58,6 +59,7 @@ class CobExtendedCarbsTest : AapsInstrumentedTest() {
     fun tearDown() {
         rxHelper.clear()
         loop.lastRun = null
+        objectivesPlugin.objectives.forEach { it.startedOn = 0 }
         (profileFunction as ProfileFunctionImpl).cache.clear()
         // Leave the command queue empty for whatever runs next in this process. This class is @ShardB,
         // which it shares with six Dana tests that drive pumps through the same queue, and work left in
@@ -77,10 +79,10 @@ class CobExtendedCarbsTest : AapsInstrumentedTest() {
         l.findByName(LTag.EVENTS.name).enabled = true
         assertThat(config.APS).isTrue()
 
-        setupProfile()
+        setupProfileAndObjectives()
     }
 
-    private suspend fun setupProfile() {
+    private suspend fun setupProfileAndObjectives() {
         persistenceLayer.clearDatabases()
         @SuppressLint("CheckResult")
         persistenceLayer.insertOrUpdateRunningMode(
@@ -94,6 +96,9 @@ class CobExtendedCarbsTest : AapsInstrumentedTest() {
             source = Sources.Aaps,
             listValues = listOf(ValueWithUnit.SimpleString("Test"))
         )
+
+        objectivesPlugin.onStart()
+        objectivesPlugin.objectives[0].startedOn = 1
 
         (profileFunction as ProfileFunctionImpl).cache.clear()
         nsIncomingDataProcessor.processProfile(Json.parseToJsonElement(profileData).jsonObject, true)

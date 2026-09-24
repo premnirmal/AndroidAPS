@@ -5,6 +5,7 @@ import app.aaps.core.ui.CoreUiStrings
 import app.aaps.plugins.configuration.ConfigurationStrings
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.configuration.Config
+import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.di.ApplicationScope
 import app.aaps.core.interfaces.maintenance.PrefsFileInfo
 import app.aaps.core.interfaces.plugin.ActivePlugin
@@ -97,6 +98,7 @@ class SWDefinition(
     var onOpenAuthorizedClients: (() -> Unit)? = null
     var onPairWithMaster: (() -> Unit)? = null
     var onOpenNsReceiveSettings: (() -> Unit)? = null
+    var onRunObjectives: (() -> Unit)? = null
     var onRequestDirectoryAccess: (() -> Unit)? = null
     var onRequestPermission: ((PermissionGroup) -> Unit)? = null
     var permissionItems: (() -> List<Pair<PermissionGroup, Boolean>>)? = null
@@ -381,6 +383,15 @@ class SWDefinition(
             .add(swBreakProvider())
             .add(pluginOption(PluginType.SENSITIVITY, ConfigurationStrings.configbuilder_sensitivity_description))
 
+    private val getScreenObjectives
+        get() = swScreenProvider().with(CoreUiStrings.objectives)
+            .skippable(false)
+            .add(swInfoTextProvider().label(ConfigurationStrings.startobjective))
+            .add(swBreakProvider())
+            .add(swButtonProvider().text(ConfigurationStrings.open_objectives).action { onRunObjectives?.invoke() })
+            .validator { activePlugin.activeObjectives?.isStarted(Objectives.FIRST_OBJECTIVE) == true }
+            .visibility { config.APS && activePlugin.activeObjectives?.allAccomplished == false }
+
     private fun swDefinitionFull() = // List all the screens here
         add(screenSetupWizard)
             .add(screenEula)
@@ -402,6 +413,7 @@ class SWDefinition(
             .add(screenPump)
             .add(screenAps)
             .add(screenSensitivity)
+            .add(getScreenObjectives)
 
     private fun swDefinitionPumpControl() = // List all the screens here
         add(screenSetupWizard)

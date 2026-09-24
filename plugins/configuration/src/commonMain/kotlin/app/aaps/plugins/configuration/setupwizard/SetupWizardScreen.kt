@@ -62,6 +62,7 @@ fun SetupWizardScreen(
     onOpenAuthorizedClients: () -> Unit,
     onPairWithMaster: () -> Unit,
     onOpenNsReceiveSettings: () -> Unit,
+    onRunObjectives: () -> Unit,
     onRequestDirectoryAccess: () -> Unit,
     onRequestPermission: (app.aaps.core.interfaces.plugin.PermissionGroup) -> Unit,
     permissionItems: () -> List<Pair<app.aaps.core.interfaces.plugin.PermissionGroup, Boolean>>,
@@ -80,6 +81,7 @@ fun SetupWizardScreen(
         swDefinition.onOpenAuthorizedClients = onOpenAuthorizedClients
         swDefinition.onPairWithMaster = onPairWithMaster
         swDefinition.onOpenNsReceiveSettings = onOpenNsReceiveSettings
+        swDefinition.onRunObjectives = onRunObjectives
         swDefinition.onRequestDirectoryAccess = onRequestDirectoryAccess
         swDefinition.onRequestPermission = onRequestPermission
         swDefinition.permissionItems = permissionItems
@@ -95,6 +97,7 @@ fun SetupWizardScreen(
             swDefinition.onOpenAuthorizedClients = null
             swDefinition.onPairWithMaster = null
             swDefinition.onOpenNsReceiveSettings = null
+            swDefinition.onRunObjectives = null
             swDefinition.onRequestDirectoryAccess = null
             swDefinition.onRequestPermission = null
             swDefinition.permissionItems = null

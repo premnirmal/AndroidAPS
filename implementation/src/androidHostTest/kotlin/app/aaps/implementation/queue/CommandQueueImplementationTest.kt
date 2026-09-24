@@ -10,6 +10,7 @@ import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.constraints.ConstraintsChecker
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
@@ -246,7 +247,7 @@ class CommandQueueImplementationTest : TestBaseWithProfile() {
         // The user is alerted (URGENT) that the carbs were lost — not silently dropped.
         verify(notificationManager).post(
             eq(NotificationId.CARBS_STORE_FAILED), eq(CoreUiStrings.carbs_not_saved_after_bolus),
-            any<NotificationLevel>(), any<Int>(), any<Long>(), any<Long>(), any<List<NotificationAction>>(), anyOrNull()
+            any<NotificationLevel>(), any<Int>(), any<Long>(), any<Long>(), anyOrNull(), any<List<NotificationAction>>(), anyOrNull()
         )
     }
 
@@ -281,24 +282,24 @@ class CommandQueueImplementationTest : TestBaseWithProfile() {
         return result
     }
 
-    // Both helpers match the String post() overload.
+    // Both helpers match the String post() overload (id, text, level, validMinutes, sound, actions, validityCheck).
     // PROFILE_SET_OK now passes the TextRef and lets the notification resolve it, so this matches the
-    // TextRef overload (id, textRef, level, validMinutes, date, validTo, actions, validityCheck).
+    // TextRef overload (id, textRef, level, validMinutes, date, validTo, sound, actions, validityCheck).
     private fun verifyOkPosted() =
         verify(notificationManager).post(
             eq(NotificationId.PROFILE_SET_OK), eq(CoreUiStrings.profile_set_ok),
             any<NotificationLevel>(), any<Int>(), any<Long>(), any<Long>(),
-            any<List<NotificationAction>>(), anyOrNull()
+            anyOrNull(), any<List<NotificationAction>>(), anyOrNull()
         )
 
     private fun verifyFailurePosted(text: String) =
         verify(notificationManager).post(
             eq(NotificationId.FAILED_UPDATE_PROFILE), eq(text), any<NotificationLevel>(), any<Int>(),
-            any<List<NotificationAction>>(), anyOrNull()
+            eq(AlarmSound.BOLUS_ERROR), any<List<NotificationAction>>(), anyOrNull()
         )
 
     private fun verifyNothingPosted() =
-        verify(notificationManager, never()).post(any<NotificationId>(), any<String>(), any<NotificationLevel>(), any<Int>(), any<List<NotificationAction>>(), anyOrNull())
+        verify(notificationManager, never()).post(any<NotificationId>(), any<String>(), any<NotificationLevel>(), any<Int>(), anyOrNull(), any<List<NotificationAction>>(), anyOrNull())
 
     @Test
     fun postProfileWriteResult_updated_postsOkAndClearsFailure() {

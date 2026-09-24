@@ -1,6 +1,7 @@
 package app.aaps.implementation.maintenance.cloud
 
 import app.aaps.core.interfaces.notifications.AapsNotification
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationHandle
 import app.aaps.core.interfaces.notifications.NotificationId
@@ -30,6 +31,7 @@ class RecordingNotificationManager : NotificationManager {
         text: String,
         level: NotificationLevel,
         validMinutes: Int,
+        sound: AlarmSound?,
         actions: List<NotificationAction>,
         validityCheck: (() -> Boolean)?
     ): NotificationHandle {
@@ -43,6 +45,7 @@ class RecordingNotificationManager : NotificationManager {
         level: NotificationLevel,
         date: Long,
         validTo: Long,
+        sound: AlarmSound?,
         actions: List<NotificationAction>,
         validityCheck: (() -> Boolean)?
     ): NotificationHandle {
@@ -57,6 +60,7 @@ class RecordingNotificationManager : NotificationManager {
         validMinutes: Int,
         date: Long,
         validTo: Long,
+        sound: AlarmSound?,
         actions: List<NotificationAction>,
         validityCheck: (() -> Boolean)?
     ): NotificationHandle {
@@ -66,5 +70,5 @@ class RecordingNotificationManager : NotificationManager {
 
     override fun dismiss(id: NotificationId) = Unit
     override fun dismiss(handle: NotificationHandle) = Unit
-    override fun dismissAllAlarms() = Unit
+    override fun muteAllAlarms() = Unit
 }

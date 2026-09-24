@@ -10,6 +10,7 @@ import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.plugin.ActivePlugin
@@ -71,7 +72,7 @@ class LocalAlertUtilsImpl(
             if (preferences.get(BooleanKey.AlertPumpUnreachable)) {
                 aapsLogger.debug(LTag.CORE, "Generating pump unreachable alarm. lastConnection: " + dateUtil.dateAndTimeString(lastConnection) + " isStatusOutdated: true")
                 preferences.put(LocalAlertLongKey.NextPumpDisconnectedAlarm, dateUtil.now() + pumpUnreachableThreshold())
-                notificationManager.post(NotificationId.PUMP_UNREACHABLE, CoreUiStrings.pump_unreachable)
+                notificationManager.post(NotificationId.PUMP_UNREACHABLE, CoreUiStrings.pump_unreachable, sound = AlarmSound.ALARM)
                 if (preferences.get(BooleanKey.NsClientCreateAnnouncementsFromErrors) && config.APS)
                     appScope.launch {
                         persistenceLayer.insertPumpTherapyEventIfNewByTimestamp(
@@ -138,7 +139,7 @@ class LocalAlertUtilsImpl(
             && preferences.get(LocalAlertLongKey.NextMissedReadingsAlarm) < dateUtil.now()
         ) {
             preferences.put(LocalAlertLongKey.NextMissedReadingsAlarm, dateUtil.now() + missedReadingsThreshold())
-            notificationManager.post(NotificationId.BG_READINGS_MISSED, CoreUiStrings.missed_bg_readings)
+            notificationManager.post(NotificationId.BG_READINGS_MISSED, CoreUiStrings.missed_bg_readings, sound = AlarmSound.ALARM)
             if (preferences.get(BooleanKey.NsClientCreateAnnouncementsFromErrors) && config.APS) {
                 appScope.launch {
                     persistenceLayer.insertPumpTherapyEventIfNewByTimestamp(

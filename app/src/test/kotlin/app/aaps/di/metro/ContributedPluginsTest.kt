@@ -107,8 +107,8 @@ class ContributedPluginsTest {
     }
 
     @Test
-    fun `only a looping build gets storage and the signature verifier`() {
-        assertThat(testRoot().contributedApsPlugins.keys).containsExactly(820, 830)
+    fun `only a looping build gets storage, signature verifier and objectives`() {
+        assertThat(testRoot().contributedApsPlugins.keys).containsExactly(820, 830, 840)
     }
 
     @Test
@@ -128,6 +128,13 @@ class ContributedPluginsTest {
         val total = root.contributedPlugins.size + root.contributedApsPlugins.size +
             root.contributedNotNsClientPlugins.size
         assertThat(total).isEqualTo(all.size)
+    }
+
+    @Test
+    fun `the ten objectives are contributed in order`() {
+        // ObjectivesPlugin takes List<Objective> and the order is the objective number, so a lost or
+        // reordered entry would change which objective the user is asked to complete next.
+        assertThat(testRoot().objectivesPlugin.objectives).hasSize(10)
     }
 
     @Test

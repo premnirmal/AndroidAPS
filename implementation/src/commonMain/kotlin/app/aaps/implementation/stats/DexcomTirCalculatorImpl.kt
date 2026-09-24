@@ -5,7 +5,6 @@ import app.aaps.core.interfaces.stats.DexcomTIR
 import app.aaps.core.interfaces.stats.DexcomTirCalculator
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.MidnightTime
-import app.aaps.core.data.time.T
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
@@ -61,16 +60,7 @@ class DexcomTirCalculatorImpl(
     override suspend fun calculate(): DexcomTIR {
         val startTime = MidnightTime.calcDaysBack(days)
         val endTime = MidnightTime.calc(dateUtil.now())
-        return calculate(startTime, endTime)
-    }
 
-    override suspend fun calculateRecent(days: Long?): DexcomTIR {
-        val endTime = dateUtil.now()
-        val startTime = days?.let { endTime - T.days(it).msecs() } ?: 0L
-        return calculate(startTime, endTime)
-    }
-
-    private suspend fun calculate(startTime: Long, endTime: Long): DexcomTIR {
         val bgReadings = persistenceLayer.getBgReadingsDataFromTimeToTime(startTime, endTime, true)
         val result = DexcomTirImpl()
         for (bg in bgReadings) result.add(bg.timestamp, bg.value)

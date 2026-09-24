@@ -204,7 +204,7 @@ class HardLimitsImplTest : TestBase() {
     fun `verifyHardLimits logs error and shows notification when value is out of range`() {
         hardLimits.verifyHardLimits(15.0, app.aaps.core.interfaces.R.string.bolus, 0.0, 10.0)
 
-        verify(notificationManager).post(any<NotificationId>(), any<String>(), any<NotificationLevel>(), any<Int>(), any<List<NotificationAction>>(), anyOrNull())
+        verify(notificationManager).post(any<NotificationId>(), any<String>(), any<NotificationLevel>(), any<Int>(), anyOrNull(), any<List<NotificationAction>>(), anyOrNull())
         runTest {
             verify(persistenceLayer).insertPumpTherapyEventIfNewByTimestamp(any(), any(), any(), any(), any(), any())
         }

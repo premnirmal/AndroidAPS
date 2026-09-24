@@ -13,6 +13,7 @@ import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.Translator
+import app.aaps.core.keys.interfaces.Preferences
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +37,7 @@ internal class RunningModeManagementViewModelTest {
     @Mock private lateinit var activePlugin: ActivePlugin
     @Mock private lateinit var profileFunction: ProfileFunction
     @Mock private lateinit var translator: Translator
+    @Mock private lateinit var preferences: Preferences
     @Mock private lateinit var persistenceLayer: PersistenceLayer
     @Mock private lateinit var aapsLogger: AAPSLogger
     @Mock private lateinit var rxBus: RxBus
@@ -55,7 +57,7 @@ internal class RunningModeManagementViewModelTest {
         whenever(persistenceLayer.observeChanges(RM::class)).thenReturn(emptyFlow())
         whenever(persistenceLayer.observeChanges(EPS::class)).thenReturn(emptyFlow())
         sut = RunningModeManagementViewModel(
-            loop, activePlugin, profileFunction, translator, persistenceLayer, aapsLogger,
+            loop, activePlugin, profileFunction, translator, preferences, persistenceLayer, aapsLogger,
             rxBus, rh, dateUtil, config, batchExecutor, CoroutineScope(UnconfinedTestDispatcher())
         )
     }

@@ -2,7 +2,6 @@ package app.aaps.ui.compose.treatments
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -16,7 +15,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -56,9 +54,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun TreatmentsScreen(
     viewModel: TreatmentsViewModel,
-    onNavigateBack: () -> Unit,
-    showTopBar: Boolean = true,
-    modifier: Modifier = Modifier
+    onNavigateBack: () -> Unit
 ) {
     val showExtendedBolusTab = viewModel.showExtendedBolusTab()
     val iconColors = AapsTheme.elementColors
@@ -164,16 +160,12 @@ fun TreatmentsScreen(
     }
 
     Scaffold(
-        modifier = modifier,
-        contentWindowInsets = if (showTopBar) ScaffoldDefaults.contentWindowInsets else WindowInsets(0),
         topBar = {
-            if (showTopBar) {
-                AapsTopAppBar(
-                    title = { Text(activeToolbar.title.ifEmpty { stringResource(CoreUiStrings.treatments_history) }) },
-                    navigationIcon = { activeToolbar.navigationIcon() },
-                    actions = { activeToolbar.actions(this) }
-                )
-            }
+            AapsTopAppBar(
+                title = { Text(activeToolbar.title.ifEmpty { stringResource(CoreUiStrings.treatments_history) }) },
+                navigationIcon = { activeToolbar.navigationIcon() },
+                actions = { activeToolbar.actions(this) }
+            )
         }
     ) { paddingValues ->
         Column(

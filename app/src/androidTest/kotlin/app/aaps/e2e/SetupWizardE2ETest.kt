@@ -31,7 +31,8 @@ import java.util.regex.Pattern
  * open-loop app and exercises the core treatments:
  *
  *  fresh start → EULA → master password → units → patient safety → BG source (default) →
- *  create + activate a profile → Virtual Pump → OpenAPS SMB → Sensitivity Oref1 → FINISH → manual bolus (assert IOB + DB) → carbs (assert DB) → temp target (assert chip + DB) →
+ *  create + activate a profile → Virtual Pump → OpenAPS SMB → Sensitivity Oref1 → start objective 1 →
+ *  FINISH → manual bolus (assert IOB + DB) → carbs (assert DB) → temp target (assert chip + DB) →
  *  enable Open Loop (assert mode + DB).
  *
  * ## Why this lives in `:app/androidTest` (vs the standalone `:e2e` module)
@@ -65,6 +66,7 @@ class SetupWizardE2ETest {
     private val configBuilder get() = testGraphs.configBuilder
     private val config get() = testGraphs.config
     private val preferences get() = testGraphs.preferences
+    private val objectivesPlugin get() = testGraphs.objectivesPlugin
 
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
     private val device: UiDevice get() = UiDevice.getInstance(instrumentation)
@@ -81,6 +83,10 @@ class SetupWizardE2ETest {
         pluginStore.plugins = pluginList
         configBuilder.initialize()
         config.initCompleted()                                            // flip splash gate → AppContent renders
+        // Pre-seed objective 1 as started: the wizard gates its FINISH button on
+        // objectives[FIRST].isStarted, and the UI "Start" runs an NTP network-time check that can't
+        // complete under the test app (no connectivity wiring from MainApp.onCreate).
+        objectivesPlugin.objectives.firstOrNull()?.startedOn = System.currentTimeMillis()
         // Heads-up banners (e.g. the profile-switch "loop disabled" toast) must not cover the UI.
         device.executeShellCommand("settings put global heads_up_notifications_enabled 0")
         // Start logcat fresh so the DB-insert assertions only match THIS run's records.
@@ -242,7 +248,11 @@ class SetupWizardE2ETest {
         // 15. APS — OpenAPS SMB is the default selection
         tapNext("Sensitivity detection")
 
-        // 16. Sensitivity — Sensitivity Oref1 is the default selection, and it is the last step
+        // 16. Sensitivity — Sensitivity Oref1 is the default selection
+        tapNext("Objectives")
+
+        // 17. Objectives — objective 1 was pre-seeded as started in setUp(), so the wizard's final
+        // step offers FINISH directly (the UI "Start" needs an NTP check that can't run in-process).
         openVia("FINISH", expect = "LocalProfile1")  // wizard → overview (active profile chip)
     }
 

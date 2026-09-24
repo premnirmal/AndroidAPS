@@ -5,7 +5,7 @@ interface LocalAlertUtils {
     /**
      * Check for unreachable pump (there was no connection with pump for some time).
      * Raise alarm if needed.
-     * Overview notification, therapy event, SMS
+     * Overview notification with sound, Therapy event, SMS
      */
     fun checkPumpUnreachableAlarm(lastConnection: Long, isStatusOutdated: Boolean, isDisconnected: Boolean)
 
@@ -29,7 +29,7 @@ interface LocalAlertUtils {
     /**
      * Check for missing BGs.
      * Raise alarm if needed.
-     * Overview notification, therapy event
+     * Overview notification with sound, Therapy event
      */
     suspend fun checkStaleBGAlert()
 }

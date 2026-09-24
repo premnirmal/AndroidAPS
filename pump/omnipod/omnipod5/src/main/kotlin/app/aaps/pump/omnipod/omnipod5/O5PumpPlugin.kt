@@ -38,7 +38,6 @@ import app.aaps.core.interfaces.pump.PumpPluginBase
 import app.aaps.core.interfaces.pump.PumpProfile
 import app.aaps.core.interfaces.pump.PumpRate
 import app.aaps.core.interfaces.pump.PumpSync
-import app.aaps.core.interfaces.pump.PumpTimeRemaining
 import app.aaps.core.interfaces.pump.defs.fillFor
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.queue.CommandQueue
@@ -82,7 +81,6 @@ import app.aaps.pump.omnipod.common.bledriver.pod.response.ResponseType
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.O5PodStateManager
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.basalDrift
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.basalDelivered
-import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.expiry
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.util.buildO5ExpirationAlerts
 import app.aaps.pump.omnipod.omnipod5.history.O5History
 import app.aaps.pump.omnipod.omnipod5.history.data.BasalValuesRecord
@@ -194,7 +192,7 @@ class O5PumpPlugin @Inject constructor(
     ownPreferences = OmnipodBooleanPreferenceKey.entries + OmnipodIntPreferenceKey.entries +
         DashBooleanPreferenceKey.entries + O5IntentKey.entries,
     aapsLogger, rh, preferences, commandQueue
-), Pump, PumpTimeRemaining {
+), Pump {
 
     @Volatile private var bolusCanceled = false
     @Volatile private var bolusDeliveryInProgress = false
@@ -1071,7 +1069,6 @@ class O5PumpPlugin @Inject constructor(
     override fun manufacturer(): ManufacturerType = ManufacturerType.Insulet
     override fun model(): PumpType = pumpDescription.pumpType
     override fun serialNumber(): String = podStateManager.podId?.toString() ?: "O5-unpaired"
-    override fun expectedEndTimeMillis(): Long? = podStateManager.expiry?.toInstant()?.toEpochMilli()
     override val isFakingTempsByExtendedBoluses: Boolean = false
 
     override suspend fun loadTDDs(): PumpEnactResult =

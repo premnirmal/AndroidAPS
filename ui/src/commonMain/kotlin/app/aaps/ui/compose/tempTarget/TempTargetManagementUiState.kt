@@ -52,6 +52,9 @@ data class TempTargetManagementUiState(
     /** Optional notes for this activation */
     val notes: String = "",
 
+    /** Whether to show notes field (from preferences) */
+    val showNotesField: Boolean = false,
+
     // ===== Loading/Error state =====
 
     // ===== Screen mode =====

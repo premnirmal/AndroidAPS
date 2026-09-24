@@ -11,6 +11,7 @@ import app.aaps.core.interfaces.bgQualityCheck.BgQualityCheck
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.configuration.ConfigBuilder
 import app.aaps.core.interfaces.constraints.ConstraintsChecker
+import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.db.ProcessedTbrEbData
 import app.aaps.core.interfaces.insulin.ConcentrationHelper
@@ -66,6 +67,7 @@ import app.aaps.plugins.aps.openAPSAMA.DetermineBasalAMA
 import app.aaps.plugins.aps.openAPSAutoISF.DetermineBasalAutoISF
 import app.aaps.plugins.aps.openAPSSMB.DetermineBasalSMB
 import app.aaps.plugins.automation.AutomationRuntime
+import app.aaps.plugins.constraints.objectives.ObjectivesPlugin
 import app.aaps.plugins.constraints.signatureVerifier.SignatureVerifierPlugin
 import app.aaps.plugins.source.di.SourceMetroGraph
 import app.aaps.plugins.sync.di.OpenHumansMetroBridge
@@ -184,7 +186,7 @@ class MetroGraphs(
      *
      * The qualified buckets are merged **only** under the condition that build should have them.
      * Keeping them apart is what stops a plugin appearing in a build that never had it - a follower
-     * showing the signature verifier, say. `mergePlugins` names which bucket a clashing plugin came from, which is
+     * showing Objectives, say. `mergePlugins` names which bucket a clashing plugin came from, which is
      * why the sources are listed rather than merged directly.
      */
     fun allPlugins(aapsLogger: AAPSLogger): List<PluginBase> {
@@ -217,8 +219,8 @@ class MetroGraphs(
     /**
      * Plugins that only belong in a build that runs the loop.
      *
-     * Same reasoning as [notNsClientPlugins], for the `@APS` qualifier. The signature verifier and the
-     * storage constraint have no meaning in a build that never makes a decision.
+     * Same reasoning as [notNsClientPlugins], for the `@APS` qualifier. Objectives, the signature
+     * verifier and the storage constraint have no meaning in a build that never makes a decision.
      */
     fun apsPlugins(): Map<Int, PluginBase> = root.contributedApsPlugins
 
@@ -238,12 +240,16 @@ class MetroGraphs(
     val xDripSource: XDripSource get() = root.xdripSourcePlugin
     val dexcomBoyda: DexcomBoyda get() = root.dexcomPlugin
     val bgQualityCheck: BgQualityCheck get() = root.bgQualityCheckPlugin
+    val objectives: Objectives get() = root.objectivesPlugin
 
     val profileFunction: ProfileFunction get() = root.profileFunction
     val versionCheckerUtils: VersionCheckerUtils get() = root.versionCheckerUtils
     val nsIncomingDataProcessor: NsIncomingDataProcessor get() = root.nsIncomingDataProcessor
     val automation: Automation get() = root.automation
     val automationRuntime: AutomationRuntime get() = root.automationRuntime
+
+    /** Same plugin as [objectives], by class. The instrumented tests ask for the concrete type. */
+    val objectivesPlugin: ObjectivesPlugin get() = root.objectivesPlugin
 
     /** The live loop's calculator - not the history browser's. */
     val iobCobCalculator: IobCobCalculator get() = root.iobCobCalculator

@@ -17,6 +17,7 @@ import app.aaps.core.interfaces.configuration.ExternalOptions
 import app.aaps.core.interfaces.di.PumpDriver
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.profile.Profile
@@ -536,7 +537,8 @@ class CarelevoPumpPlugin @Inject constructor(
         fresh.firstOrNull()?.let { alarm ->
             uiInteraction.runAlarm(
                 status = rh.gs(alarm.cause.transformNotificationStringResources().first),
-                title = rh.gs(R.string.carelevo)
+                title = rh.gs(R.string.carelevo),
+                sound = AlarmSound.ERROR
             )
         }
 

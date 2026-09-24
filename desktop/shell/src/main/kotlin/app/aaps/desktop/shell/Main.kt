@@ -1,7 +1,6 @@
 package app.aaps.desktop.shell
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -39,6 +38,9 @@ import java.util.Locale
 import app.aaps.appshell.navigation.AppRoute
 import app.aaps.appshell.navigation.appNavGraph
 import app.aaps.appshell.navigation.ElementNavigator
+import app.aaps.appshell.navigation.handleNotificationAction
+import app.aaps.appshell.navigation.handleQuickLaunchAction
+import app.aaps.appshell.navigation.handleSearchResultClick
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.logging.LTag
@@ -51,7 +53,16 @@ import app.aaps.implementation.logging.AAPSLoggerDesktop
 import app.aaps.implementation.maintenance.DesktopFolders
 import app.aaps.shared.clientbindings.ClientViewModelFactory
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
+import app.aaps.ui.compose.loopSheet.LoopActionViewModel
 import app.aaps.ui.compose.main.MainViewModel
+import app.aaps.ui.compose.main.OverviewScreen
+import app.aaps.ui.compose.maintenance.MaintenanceViewModel
+import app.aaps.ui.compose.manageSheet.ManageViewModel
+import app.aaps.ui.compose.overview.statusLights.StatusViewModel
+import app.aaps.ui.compose.permissionsSheet.PermissionsViewModel
+import app.aaps.ui.compose.scenesSheet.ScenesViewModel
+import app.aaps.ui.compose.treatmentsSheet.TreatmentViewModel
+import app.aaps.ui.search.SearchViewModel
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import app.aaps.ui.compose.profileManagement.viewmodels.ProfileEditorViewModel
@@ -115,7 +126,7 @@ fun main() {
             icon = appIcon
         ) {
             startup.fold(
-                onSuccess = { AapsDesktopApp(it, appIcon) },
+                onSuccess = { AapsDesktopApp(it, appIcon, appName) },
                 onFailure = { MaterialTheme { Failed(it) } }
             )
         }
@@ -231,7 +242,7 @@ private fun startPlugins(graph: DesktopAppGraph) {
  * in the log rather than doing nothing quietly.
  */
 @Composable
-private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter) {
+private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter, appName: String) {
     val logger = graph.logger
     val viewModelFactory = remember(graph) { ClientViewModelFactory(graph) }
 
@@ -307,7 +318,8 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter) {
                 dexcomBoyda = graph.dexcomBoyda,
                 onOpenCgmApp = { pkg -> logger.error(LTag.CORE, "No CGM app to open on desktop: $pkg") },
                 onExit = { logger.debug(LTag.CORE, "Exit requested from the menu") },
-                onRequestDirectoryAccess = { logger.debug(LTag.CORE, "Desktop reads its own folder; nothing to grant") }
+                onRequestDirectoryAccess = { logger.debug(LTag.CORE, "Desktop reads its own folder; nothing to grant") },
+                onOpenUrl = { url -> graph.urlOpener.open(url) }
             )
             val insulinManagement = metroViewModel<InsulinManagementViewModel>()
             val profileManagement = metroViewModel<ProfileManagementViewModel>()
@@ -334,7 +346,10 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter) {
                 }
             )
 
-            NavHost(navController = navController, startDestination = AppRoute.Preferences.route) {
+            // The overview is the start destination, the same as Android and iOS. Settings used to
+            // be, which left its back arrow inert - there was nothing behind it - and left every
+            // other screen unreachable, since they are all reached from the overview.
+            NavHost(navController = navController, startDestination = AppRoute.Main.route) {
                 appNavGraph(
                     navController = navController,
                     insulinManagementViewModel = insulinManagement,
@@ -351,8 +366,10 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter) {
                     siteRotationManagementViewModel = siteRotationManagement,
                     graphViewModel = graphs,
                     chipsViewModel = chips,
+                    swDefinition = graph.swDefinition,
                     rxBus = graph.rxBus,
                     activePlugin = graph.activePlugin,
+                    pluginPermissions = graph.pluginPermissions,
                     // Passed so the rules can be read and edited here. The runtime is deliberately
                     // NOT started on a client: `MainApp` calls `automationRuntime.start()`, this shell
                     // does not, and that is the design - a follower edits definitions and the master
@@ -387,8 +404,51 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter) {
                     },
                     onRefreshPermissions = { logger.debug(LTag.CORE, "No runtime permissions to refresh on desktop") },
                     onExecuteQuickWizard = { guid -> mainViewModel.executeQuickWizard(guid) },
-                    onNavigateToTrioTab = {},
-                    trioTabScaffold = { _, _, _, _, content -> content(PaddingValues()) }
+                    onRequestDirectoryAccess = { logger.debug(LTag.CORE, "Desktop reads its own folder; no access to request") },
+                    onRequestPermission = { group -> logger.notWiredYet("permission request $group") },
+                    overview = {
+                        OverviewScreen(
+                            mainViewModel = mainViewModel,
+                            manageViewModel = metroViewModel<ManageViewModel>(),
+                            maintenanceViewModel = metroViewModel<MaintenanceViewModel>(),
+                            statusViewModel = metroViewModel<StatusViewModel>(),
+                            treatmentViewModel = metroViewModel<TreatmentViewModel>(),
+                            scenesViewModel = metroViewModel<ScenesViewModel>(),
+                            loopActionViewModel = metroViewModel<LoopActionViewModel>(),
+                            searchViewModel = metroViewModel<SearchViewModel>(),
+                            permissionsViewModel = metroViewModel<PermissionsViewModel>(),
+                            graphViewModel = graphs,
+                            chipsViewModel = chips,
+                            activePlugin = graph.activePlugin,
+                            config = graph.config,
+                            objectives = graph.objectives,
+                            bgQualityCheck = graph.bgQualityCheck,
+                            notificationManager = graph.notificationManager,
+                            uiInteraction = graph.uiInteraction,
+                            builtInSearchables = graph.builtInSearchables,
+                            bolusProgressData = graph.bolusProgressData,
+                            clientControlActionDispatcher = graph.clientControlActionDispatcher,
+                            commandQueue = graph.commandQueue,
+                            pumpCommunicationStatus = graph.pumpCommunicationStatus,
+                            appName = appName,
+                            authorizationFailedMessage = "Authorization failed",
+                            onNavigate = { request -> navigator.handleNavigationRequest(request) },
+                            onSearchResultClick = { entry -> navigator.handleSearchResultClick(entry) },
+                            onNotificationActionClick = { n -> navigator.handleNotificationAction(n.id) },
+                            onQuickLaunchActionClick = { action -> navigator.handleQuickLaunchAction(action) },
+                            onImportSettingsNavigate = { source -> navController.navigate(AppRoute.ImportSettings.createRoute(source.name)) },
+                            onDirectoryClick = { logger.debug(LTag.CORE, "Desktop reads its own folder") },
+                            // authBrowser, not urlOpener: the sign in ends at a port this app is
+                            // listening on, and DesktopAuthBrowser has the fallback launcher an
+                            // ordinary link opener does not. See AuthBrowser.
+                            onLaunchBrowser = { url -> graph.authBrowser.show(url) },
+                            onBringToForeground = { logger.debug(LTag.CORE, "Desktop window is already in front") },
+                            onRecreateActivity = { logger.notWiredYet("window recreate") },
+                            onAuthorizationFailed = { logger.error(LTag.CORE, "Authorization failed") },
+                            autoShowNotificationSheet = false,
+                            onAutoShowConsumed = {}
+                        )
+                    }
                 )
             }
         }

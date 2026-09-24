@@ -9,6 +9,7 @@ import app.aaps.core.interfaces.overview.OverviewData
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.workflow.CalculationWorkflow
+import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.nssdk.mapper.convertToRemoteAndBack
 import app.aaps.plugins.sync.nsclientV3.NSClientV3Plugin
 import app.aaps.plugins.sync.nsclientV3.data.NSDeviceStatusHandler
@@ -25,6 +26,7 @@ import org.mockito.kotlin.whenever
 @Suppress("SpellCheckingInspection")
 internal class DeviceStatusExtensionKtTest : TestBase() {
 
+    @Mock lateinit var preferences: Preferences
     @Mock lateinit var rh: ResourceHelper
     @Mock lateinit var dateUtil: DateUtil
     @Mock lateinit var config: Config
@@ -41,7 +43,7 @@ internal class DeviceStatusExtensionKtTest : TestBase() {
     fun setup() {
         processedDeviceStatusData = ProcessedDeviceStatusDataImpl { apsResult }
         nsDeviceStatusHandler = NSDeviceStatusHandler(
-            config, dateUtil, processedDeviceStatusData, aapsLogger,
+            preferences, config, dateUtil, processedDeviceStatusData, aapsLogger,
             persistenceLayer, overviewData, calculationWorkflow, rxBus, testScope,
             { nsClientV3Plugin }
         )

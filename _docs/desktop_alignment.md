@@ -173,6 +173,8 @@ save dialog, a folder it opens - is a product question rather than a porting one
 Not everything should be chased. Some of these are real platform limits and the honest answer is to
 say so rather than fake it:
 
+- **`AlertOverrideDoNotDisturb`** - AWT offers one system beep and no notion of silent mode, so
+  desktop honours neither half of that setting. Recorded in `AlarmSoundPlayer`'s KDoc.
 - **Paired Bluetooth devices** - there is no list to read, which is why `DesktopPairedBtDevices`
   returns an empty list rather than null. Null means "ask the user for a permission" and there is no
   permission to ask for.

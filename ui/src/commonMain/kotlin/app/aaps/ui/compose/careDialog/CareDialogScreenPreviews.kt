@@ -13,7 +13,8 @@ internal fun CareDialogScreenPreview() {
             uiState = CareDialogUiState(
                 eventType = CareportalEventType.BGCHECK,
                 bgValue = 120.0,
-                glucoseUnits = GlucoseUnit.MGDL
+                glucoseUnits = GlucoseUnit.MGDL,
+                showNotesFromPreferences = true
             ),
             eventType = CareportalEventType.BGCHECK,
             dateString = "25/02/2026",

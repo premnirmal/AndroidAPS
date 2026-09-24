@@ -107,6 +107,7 @@
     <string name="format_hours">%1$.2f 小時</string>
     <string name="format_mins">%1$d 分鐘</string>
     <string name="value_with_unit" comment="A numeric value followed by its unit, when no dedicated value template exists. %1$s = value, %2$s = unit. Example: 120 mg/dl">%1$s %2$s</string>
+    <string name="objectives">目標</string>
     <string name="please_wait">請稍候…</string>
     <string name="stop">停止</string>
     <string name="stop_pressed">已按下停止鍵</string>
@@ -977,6 +978,14 @@
     <!--    Search-->
     <string name="search">搜尋</string>
     <string name="clear">清除</string>
+    <string name="search_category_categories">偏好設定類別</string>
+    <string name="search_category_preferences">偏好設定</string>
+    <string name="search_category_dialogs">對話方塊</string>
+    <string name="search_category_plugins">外掛</string>
+    <string name="search_category_wiki">說明文件</string>
+    <string name="wiki_search_offline">說明文件搜尋需要網際網路連線</string>
+    <string name="no_search_results">找不到結果</string>
+    <string name="search_plugin_disabled">外掛 %1$s 已停用</string>
     <!--    Food Management -->
     <string name="food_management">食物</string>
     <string name="food_deleted">食物已刪除</string>
