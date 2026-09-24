@@ -6,6 +6,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.interfaces.clientcontrol.ClientControlActionDispatcher
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.notifications.AapsNotification
+import app.aaps.core.interfaces.notifications.NotificationHandle
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
@@ -113,7 +114,9 @@ fun OverviewScreen(
         onRecreateActivity = onRecreateActivity,
         // Notifications
         notificationsFlow = notificationManager.notifications,
-        onDismissNotification = { notification -> notificationManager.dismiss(notification.id) },
+        // By handle, not by id: dismiss(id) removes EVERY card carrying that id, so on an allowMultiple
+        // notification - patch alerts, automation messages, a failed plugin - dismissing one wiped them all.
+        onDismissNotification = { notification -> notificationManager.dismiss(NotificationHandle(notification.instanceKey)) },
         onNotificationActionClick = onNotificationActionClick,
         autoShowNotificationSheet = autoShowNotificationSheet,
         onAutoShowConsumed = onAutoShowConsumed,

@@ -1,6 +1,5 @@
 package app.aaps.persistentNotification
 
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -28,8 +27,10 @@ import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.NotificationHolder
+import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.nsclient.ProcessedDeviceStatusData
 import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.plugin.EnforcedState
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.profile.ProfileFunction
@@ -71,6 +72,7 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlin.math.round
+import android.app.NotificationManager as AndroidNotificationManager
 
 @Suppress("PrivatePropertyName")
 // Registers itself into the every-build plugin bucket at order 0, replacing the @Binds @IntKey(0) in
@@ -101,16 +103,16 @@ class PersistentNotificationPlugin(
     private val persistenceLayer: PersistenceLayer,
     private val processedDeviceStatusData: ProcessedDeviceStatusData,
     private val dateUtil: DateUtil,
-    private val trendCalculator: TrendCalculator
+    private val trendCalculator: TrendCalculator,
+    notificationManager: NotificationManager
 ) : PluginBase(
     PluginDescription()
         .mainType(PluginType.GENERAL)
         .pluginName(TextRef.AndroidRes(R.string.ongoingnotificaction))
-        .enableByDefault(true)
-        .alwaysEnabled(true)
+        .enforce(EnforcedState.Enabled)
         .showInList { false }
         .description(TextRef.AndroidRes(R.string.description_persistent_notification)),
-    aapsLogger, rh
+    aapsLogger, rh, notificationManager
 ) {
 
     // For Android Auto
@@ -220,10 +222,16 @@ class PersistentNotificationPlugin(
                         units.displayLabel
                     )
                 }
-                val trendSymbol = (trendCalculator.getTrendArrow(iobCobCalculator.ads)
-                    ?.takeIf { it != TrendArrow.NONE } ?: TrendArrow.FLAT).symbol
-                bgStatusChipText = "$bgValueText$trendSymbol"
-                line1 = "$bgValueText $trendSymbol"
+                // Show an arrow only when there really is one. This used to fall back to FLAT,
+                // which told the user the glucose was stable whenever the trend was simply not
+                // known yet - for example right after a start, with fewer than two readings.
+                // NONE and the two triples have no glyph in TrendArrow.symbol, only the
+                // placeholders "??" and "X", so they are dropped rather than printed.
+                val trendSymbol = trendCalculator.getTrendArrow(iobCobCalculator.ads)
+                    ?.takeIf { it != TrendArrow.NONE && it != TrendArrow.TRIPLE_UP && it != TrendArrow.TRIPLE_DOWN }
+                    ?.symbol
+                bgStatusChipText = bgValueText + (trendSymbol ?: "")
+                line1 = bgValueText + (trendSymbol?.let { " $it" } ?: "")
                 if (glucoseStatus != null) {
                     line1 += " " + profileUtil.fromMgdlToSignedStringInUnits(glucoseStatus.delta)
                 } else {
@@ -335,7 +343,7 @@ class PersistentNotificationPlugin(
         }
         /// End Android Auto
         builder.setContentIntent(notificationHolder.openAppIntent())
-        val mNotificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val mNotificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as AndroidNotificationManager
         val notification = builder.build()
         mNotificationManager.notify(notificationHolder.notificationID, notification)
         notificationHolder.notification = notification

@@ -69,7 +69,7 @@ fun O5CertificateStoreScreen(
             if (showManualImport) {
                 O5CredentialManualImportScreen(viewModel = viewModel, rh = rh)
             } else {
-                O5CredentialImportScreen(viewModel = viewModel, rh = rh)
+                O5CredentialListScreen(viewModel = viewModel, rh = rh)
             }
         }
     }
