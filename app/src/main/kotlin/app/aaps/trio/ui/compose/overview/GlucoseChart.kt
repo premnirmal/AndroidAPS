@@ -7,16 +7,23 @@ import androidx.compose.animation.core.animateDecay
 import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,6 +62,7 @@ import app.aaps.core.interfaces.overview.graph.BgRange
 import app.aaps.core.interfaces.overview.graph.BgType
 import app.aaps.core.interfaces.overview.graph.BolusGraphPoint
 import app.aaps.core.interfaces.overview.graph.GraphDataPoint
+import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.LocalDateUtil
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
@@ -96,6 +104,7 @@ private val STRIP_TO_GLUCOSE_GAP = 8.dp
 private val GLUCOSE_TO_IOB_GAP = 8.dp
 private val IOB_STRIP_HEIGHT = 50.dp
 private val BOLUS_MARKER_TOP_MARGIN = 10.dp
+private const val BOLUS_VALUE_THRESHOLD_UNITS = 0.5
 
 /**
  * The part of a time-sorted list within [start, end], found by binary search. When [includeBounds]
@@ -397,13 +406,13 @@ fun GlucoseChart(
                             val nearestBolus = currentBoluses.minByOrNull { abs(it.timestamp - tapTimeMillis) }
                             val nearestReading = currentReadings.minByOrNull { abs(it.timestamp - tapTimeMillis) }
                             tapSelection = when {
-                                nearestBolus != null && abs(nearestBolus.timestamp - tapTimeMillis) <= matchMillis ->
+                                nearestBolus != null && abs(nearestBolus.timestamp - tapTimeMillis) <= matchMillis     ->
                                     ChartTapSelection.Bolus(nearestBolus)
 
                                 nearestReading != null && abs(nearestReading.timestamp - tapTimeMillis) <= matchMillis ->
                                     ChartTapSelection.Bg(nearestReading)
 
-                                else                                                                              -> null
+                                else                                                                                   -> null
                             }
                         }
                     },
@@ -753,7 +762,9 @@ fun GlucoseChart(
                 glucoseColor = rangeColor(reading.range),
                 iob = selectedIob?.let { numberFormat.format(it) + " U" } ?: "–",
                 cob = selectedCob?.let { "${it.roundToInt()} g" } ?: "–",
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 2.dp),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 2.dp),
             )
         }
 
@@ -761,7 +772,9 @@ fun GlucoseChart(
             ChartBolusPill(
                 time = dateUtil.timeString(bolus.timestamp),
                 bolus = bolus.label,
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 2.dp),
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 2.dp),
             )
         }
 
@@ -780,6 +793,112 @@ fun GlucoseChart(
 
     if (showPredictionInfo) {
         PredictionLegendBottomSheet(onDismiss = { showPredictionInfo = false })
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3Api::class)
+internal fun PredictionLegendBottomSheet(onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(AapsSpacing.extraLarge),
+            verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
+        ) {
+            Text(
+                text = stringResource(R.string.trio_graph_prediction_info),
+                style = MaterialTheme.typography.titleLarge
+            )
+            PredictionLegendItem(
+                title = stringResource(R.string.trio_graph_prediction_iob_title),
+                description = stringResource(R.string.trio_graph_prediction_iob_description),
+                color = AapsTheme.generalColors.iobPrediction
+            )
+            PredictionLegendItem(
+                title = stringResource(R.string.trio_graph_prediction_cob_title),
+                description = stringResource(R.string.trio_graph_prediction_cob_description),
+                color = AapsTheme.generalColors.cobPrediction
+            )
+            PredictionLegendItem(
+                title = stringResource(R.string.trio_graph_prediction_acob_title),
+                description = stringResource(R.string.trio_graph_prediction_acob_description),
+                color = AapsTheme.generalColors.aCobPrediction
+            )
+            PredictionLegendItem(
+                title = stringResource(R.string.trio_graph_prediction_uam_title),
+                description = stringResource(R.string.trio_graph_prediction_uam_description),
+                color = AapsTheme.generalColors.uamPrediction
+            )
+            PredictionLegendItem(
+                title = stringResource(R.string.trio_graph_prediction_zt_title),
+                description = stringResource(R.string.trio_graph_prediction_zt_description),
+                color = AapsTheme.generalColors.ztPrediction
+            )
+            Text(
+                text = stringResource(R.string.trio_graph_gesture_help_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+            GestureHelpItem(text = stringResource(R.string.trio_graph_gesture_pinch))
+            GestureHelpItem(text = stringResource(R.string.trio_graph_gesture_double_tap))
+            GestureHelpItem(text = stringResource(R.string.trio_graph_gesture_scroll))
+        }
+    }
+}
+
+@Composable
+private fun GestureHelpItem(text: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val bulletColor = MaterialTheme.colorScheme.onSurfaceVariant
+        Canvas(
+            modifier = Modifier
+                .padding(top = AapsSpacing.small)
+                .size(AapsSpacing.small)
+        ) {
+            drawCircle(color = bulletColor)
+        }
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun PredictionLegendItem(
+    title: String,
+    description: String,
+    color: Color
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Canvas(
+            modifier = Modifier
+                .padding(top = AapsSpacing.medium)
+                .size(AapsSpacing.xxLarge)
+        ) {
+            drawLine(
+                color = color,
+                start = Offset.Zero,
+                end = Offset(size.width, 0f),
+                strokeWidth = 2.dp.toPx(),
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 8.dp.toPx()))
+            )
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.titleSmall)
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
