@@ -61,6 +61,7 @@
     <string name="goingtodeliver">עומד להזריק %1$.2f יח\'</string>
     <string name="androidaps_start">הופעל AndroidAPS</string>
     <string name="format_hours">%1$.2f ש\'</string>
+    <string name="objectives">משימות</string>
     <string name="please_wait">נא להמתין…</string>
     <string name="stop">עצור</string>
     <string name="invalid_profile">פרופיל לא חוקי!</string>

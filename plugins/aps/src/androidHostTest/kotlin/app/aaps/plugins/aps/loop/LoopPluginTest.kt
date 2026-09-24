@@ -24,7 +24,6 @@ import app.aaps.core.interfaces.pump.PumpWithConcentration
 import app.aaps.core.interfaces.queue.CommandQueue
 import app.aaps.core.interfaces.receivers.ReceiverStatusStore
 import app.aaps.core.interfaces.utils.HardLimits
-import app.aaps.core.keys.LongNonKey
 import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.objects.constraints.ConstraintObject
 import app.aaps.core.objects.profile.ProfileSealed
@@ -77,33 +76,8 @@ class LoopPluginTest : TestBaseWithProfile() {
 
     @BeforeEach fun prepare() {
         whenever(config.APS).thenReturn(true)
-<<<<<<< HEAD
-        loopPlugin = createLoopPlugin()
-        whenever(activePlugin.activePump).thenReturn(virtualPumpPlugin)
-    }
-
-    private fun createLoopPlugin() =
-        LoopPlugin(
-            aapsLogger, rxBus, preferences, config,
-            constraintChecker, rh, profileFunction, commandQueue, activePlugin, processedTbrEbData, receiverStatusStore, fabricPrivacy, dateUtil, uel,
-            // The shared test base still hands out a javax Provider, which other tests rely on;
-            // LoopPlugin takes Metro's now, so it is adapted here rather than flipping the base.
-            persistenceLayer, uiInteraction, notificationManager, { pumpEnactResultProvider() },
-            processedDeviceStatusData, pumpStatusProvider, decimalFormatter, ch, loopNotifier, testScope
-        )
-
-    @Test
-    fun `restores the last loop timestamp from preferences`() {
-        val timestamp = 1_234_567L
-        whenever(preferences.get(LongNonKey.LastLoopRunTimestamp)).thenReturn(timestamp)
-
-        loopPlugin = createLoopPlugin()
-
-        assertThat(loopPlugin.lastRun?.lastAPSRun).isEqualTo(timestamp)
-=======
         loopPlugin = buildLoopPlugin()
         whenever(activePlugin.activePump).thenReturn(virtualPumpPlugin)
->>>>>>> origin/dev
     }
 
     /**

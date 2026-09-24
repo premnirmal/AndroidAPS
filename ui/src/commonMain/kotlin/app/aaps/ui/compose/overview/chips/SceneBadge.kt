@@ -27,7 +27,7 @@ import app.aaps.core.ui.compose.stringResource
  * surfaces, so the badge label is merged into the chip announcement.
  */
 @Composable
-fun SceneBadge(modifier: Modifier = Modifier) {
+internal fun SceneBadge(modifier: Modifier = Modifier) {
     val sceneColor = ElementType.SCENE.color()
     Box(
         modifier = modifier

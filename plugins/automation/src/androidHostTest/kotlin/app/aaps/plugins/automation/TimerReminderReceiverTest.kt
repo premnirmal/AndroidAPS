@@ -5,6 +5,7 @@ import android.app.Application
 import android.content.Intent
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.di.MetroMemberInjector
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.shared.tests.TestBase
@@ -58,7 +59,7 @@ class TimerReminderReceiverTest : TestBase() {
 
         sut.onReceive(context, intent)
 
-        verify(uiInteraction).runAlarm(status = "Time to eat", title = "AAPS")
+        verify(uiInteraction).runAlarm(status = "Time to eat", title = "AAPS", sound = AlarmSound.ALARM)
     }
 
     @Test
@@ -68,7 +69,7 @@ class TimerReminderReceiverTest : TestBase() {
 
         sut.onReceive(context, intent)
 
-        verify(uiInteraction).runAlarm(status = "AAPS", title = "AAPS")
+        verify(uiInteraction).runAlarm(status = "AAPS", title = "AAPS", sound = AlarmSound.ALARM)
     }
 
     @Test
@@ -79,6 +80,6 @@ class TimerReminderReceiverTest : TestBase() {
 
         sut.onReceive(context, intent)
 
-        verify(uiInteraction).runAlarm(status = "AAPS", title = "AAPS")
+        verify(uiInteraction).runAlarm(status = "AAPS", title = "AAPS", sound = AlarmSound.ALARM)
     }
 }

@@ -6,6 +6,7 @@ import app.aaps.core.data.pump.defs.PumpDescription
 import app.aaps.core.interfaces.aps.Loop
 import app.aaps.core.interfaces.bgQualityCheck.BgQualityCheck
 import app.aaps.core.interfaces.constraints.Constraint
+import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.constraints.PluginConstraints
 import app.aaps.core.interfaces.constraints.PumpPluginConstraints
 import app.aaps.core.interfaces.db.PersistenceLayer
@@ -25,11 +26,24 @@ import app.aaps.plugins.aps.openAPSAMA.OpenAPSAMAPlugin
 import app.aaps.plugins.aps.openAPSSMB.DetermineBasalSMB
 import app.aaps.plugins.aps.openAPSSMB.GlucoseStatusCalculatorSMB
 import app.aaps.plugins.aps.openAPSSMB.OpenAPSSMBPlugin
+import app.aaps.plugins.constraints.objectives.ObjectivesPlugin
+import app.aaps.plugins.constraints.objectives.objectives.Objective0
+import app.aaps.plugins.constraints.objectives.objectives.PlainDurationText
+import app.aaps.plugins.constraints.objectives.objectives.Objective1
+import app.aaps.plugins.constraints.objectives.objectives.Objective2
+import app.aaps.plugins.constraints.objectives.objectives.Objective3
+import app.aaps.plugins.constraints.objectives.objectives.Objective4
+import app.aaps.plugins.constraints.objectives.objectives.Objective5
+import app.aaps.plugins.constraints.objectives.objectives.Objective6
+import app.aaps.plugins.constraints.objectives.objectives.Objective7
+import app.aaps.plugins.constraints.objectives.objectives.Objective8
+import app.aaps.plugins.constraints.objectives.objectives.Objective9
 import app.aaps.plugins.constraints.safety.SafetyPlugin
 import app.aaps.pump.virtual.VirtualPumpPlugin
 import app.aaps.shared.tests.TestBaseWithProfile
 import app.aaps.shared.tests.generatedTextResolver
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -74,6 +88,7 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
 
     private lateinit var constraintChecker: ConstraintsCheckerImpl
     private lateinit var safetyPlugin: SafetyPlugin
+    private lateinit var objectivesPlugin: ObjectivesPlugin
     private lateinit var openAPSSMBPlugin: OpenAPSSMBPlugin
     private lateinit var openAPSAMAPlugin: OpenAPSAMAPlugin
 
@@ -84,45 +99,12 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
             whenever(persistenceLayer.getApsResults(any(), any())).thenReturn(emptyList())
         }
 
-<<<<<<< HEAD
-        whenever(rh.gs(ConstraintsStrings.closed_loop_disabled_on_dev_branch)).thenReturn("Running dev version. Closed loop is disabled.")
-        whenever(rh.gs(CoreUiStrings.no_valid_basal_rate)).thenReturn("No valid basal rate read from pump")
-        // :plugins:aps resolves its own strings through TextRef, so these need the ApsStrings key, not ConstraintsStrings.
-        whenever(rh.gs(ApsStrings.hardlimit)).thenReturn("hard limit")
-        whenever(rh.gs(CoreUiStrings.limitingbasalratio)).thenReturn("Limiting max basal rate to %1\$.2f U/h because of %2\$s")
-        whenever(rh.gs(ApsStrings.maxvalueinpreferences)).thenReturn("max value in preferences")
-        whenever(rh.gs(ApsStrings.autosens_disabled_in_preferences)).thenReturn("Autosens disabled in preferences")
-        whenever(rh.gs(ApsStrings.smb_disabled_in_preferences)).thenReturn("SMB disabled in preferences")
-        whenever(rh.gs(CoreUiStrings.pumplimit)).thenReturn("pump limit")
-        whenever(rh.gs(CoreUiStrings.itmustbepositivevalue)).thenReturn("it must be positive value")
-        whenever(rh.gs(ConstraintsStrings.maxvalueinpreferences)).thenReturn("max value in preferences")
-        whenever(rh.gs(ApsStrings.max_basal_multiplier)).thenReturn("max basal multiplier")
-        whenever(rh.gs(ApsStrings.max_daily_basal_multiplier)).thenReturn("max daily basal multiplier")
-        whenever(rh.gs(CoreUiStrings.pumplimit)).thenReturn("pump limit")
-        whenever(rh.gs(CoreUiStrings.limitingbolus)).thenReturn("Limiting bolus to %.1f U because of %s")
-        whenever(rh.gs(ConstraintsStrings.hardlimit)).thenReturn("hard limit")
-        whenever(rh.gs(ConstraintsStrings.limitingcarbs)).thenReturn("Limiting carbs to %d g because of %s")
-        whenever(rh.gs(ApsStrings.limiting_iob)).thenReturn("Limiting IOB to %.1f U because of %s")
-        whenever(rh.gs(CoreUiStrings.limitingbasalratio)).thenReturn("Limiting max basal rate to %1\$.2f U/h because of %2\$s")
-        whenever(rh.gs(CoreUiStrings.limitingpercentrate)).thenReturn("Limiting max percent rate to %1\$d%% because of %2\$s")
-        whenever(rh.gs(CoreUiStrings.itmustbepositivevalue)).thenReturn("it must be positive value")
-        whenever(rh.gs(ConstraintsStrings.smbnotallowedinopenloopmode)).thenReturn("SMB not allowed in open loop mode")
-        whenever(rh.gs(CoreUiStrings.pumplimit)).thenReturn("pump limit")
-        whenever(rh.gs(ConstraintsStrings.smbalwaysdisabled)).thenReturn("SMB always and after carbs disabled because active BG source doesn\\'t support advanced filtering")
-        whenever(rh.gs(CoreUiStrings.limitingpercentrate)).thenReturn("Limiting max percent rate to %1\$d%% because of %2\$s")
-        whenever(rh.gs(CoreUiStrings.limitingbolus)).thenReturn("Limiting bolus to %1\$.1f U because of %2\$s")
-        whenever(rh.gs(CoreUiStrings.limitingbasalratio)).thenReturn("Limiting max basal rate to %1\$.2f U/h because of %2\$s")
-
-=======
->>>>>>> origin/dev
         whenever(activePlugin.activePump).thenReturn(pumpWithConcentration)
         whenever(pumpWithConcentration.pumpDescription).thenReturn(PumpDescription())
 
         //SafetyPlugin
         constraintChecker = ConstraintsCheckerImpl(activePlugin, aapsLogger, ch, text)
 
-<<<<<<< HEAD
-=======
         // The real formatter rather than a mock: it is pure arithmetic over a duration, and the
         // objectives only read it for display.
         val durationText = PlainDurationText()
@@ -140,7 +122,6 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
         )
         objectivesPlugin = ObjectivesPlugin(aapsLogger, text, preferences, config, objectives, mock())
         runBlocking { objectivesPlugin.onStart() }
->>>>>>> origin/dev
         openAPSSMBPlugin =
             OpenAPSSMBPlugin(
                 aapsLogger, rxBus, constraintChecker, text, profileFunction, profileUtil, config, activePlugin, iobCobCalculator,
@@ -161,6 +142,7 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
             )
         val constraintsPluginsList = ArrayList<PluginBase>()
         constraintsPluginsList.add(safetyPlugin)
+        constraintsPluginsList.add(objectivesPlugin)
         // Pump plugins are no longer PluginConstraints — their cU delivery caps are PumpPluginConstraints,
         // folded into the scan by ConstraintsCheckerImpl via activePumpInternal (stubbed per test).
         constraintsPluginsList.add(openAPSAMAPlugin)
@@ -168,31 +150,37 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
         whenever(activePlugin.getSpecificPluginsListByInterface(PluginConstraints::class)).thenReturn(constraintsPluginsList)
     }
 
+    // Combo & Objectives
     @Test
     fun isLoopInvocationAllowedTest() {
         val c = constraintChecker.isLoopInvocationAllowed()
-        assertThat(c.reasonList).isEmpty()
-        assertThat(c.mostLimitedReasonList).isEmpty()
-        assertThat(c.value()).isTrue()
+        assertThat(c.reasonList).hasSize(1) // Objectives
+        assertThat(c.mostLimitedReasonList).hasSize(1) // Objectives
+        assertThat(c.value()).isFalse()
     }
 
+    // Safety & Objectives
+    // 2x Safety & Objectives
     @Test
     fun isClosedLoopAllowedTest() = runTest {
         whenever(config.isEngineeringModeOrRelease()).thenReturn(true)
         whenever(loop.runningMode()).thenReturn(RM.Mode.CLOSED_LOOP)
+        objectivesPlugin.objectives[Objectives.CLOSED_LOOP_OBJECTIVE].startedOn = 0
         val c: Constraint<Boolean> = constraintChecker.isClosedLoopAllowed()
         aapsLogger.debug("Reason list: " + c.reasonList.toString())
-        assertThat(c.reasonList).isEmpty()
-        assertThat(c.value()).isTrue()
+        assertThat(c.reasonList[0]).contains("Objectives: Objective 7 not started") // Safety & Objectives
+        assertThat(c.value()).isFalse()
     }
 
+    // Safety & Objectives
     @Test
     fun isAutosensModeEnabledTest() {
         openAPSSMBPlugin.setPluginEnabledBlocking(PluginType.APS, true)
+        objectivesPlugin.objectives[Objectives.AUTOSENS_OBJECTIVE].startedOn = 0
         whenever(preferences.get(BooleanKey.ApsUseAutosens)).thenReturn(false)
         val c = constraintChecker.isAutosensModeEnabled()
-        assertThat(c.reasonList).hasSize(1)
-        assertThat(c.mostLimitedReasonList).hasSize(1)
+        assertThat(c.reasonList).hasSize(2) // Safety & Objectives
+        assertThat(c.mostLimitedReasonList).hasSize(2) // Safety & Objectives
         assertThat(c.value()).isFalse()
     }
 
@@ -214,15 +202,17 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
         assertThat(c.value()).isFalse() // SMB should limit
     }
 
+    // Safety & Objectives
     @Test
     fun isSMBModeEnabledTest() = runTest {
         openAPSSMBPlugin.setPluginEnabledBlocking(PluginType.APS, true)
+        objectivesPlugin.objectives[Objectives.SMB_OBJECTIVE].startedOn = 0
         whenever(preferences.get(BooleanKey.ApsUseSmb)).thenReturn(false)
         whenever(loop.runningMode()).thenReturn(RM.Mode.OPEN_LOOP)
 //        whenever(constraintChecker.isClosedLoopAllowed()).thenReturn(ConstraintObject(true))
         val c = constraintChecker.isSMBModeEnabled()
-        assertThat(c.reasonList).hasSize(2)
-        assertThat(c.mostLimitedReasonList).hasSize(2)
+        assertThat(c.reasonList).hasSize(3) // 2x Safety & Objectives
+        assertThat(c.mostLimitedReasonList).hasSize(3) // 2x Safety & Objectives
         assertThat(c.value()).isFalse()
     }
 

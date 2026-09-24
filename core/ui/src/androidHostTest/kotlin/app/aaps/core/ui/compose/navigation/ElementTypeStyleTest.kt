@@ -7,8 +7,10 @@ import org.junit.jupiter.api.Test
 /**
  * Structural guard for the non-`@Composable` extensions in `ElementTypeStyle.kt`. Adding a new
  * [ElementType] without updating the icon/label/description `when` branches would compile-fail
- * Kotlin's exhaustiveness check, but the more interesting bug is subtler: an entry mapped to
- * label `0` outside the documented "dynamic label" set. These tests catch that drift.
+ * Kotlin's exhaustiveness check, but the more interesting bugs are subtler:
+ *  - a searchable element with no label/description (user-facing identifier missing)
+ *  - an entry mapped to label `0` outside the documented "dynamic label" set
+ * These tests catch those drifts.
  */
 class ElementTypeStyleTest {
 
@@ -57,5 +59,14 @@ class ElementTypeStyleTest {
     fun typesWithZeroDescription_matchDocumentedSet() {
         val actualZero = ElementType.entries.filter { it.description() == null }.toSet()
         assertThat(actualZero).isEqualTo(typesWithoutDescription)
+    }
+
+    @Test
+    fun searchableEntries_haveDisplayableLabel() {
+        // A search hit with no label and no dynamic-label fallback would show as a blank row.
+        val blank = ElementType.searchableEntries.filter {
+            it.label() == null && it !in typesWithDynamicLabel
+        }
+        assertThat(blank).isEmpty()
     }
 }

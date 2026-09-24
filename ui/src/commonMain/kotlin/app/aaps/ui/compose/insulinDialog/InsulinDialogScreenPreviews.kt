@@ -21,7 +21,8 @@ internal fun InsulinDialogScreenPreview() {
                 bolusStep = 0.1,
                 insulinButtonIncrement1 = 0.5,
                 insulinButtonIncrement2 = 1.0,
-                insulinButtonIncrement3 = 2.0
+                insulinButtonIncrement3 = 2.0,
+                showNotesFromPreferences = true
             ),
             bgInfo = BgInfoUiState(bgInfo = null, timeAgoText = ""),
             iob = IobUiState(),

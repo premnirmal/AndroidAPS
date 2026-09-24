@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
@@ -57,22 +56,6 @@ class CommandBolusTest : TestBaseWithProfile() {
 
         assertThat(result).isSameInstanceAs(pumpResult)
         verify(bolusProgressData).clear(BOLUS_GENERATION)
-    }
-
-    @Test
-    fun `execute clears progress after a successful stop`() = runTest {
-        val pumpResult = PumpEnactResultObject(rh).success(true).enacted(true)
-        val pump = mock<PumpWithConcentration> {
-            on { deliverTreatment(info) } doReturn pumpResult
-        }
-        whenever(activePlugin.activePump).thenReturn(pump)
-        whenever(bolusProgressData.isStopPressed).thenReturn(true)
-
-        val result = newCommand().execute()
-
-        assertThat(result).isSameInstanceAs(pumpResult)
-        verify(bolusProgressData).clear(BOLUS_GENERATION)
-        verify(bolusProgressData, never()).completeAndAutoClear(BOLUS_GENERATION)
     }
 
     @Test

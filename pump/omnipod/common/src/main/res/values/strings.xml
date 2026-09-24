@@ -185,6 +185,7 @@
 
     <!-- Omnipod 5 -->
     <string name="omnipod_5_login" translatable="false">https://api.osaid-keymanager.org/o5/aaps/start</string>
+    <string name="omnipod_5_store_credentials">Credentials</string>
     <string name="omnipod_5_name">Omnipod 5</string>
     <string name="omnipod_5_name_short">O5</string>
     <string name="omnipod_5_unconfirmed_command" comment="Reason shown when a status read is triggered to reconcile an unconfirmed command. 26 characters max for translation.">Unconfirmed command</string>
@@ -192,6 +193,9 @@
     <string name="omnipod_5_certificate_store">Certificate store</string>
     <string name="omnipod_5_certificate_store_summary">Import and manage the Omnipod 5 pairing credential.</string>
     <string name="omnipod_5_certificate_store_import">Import certificate</string>
+    <string name="omnipod_5_certificate_store_imported">Imported credential for controller %1$s</string>
+    <string name="omnipod_5_certificate_store_controller_id">Controller %1$s</string>
+    <string name="omnipod_5_certificate_store_installed_credentials">Installed credentials</string>
     <string name="omnipod_5_credential_import_failed">Could not import the credential. Please try again.</string>
     <string name="omnipod_5_credential_import_try_again">Try again</string>
     <string name="omnipod_5_credential_imported">Omnipod 5 credential imported</string>

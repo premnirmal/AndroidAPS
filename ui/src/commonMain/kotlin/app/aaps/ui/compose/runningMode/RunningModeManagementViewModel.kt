@@ -28,6 +28,8 @@ import app.aaps.core.interfaces.rx.events.EventShowDialog
 import app.aaps.core.interfaces.rx.events.EventShowSnackbar
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.Translator
+import app.aaps.core.keys.BooleanNonKey
+import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.clientcontrol.failText
 import app.aaps.ui.UiStrings
@@ -63,6 +65,7 @@ class RunningModeManagementViewModel(
     private val activePlugin: ActivePlugin,
     private val profileFunction: ProfileFunction,
     private val translator: Translator,
+    private val preferences: Preferences,
     private val persistenceLayer: PersistenceLayer,
     private val aapsLogger: AAPSLogger,
     private val rxBus: RxBus,
@@ -164,7 +167,10 @@ class RunningModeManagementViewModel(
                     EventShowDialog.OkCancel(
                         title = label, message = "", confirmationLines = prepared.lines, icon = targetMode.toIcon(),
                         onOk = {
-                            appScope.launch { batchExecutor.commit(prepared.id, Sources.LoopDialog, label) }
+                            appScope.launch {
+                                if (batchExecutor.commit(prepared.id, Sources.LoopDialog, label) is ActionProgress.Applied)
+                                    trackObjectives(action, durationMinutes)
+                            }
                         }
                     )
                 )
@@ -177,6 +183,15 @@ class RunningModeManagementViewModel(
 
                 else                       -> Unit // Unconfirmed → handled by the app-level pending modal
             }
+        }
+    }
+
+    /** Credit the disconnect/reconnect objectives milestones once a running-mode change is confirmed + applied. */
+    private fun trackObjectives(action: Action, durationMinutes: Int) {
+        when (action) {
+            Action.RESUME, Action.RECONNECT -> preferences.put(BooleanNonKey.ObjectivesReconnectUsed, true)
+            Action.DISCONNECT               -> if (durationMinutes >= 60) preferences.put(BooleanNonKey.ObjectivesDisconnectUsed, true)
+            else                            -> Unit
         }
     }
 

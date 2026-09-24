@@ -361,7 +361,7 @@ class DataHandlerMobile(
             if (rejectIfNotReady()) return@onEvent
             onCommitResult(sceneActions.stop(triggerChain = false))
         }
-        onEventSync<EventData.SnoozeAlert> { uiInteraction.stopAlarm("Dismissed from wear") }
+        onEventSync<EventData.SnoozeAlert> { uiInteraction.stopAlarm("Muted from wear") }
         onEventSync<EventData.WearException> { fabricPrivacy.logWearException(it) }
         // Coalesce Wear reconnect-flush bursts (Data Layer replays queued events back-to-back).
         // chunkedOnQuietPeriod keeps the timer idle when no events arrive, unlike a fixed window.

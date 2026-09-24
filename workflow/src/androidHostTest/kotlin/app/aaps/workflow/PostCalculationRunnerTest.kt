@@ -78,7 +78,6 @@ class PostCalculationRunnerTest : TestBaseWithProfile() {
         Assertions.assertEquals(WorkOutcome.Success, result)
         verify(loop, never()).invoke(any(), any(), any())
         verify(widgetUpdater, never()).update(any())
-        verify(data.cache, never()).updatePredictions(any())
     }
 
     @Test

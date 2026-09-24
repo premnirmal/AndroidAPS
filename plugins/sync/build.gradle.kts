@@ -151,6 +151,7 @@ kotlin {
                 // ErrorCorrectionLevel directly - declare it so a qrgen upgrade cannot drop it.
                 implementation(libs.com.google.zxing.core)
 
+                // Garmin
             }
         }
 

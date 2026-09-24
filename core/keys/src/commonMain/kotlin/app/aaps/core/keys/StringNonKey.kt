@@ -49,12 +49,6 @@ enum class StringNonKey(
     PumpCommonTbrStorage(key = "pump_sync_storage_tbr_json", defaultValue = "", exportable = false),
     TempTargetPresets(key = "temp_target_presets", defaultValue = "[]", sync = SyncSpec(SyncChannel.Cold, SyncDirection.Bidirectional)),
     SceneDefinitions(key = "scene_definitions", defaultValue = "[]", sync = SyncSpec(SyncChannel.Cold, SyncDirection.Bidirectional)),
-<<<<<<< HEAD
-    ActiveScene(key = "active_scene", defaultValue = ""),
-    LastOverviewProfileName("last_overview_profile_name", "", exportable = false),
-    LastOverviewProfileTargetRange("last_overview_profile_target_range", "", exportable = false),
-    LastOverviewRunningMode("last_overview_running_mode", "", exportable = false),
-=======
     /**
      * WHICH scene is running right now, as opposed to [SceneDefinitions] above, which is the list the
      * user configured. The definitions are a setting and travel with an export; this is runtime
@@ -62,7 +56,6 @@ enum class StringNonKey(
      * another phone's "currently active" is meaningless here.
      */
     ActiveScene(key = "active_scene", defaultValue = "", exportable = false),
->>>>>>> origin/dev
 
     // Whole local profile list as one JSON document: {"lastChange": <ms>, "profiles": [ … ]}.
     // One key means one atomic apply and one last-writer-wins unit, which is what makes the profile

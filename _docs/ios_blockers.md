@@ -585,8 +585,6 @@ Not blockers, and not for the Windows session to fix. Listed so nobody is surpri
   `socket.io-client-java` Android uses, which is what keeps both platforms speaking to Nightscout
   identically. The graph has to take it as a factory parameter from the app at start up.
 
-<<<<<<< HEAD
-=======
 - **FIXED, and this entry used to say the opposite.** Until 2026-09-21 this said `setAudibleAlarm`
   only logs and that an urgent alarm makes no sound on iOS. That is no longer true, and reading it
   as current would mean either redoing finished work or shipping an URGENT notification believing it
@@ -603,7 +601,6 @@ Not blockers, and not for the Windows session to fix. Listed so nobody is surpri
 
   Earlier notes here said the entitlement was the only route. That was wrong: it is the only route
   for a notification-delivered alarm, not for one the app plays itself.
->>>>>>> origin/dev
 - `IosSystemNotificationPlatform.onDismissed` **is** wired now. Two things were needed and either
   one missing makes it silently never fire: a delegate on the shared centre, held in a property
   because that slot is weak, and a `UNNotificationCategory` carrying `customDismissAction`, without
@@ -861,6 +858,43 @@ cryptography-kotlin, which is backed by the platform CSPRNG and is a drop-in for
 Checked the rest of the tree while there: the only other `kotlin.random.Random` uses are a virtual
 pump serial number and a date helper, neither of which is security.
 
+
+## Before anyone writes `IosUiInteraction`: the alarm owner tag is a trap
+
+Not a live bug - nothing on iOS plays with `OWNER_FULLSCREEN` today - but the next person to write
+`UiInteraction.runAlarm` for iOS will walk into it, so it is written down before that happens.
+
+`AlarmSoundPlayer` records who started a sound. Two owners exist: `OWNER_INTERNAL`, used by the
+notification registry through `setAudibleAlarm`, and `OWNER_FULLSCREEN`, used by Android's
+`AlarmNotificationManager` for the full screen alarm that `runAlarm` posts.
+
+`stopAlarm` is `notificationManager.muteAllAlarms()` on both platforms, and that ends in
+`refreshAlarmSound()` plus `platform.cancelAll()`. The difference is what `cancelAll` does:
+
+- `AndroidSystemNotificationPlatform.cancelAll()` calls `alarmNotificationManager().cancelAlarm()`,
+  which stops the **`OWNER_FULLSCREEN`** audio and cancels the notification.
+- `IosSystemNotificationPlatform.cancelAll()` removes only the delivered notifications it posted
+  itself, matched by the instance-key parse. Nothing on the iOS side stops `OWNER_FULLSCREEN`,
+  because nothing starts it. (It used to call `removeAllPendingNotificationRequests()` as well,
+  which deleted the scheduled automation reminders - they share the `aaps-` prefix. Whatever
+  `runAlarm` ends up doing, it must not widen this back out.)
+
+So an iOS `runAlarm` that plays with `OWNER_FULLSCREEN` would produce a **ramping alarm that
+`stopAlarm` cannot silence**. In a medical app that is the worse of the two failure directions, and
+it would not show up in a build or in any test that does not actually let the sound run.
+
+Two ways out, and the choice is a design decision rather than a porting one:
+
+1. play with `OWNER_INTERNAL` and let the registry own the sound, accepting that
+   `setAudibleAlarm`'s `soundingKey` bookkeeping may silence it when the notification list changes;
+2. give iOS its own counterpart of `cancelAlarm()` so `cancelAll()` stops the full screen owner too,
+   which is the shape Android already has.
+
+Related, and part of the same decision: `runAlarm` takes a `title`, and the shared registry does not
+carry one - `CommonNotificationManager` derives the title from the level ("Urgent alarm" / "Info").
+Posting an alarm through the registry therefore loses the caller's title, while posting outside it
+is what raises the owner tag question above. Android sidesteps both by not using the registry for
+`runAlarm` at all.
 
 Worth knowing while deciding: `UiInteraction` is injected on iOS but never called. `LoopPlugin` and
 `TreatmentsViewModel` hold it without using it in commonMain, and every reader of `mainActivity` and
@@ -1297,7 +1331,8 @@ code rather than written twice. It should be deleted from both the day the Main 
 - **The notification cluster - done.** There is one registry now.
   `AndroidSystemNotificationPlatform` (`implementation/src/androidMain/.../notifications/`) holds the
   Android half - channel, dismiss `BroadcastReceiver`, `NotificationCompat`, `PendingIntent` - and
-  shows URGENT notifications as silent visual/vibration alerts; anything else is shown only when
+  makes the three way decision the old class made inline: URGENT **with a sound** is posted silently,
+  because `AlarmSoundPlayer` owns the ramping audio; anything else is shown only when
   `AlertUrgentAsAndroidNotification` is set **and** there are no actions; otherwise nothing.
   `NotificationManagerImpl` is deleted and `CommonNotificationManager` is bound on both platforms.
   Notes for whoever reads this next:
@@ -1306,13 +1341,13 @@ code rather than written twice. It should be deleted from both the day the Main 
   - it is a `@Provides` in `ImplementationBindings`, not annotations on the class: building the
     registry registers the receiver and creates the channel, and that must not happen while the
     graph is being assembled.
-  - `AlarmNotificationManager` and `NotificationHolder` are injected as
+  - `AlarmNotificationManager`, `AlarmSoundPlayer` and `NotificationHolder` are injected as
     `Provider`s for the same reason. `AlarmNotificationManager` calls `createChannels()` in its own
     constructor, so injecting it directly makes the plain-JVM graph tests fail on `getSystemService`.
   - the channel is created on the first `show()` rather than at start up, so its entry in the system
     notification settings appears only after the first notification.
-  - `NotificationHolderImpl` is on Metro now. `AlarmNotificationManager` is the last one still on
-    javax.
+  - `AlarmSoundPlayerImpl` and `NotificationHolderImpl` are on Metro now. `AlarmNotificationManager`
+    is the last one still on javax.
   - 9 Robolectric tests pin the gating in `AndroidSystemNotificationPlatformTest`. The paths that
     need a real alarm are not covered on device yet.
 

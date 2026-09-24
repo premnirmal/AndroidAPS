@@ -4,28 +4,21 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -50,7 +43,6 @@ import kotlin.math.sin
  *   [LocalAapsScale] so the circle grows on tablets to match scaled typography. Pass an explicit
  *   value only if you want to override the tablet-aware default.
  * @param showTimeAgo Whether to render the small "time ago" line below the BG value.
- * @param useGradientRing Whether to use the Trio gradient around the BG circle.
  *
  * @see BgInfoSectionInRangePreview
  * @see BgInfoSectionHighPreview
@@ -63,9 +55,7 @@ fun BgInfoSection(
     timeAgoText: String,
     modifier: Modifier = Modifier,
     size: Dp = AapsSpacing.bgCircleSize * LocalAapsScale.current,
-    showTimeAgo: Boolean = true,
-    useGradientRing: Boolean = false,
-    elevation: Dp = 0.dp
+    showTimeAgo: Boolean = true
 ) {
     if (bgInfo == null) {
         // Show placeholder when no data
@@ -83,24 +73,8 @@ fun BgInfoSection(
     }
 
     val bgColor = bgInfo.bgRange.toColor()
-    val displayColor = if (useGradientRing && bgInfo.bgRange == BgRange.IN_RANGE) {
-        MaterialTheme.colorScheme.onSurface
-    } else {
-        bgColor
-    }
-    val trioColors = AapsTheme.generalColors
-    val trendColor = if (useGradientRing) trioColors.trioBgAccent else bgColor
     val ringColor = bgColor.copy(alpha = 0.3f)
-    val circleColor = if (useGradientRing) trioColors.trioBgCircle else MaterialTheme.colorScheme.surfaceContainerHigh
     val ringStrokeWidth = AapsSpacing.bgRingStrokeWidth * LocalAapsScale.current
-    val gradientColors = listOf(
-        trioColors.trioBgRingPurple,
-        trioColors.trioBgRingViolet,
-        trioColors.trioBgRingIndigo,
-        trioColors.trioBgRingBlue,
-        trioColors.trioBgAccent,
-        trioColors.trioBgRingPurple
-    )
 
     // Build accessibility description: "BG 120, Flat, delta +2, 2 min ago"
     val a11yDescription = buildString {
@@ -114,41 +88,18 @@ fun BgInfoSection(
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
+            .padding(AapsSpacing.small)
             .semantics { contentDescription = a11yDescription }
     ) {
-        Surface(
-            modifier = Modifier.size(size),
-            shape = CircleShape,
-            color = circleColor,
-            shadowElevation = elevation
-        ) {}
         // Background ring + trend arc indicator
         Canvas(modifier = Modifier.size(size)) {
             val strokeWidth = ringStrokeWidth.toPx()
-            val canvasDiameter = minOf(this.size.width, this.size.height)
-            val arcDiameter = (canvasDiameter - strokeWidth).coerceAtLeast(0f)
-            val arcSize = Size(arcDiameter, arcDiameter)
-            val topLeft = Offset(
-                x = (this.size.width - arcDiameter) / 2,
-                y = (this.size.height - arcDiameter) / 2
-            )
-            val circleCenter = Offset(this.size.width / 2, this.size.height / 2)
-
-            if (useGradientRing) {
-                drawCircle(
-                    color = circleColor,
-                    radius = arcSize.width / 2,
-                    center = circleCenter
-                )
-            }
+            val arcSize = Size(size.toPx() - strokeWidth, size.toPx() - strokeWidth)
+            val topLeft = Offset(strokeWidth / 2, strokeWidth / 2)
 
             // Background ring (full circle, semi-transparent)
             drawArc(
-                brush = if (useGradientRing) {
-                    Brush.sweepGradient(gradientColors)
-                } else {
-                    SolidColor(ringColor)
-                },
+                color = ringColor,
                 startAngle = 0f,
                 sweepAngle = 360f,
                 useCenter = false,
@@ -163,7 +114,7 @@ fun BgInfoSection(
                     // Single bright arc segment
                     val arcStart = indicator.centerAngle - indicator.sweepAngle / 2
                     drawArc(
-                        color = trendColor,
+                        color = bgColor,
                         startAngle = arcStart,
                         sweepAngle = indicator.sweepAngle,
                         useCenter = false,
@@ -202,7 +153,7 @@ fun BgInfoSection(
                                 lineTo(baseX - triHalfBase * perpX, baseY - triHalfBase * perpY)
                                 close()
                             },
-                            color = trendColor
+                            color = bgColor
                         )
                     }
                 }
@@ -212,9 +163,7 @@ fun BgInfoSection(
         // Center content: delta on top, BG value, time ago below
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier
-                .width(size)
-                .padding(bottom = AapsSpacing.small),
+            modifier = Modifier.padding(bottom = AapsSpacing.small),
             verticalArrangement = Arrangement.spacedBy((-2).dp, Alignment.CenterVertically)
         ) {
             // Delta on top
@@ -222,9 +171,7 @@ fun BgInfoSection(
                 Text(
                     text = delta,
                     style = AapsTheme.typography.bgSecondary,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -232,10 +179,8 @@ fun BgInfoSection(
             Text(
                 text = bgInfo.bgText,
                 style = AapsTheme.typography.bgValue,
-                color = displayColor,
-                textDecoration = if (bgInfo.isOutdated) TextDecoration.LineThrough else TextDecoration.None,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                color = bgColor,
+                textDecoration = if (bgInfo.isOutdated) TextDecoration.LineThrough else TextDecoration.None
             )
 
             // Time ago below
@@ -243,9 +188,7 @@ fun BgInfoSection(
                 Text(
                     text = timeAgoText,
                     style = AapsTheme.typography.bgTimeAgo,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

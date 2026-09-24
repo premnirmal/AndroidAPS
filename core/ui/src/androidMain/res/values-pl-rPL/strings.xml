@@ -63,6 +63,7 @@
     <string name="goingtodeliver">Zamierzam podać %1$.2f U</string>
     <string name="androidaps_start">AAPS uruchomiony</string>
     <string name="format_hours">%1$.2f h</string>
+    <string name="objectives">Zadania</string>
     <string name="please_wait">Proszę czekać…</string>
     <string name="stop">Stop</string>
     <string name="invalid_profile">Nieprawidłowy profil!</string>

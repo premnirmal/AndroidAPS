@@ -30,6 +30,8 @@
     <string name="setupwizard_aps_description">Изберете един от възможните алгоритми. Те са сортирани от стар към най-нов. Новите са обикновено по-добри. Не забравяйте да прочетете документацията и да конфигурирате преди да го използвате.</string>
     <string name="setupwizard_pump_waiting_for_riley_link_connection">Конфигурация на RileyLink. След избиране на RileyLink, ще е възможно неговото конфигуриране, след като статуса му е \"Свързан\". Може да отнеме време \n</string>
     <string name="setupwizard_pump_pump_not_initialized"><b>Заб:</b> Можете да продължите след като помпата се инициализира.\n</string>
+    <string name="startobjective">Започнете първа цел</string>
+    <string name="open_objectives">Отворени цели</string>
     <string name="setupwizard_permissions">Разрешения</string>
     <string name="setupwizard_profile_info">Създайте профил с вашите базали, въгл. число, инсулинова чувствителност и цели. Можете да добавите други профили по-късно.</string>
     <string name="setupwizard_permissions_info">На AAPS му трябва разрешение да ползва паметта. Моля разрешете му всичко от изброените.</string>

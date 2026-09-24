@@ -281,14 +281,16 @@ internal fun CareDialogContent(
                     )
 
                     // Notes Section
-                    TextField(
-                        value = uiState.notes,
-                        onValueChange = onNotesChange,
-                        label = { Text(stringResource(CoreUiStrings.notes_label)) },
-                        modifier = itemModifier,
-                        singleLine = false,
-                        maxLines = 3
-                    )
+                    if (uiState.showNotesSection) {
+                        TextField(
+                            value = uiState.notes,
+                            onValueChange = onNotesChange,
+                            label = { Text(stringResource(CoreUiStrings.notes_label)) },
+                            modifier = itemModifier,
+                            singleLine = false,
+                            maxLines = 3
+                        )
+                    }
                 }
             }
 

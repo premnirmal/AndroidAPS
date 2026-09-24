@@ -8,10 +8,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -25,7 +29,7 @@ import app.aaps.core.ui.compose.metroViewModel
 import app.aaps.pump.omnipod.common.R
 import app.aaps.pump.omnipod.common.ui.compose.OmnipodComposeHost
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
-import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialImportScreen
+import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialListScreen
 import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialImportViewModel
 import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialImportWebViewScreen
 import app.aaps.pump.omnipod.omnipod5.ui.wizard.compose.O5OmnipodWizardViewModel
@@ -94,30 +98,45 @@ class OmnipodO5ComposeContent(
             },
             extraContent = { onBack ->
                 val title = stringResource(R.string.omnipod_5_name)
+                var showingCredentials: Boolean by remember { mutableStateOf(false) }
                 LaunchedEffect(title) {
                     setToolbarConfig(
                         ToolbarConfig(
                             title = title,
                             navigationIcon = {
-                                IconButton(onClick = onBack) {
+                                IconButton(onClick = {
+                                    if (showingCredentials) {
+                                        showingCredentials = false
+                                    } else {
+                                        onBack.invoke()
+                                    }
+                                }) {
                                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(CoreUiR.string.back))
                                 }
                             },
-                            actions = {}
+                            actions = {
+                                if (!showingCredentials) {
+                                    TextButton(onClick = { showingCredentials = true }) {
+                                        Text(stringResource(R.string.omnipod_5_store_credentials))
+                                    }
+                                }
+                            }
                         )
                     )
                 }
                 val historyViewModel: O5PodHistoryViewModel = metroViewModel()
                 val records by historyViewModel.records.collectAsStateWithLifecycle()
                 Column(Modifier.fillMaxSize()) {
-                    O5CredentialImportScreen(viewModel = credentialViewModel, rh = rh)
-                    HorizontalDivider()
-                    Box(Modifier.weight(1f)) {
-                        O5PodHistoryScreen(
-                            records = records,
-                            rh = historyViewModel.rh,
-                            profileUtil = historyViewModel.profileUtil
-                        )
+                    if (showingCredentials) {
+                        O5CredentialListScreen(viewModel = credentialViewModel, rh = rh)
+                    } else {
+                        Box(Modifier.weight(1f)) {
+                            O5PodHistoryScreen(
+                                records = records,
+                                rh = historyViewModel.rh,
+                                profileUtil = historyViewModel.profileUtil
+                            )
+                        }
                     }
                 }
             }

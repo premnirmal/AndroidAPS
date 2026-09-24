@@ -25,4 +25,18 @@
     <string name="smbnotallowedinopenloopmode">SMB não permitido no modo open loop</string>
     <string name="maxvalueinpreferences">valor máx nas preferências</string>
     <string name="hardlimit">limite rígido</string>
+    <!-- Objectives -->
+    <string name="completed_well_done">Terminado, parabéns!</string>
+    <string name="not_completed_yet">Incompleto</string>
+    <string name="time_elapsed">Tempo decorrido</string>
+    <string name="hasbgdata">Glicemia disponivel desde a fonte selecionada</string>
+    <string name="synchaswritepermission">O serviço de sincronização tem permissão de escrita</string>
+    <string name="loopenabled">Loop activado</string>
+    <string name="apsselected">APS seleccionado</string>
+    <string name="closedmodeenabled">Modo fechado ativado</string>
+    <string name="objectives_shortname">OBJ</string>
+    <string name="description_objectives">Programa de aprendizagem</string>
+    <string name="doyouwantresetstart">Deseja reiniciar o objetivo? Pode perder seu progresso.</string>
+    <string name="objectives_button_unfinish">Reiniciar objetivo</string>
+    <string name="objectives_button_unstart">Reiniciar objetivo</string>
 </resources>

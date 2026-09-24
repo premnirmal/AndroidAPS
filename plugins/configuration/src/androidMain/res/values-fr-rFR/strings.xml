@@ -31,6 +31,8 @@ L\'ENSEMBLE DES RISQUES LIÉS À LA QUALITÉ ET À LA PERFORMANCE DU PROGRAMME S
     <string name="setupwizard_aps_description">Sélectionnez un des algorithmes disponibles. Ils sont triés du plus ancien au plus récent. L\'algorithme plus récent est généralement plus puissant. N\'oubliez pas de lire la documentation OpenAPS et de le configurer avant de l\'utiliser.</string>
     <string name="setupwizard_pump_waiting_for_riley_link_connection">Veuillez configurer votre RileyLink ci-dessous. Après avoir sélectionné un RileyLink, il sera possible de continuer l\'installation une fois que le statut de RileyLink sera « Connecté ». Cela peut prendre une minute.\n</string>
     <string name="setupwizard_pump_pump_not_initialized"><b>Remarque :</b> Vous pouvez continuer l\'installation une fois la pompe configurée.\n</string>
+    <string name="startobjective">Démarrez votre premier objectif</string>
+    <string name="open_objectives">Ouvrir les objectifs</string>
     <string name="setupwizard_permissions">Autorisations</string>
     <string name="setupwizard_profile_info">Créez un profil avec vos taux de basal, G/I, SI et valeurs cibles. Vous pourrez ajouter plusieurs profils plus tard.</string>
     <string name="setupwizard_permissions_info">AAPS a besoin d\'un accès au stockage et d\'autorisations pour fonctionner correctement. Veuillez accorder les autorisations requises ci-dessous.</string>

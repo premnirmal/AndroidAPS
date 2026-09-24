@@ -29,6 +29,8 @@
     <string name="setupwizard_aps_description">Выберите один из доступных алгоритмов. Они отсортированы от старых к новым. Обычно, чем новее алгоритм, тем он мощнее. Не забудьте перед использованием прочитать документацию OpenAPS и сделать необходимые настройки.</string>
     <string name="setupwizard_pump_waiting_for_riley_link_connection">Сконфигурируйте RileyLink. После выбора RileyLink можно будет продолжить установку если состояние RileyLink \"Соединено\". Это может занять минуту.\n</string>
     <string name="setupwizard_pump_pump_not_initialized"><b>Примечание:</b> После инициализации помпы можно продолжить настройку\n</string>
+    <string name="startobjective">Начните первую Цель</string>
+    <string name="open_objectives">Открыть Цели</string>
     <string name="setupwizard_permissions">Разрешения</string>
     <string name="setupwizard_profile_info">Создайте профиль с указанием БС, УК, ФЧИ и целевой ГК. Вы сможете добавить дополнительные профили позднее.</string>
     <string name="setupwizard_permissions_info">Для корректной работы AAPS требуется доступ к хранилищу и разрешения. Пожалуйста, предоставьте необходимые разрешения ниже.</string>

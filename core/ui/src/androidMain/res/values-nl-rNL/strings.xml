@@ -45,6 +45,7 @@
     <string name="goingtodeliver">%1$.2f E toedienen</string>
     <string name="androidaps_start">AAPS gestart</string>
     <string name="format_hours">%1$.2f u</string>
+    <string name="objectives">Doelen</string>
     <string name="please_wait">Even geduld a.u.b.…</string>
     <string name="stop">Stop</string>
     <string name="invalid_profile">Ongeldig profiel!</string>

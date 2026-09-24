@@ -26,4 +26,18 @@
     <string name="smbnotallowedinopenloopmode">SMB אינו פעיל במצב לולאה פתוחה</string>
     <string name="maxvalueinpreferences">ערך מקסימלי בהעדפות</string>
     <string name="hardlimit">מגבלה קשיחה</string>
+    <!-- Objectives -->
+    <string name="completed_well_done">הושלם, כל הכבוד!</string>
+    <string name="not_completed_yet">עוד לא הושלם</string>
+    <string name="time_elapsed">זמן שחלף</string>
+    <string name="hasbgdata">ערכי סוכר זמינים מהמקור הנבחר</string>
+    <string name="synchaswritepermission">לשירות הסנכרון יש הרשאת כתיבה</string>
+    <string name="loopenabled">הלולאה פעילה</string>
+    <string name="apsselected">נבחר APS</string>
+    <string name="closedmodeenabled">מצב סגור מופעל</string>
+    <string name="objectives_shortname">OBJ</string>
+    <string name="description_objectives">תוכנית הלימוד</string>
+    <string name="doyouwantresetstart">האם ברצונכם לאפס את התחלת המשימה? אתם עלולים לאבד את התקדמותכם במשימה.</string>
+    <string name="objectives_button_unfinish">ביטול השלמה</string>
+    <string name="objectives_button_unstart">ביטול התחלה</string>
 </resources>

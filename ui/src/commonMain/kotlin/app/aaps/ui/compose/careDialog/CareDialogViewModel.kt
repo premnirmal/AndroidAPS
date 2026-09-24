@@ -75,6 +75,7 @@ class CareDialogViewModel(
         val currentBg = profileUtil.fromMgdlToUnits(
             glucoseStatusProvider.glucoseStatusData?.glucose ?: 0.0
         )
+        val showNotes = preferences.get(BooleanKey.OverviewShowNotesInDialogs)
         val siteRotation = preferences.get(BooleanKey.SiteRotationManageCgm)
 
         _uiState.update {
@@ -87,6 +88,7 @@ class CareDialogViewModel(
                 eventTime = dateUtil.now(),
                 eventTimeChanged = false,
                 glucoseUnits = units,
+                showNotesFromPreferences = showNotes,
                 siteRotationManageCgm = siteRotation
             )
         }

@@ -10,7 +10,6 @@ import androidx.core.app.NotificationCompat
 import app.aaps.core.data.configuration.Constants
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.ui.CarbSuggestionActions
-import app.aaps.core.interfaces.ui.IconsProvider
 import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.plugins.aps.R
 import dev.zacsweers.metro.AppScope
@@ -33,8 +32,7 @@ class AndroidLoopNotifier(
     private val context: Context,
     private val rh: ResourceHelper,
     private val uiInteraction: UiInteraction,
-    private val carbSuggestionActions: CarbSuggestionActions,
-    private val iconsProvider: IconsProvider
+    private val carbSuggestionActions: CarbSuggestionActions
 ) : LoopNotifier {
 
     private val notificationManager
@@ -47,11 +45,7 @@ class AndroidLoopNotifier(
             CHANNEL_ID,
             CHANNEL_ID,
             AndroidNotificationManager.IMPORTANCE_HIGH
-        ).apply {
-            setSound(null, null)
-            enableVibration(true)
-        }
-        notificationManager.deleteNotificationChannel("AAPS-OpenLoop")
+        )
         notificationManager.createNotificationChannel(channel)
     }
 
@@ -83,7 +77,7 @@ class AndroidLoopNotifier(
 
     private fun baseBuilder(title: String, text: String): NotificationCompat.Builder =
         NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(iconsProvider.getNotificationIcon())
+            .setSmallIcon(app.aaps.core.ui.R.drawable.notif_icon)
             .setContentTitle(title)
             .setContentText(text)
             .setAutoCancel(true)
@@ -93,7 +87,7 @@ class AndroidLoopNotifier(
 
     private fun ignoreAction(label: Int, fallback: String, minutes: Int, requestCode: Int) =
         NotificationCompat.Action(
-            iconsProvider.getNotificationIcon(),
+            app.aaps.core.ui.R.drawable.ic_notif_aaps,
             rh.gs(label, fallback),
             carbSuggestionActions.ignoreFor(minutes = minutes, requestCode = requestCode)
         )
@@ -112,7 +106,7 @@ class AndroidLoopNotifier(
 
     private companion object {
 
-        const val CHANNEL_ID = "AAPS-OpenLoop-Silent"
+        const val CHANNEL_ID = "AAPS-OpenLoop"
         val VIBRATE_PATTERN = longArrayOf(1000, 1000, 1000, 1000, 1000)
     }
 }

@@ -5,6 +5,7 @@ import app.aaps.core.interfaces.aps.APS
 import app.aaps.core.interfaces.aps.Sensitivity
 import app.aaps.core.interfaces.calibration.Calibration
 import app.aaps.core.interfaces.configuration.ConfigBuilder
+import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.constraints.Safety
 import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
@@ -284,6 +285,8 @@ class PluginStore(
 
     override val activeIobCobCalculator: IobCobCalculator
         get() = getSpecificPluginsListByInterface(IobCobCalculator::class).first() as IobCobCalculator
+    override val activeObjectives: Objectives?
+        get() = getSpecificPluginsListByInterface(Objectives::class).firstOrNull() as Objectives?
 
     @Suppress("UNCHECKED_CAST")
     override val firstActiveSync: Sync?

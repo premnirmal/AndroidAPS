@@ -1,5 +1,6 @@
 package app.aaps.di.metro
 
+import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.db.ProcessedTbrEbData
 import app.aaps.core.interfaces.iob.IobCobCalculator
@@ -17,6 +18,7 @@ import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.interfaces.workflow.CalculationSignalsEmitter
 import app.aaps.core.interfaces.workflow.CalculationWorkflow
 import app.aaps.core.keys.interfaces.Preferences
+import app.aaps.plugins.constraints.objectives.ObjectivesPlugin
 import app.aaps.plugins.main.iob.iobCobCalculator.IobCobCalculatorPlugin
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.BindingContainer
@@ -77,4 +79,20 @@ object MainPluginsBindings {
     @IntoMap
     @IntKey(10)
     fun iobCobCalculatorEntry(plugin: IobCobCalculatorPlugin): PluginBase = plugin
+
+    /**
+     * The `Objectives` interface, unqualified.
+     *
+     * `ObjectivesPlugin` carries `@APS` on the class for the plugin-list multibinding, and a second
+     * `@ContributesBinding` there would inherit it - the interface would then only be readable as
+     * `@APS Objectives`, which is not what a reader asks for.
+     *
+     * Metro documents the way out: put the qualifier on the bound type instead, `binding<@APS
+     * PluginBase>()`. The version pinned here rejects that form outright -
+     * `Inapplicable candidate(s): constructor(scope: KClass<*>, binding: binding<*> = ...)` - which is
+     * the same wall `SyncPluginsBindings` hits for its qualified entry. So this stays stated, and
+     * hands out the same scoped instance either way. Retry both when Metro leaves the snapshot.
+     */
+    @Provides
+    fun objectives(plugin: ObjectivesPlugin): Objectives = plugin
 }

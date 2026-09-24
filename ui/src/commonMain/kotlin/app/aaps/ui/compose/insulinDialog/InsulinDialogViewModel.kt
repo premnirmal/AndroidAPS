@@ -136,6 +136,7 @@ class InsulinDialogViewModel(
                 eatingSoonTtTarget = profileUtil.fromMgdlToUnits(preferences.ttTargetMgdl(TT.Reason.EATING_SOON), units),
                 eatingSoonTtDuration = preferences.ttDurationMinutes(TT.Reason.EATING_SOON),
                 units = units,
+                showNotesFromPreferences = preferences.get(BooleanKey.OverviewShowNotesInDialogs),
                 simpleMode = preferences.get(BooleanKey.GeneralSimpleMode),
                 isAapsClient = isAapsClient,
                 forcedRecordOnly = initialForcedRecordOnly

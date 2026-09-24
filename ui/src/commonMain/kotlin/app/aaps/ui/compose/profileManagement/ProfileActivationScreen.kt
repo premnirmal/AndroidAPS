@@ -77,6 +77,7 @@ import app.aaps.ui.UiStrings
  * @param currentPercentage Current active percentage (for reuse button)
  * @param currentTimeshiftHours Current active timeshift in hours (for reuse button)
  * @param hasReuseValues Whether reuse button should be shown
+ * @param showNotesField Whether to show the notes input field (based on BooleanKey.OverviewShowNotesInDialogs)
  * @param initialTimestamp Initial timestamp (defaults to now)
  * @param rh TextResolver for string resources
  * @param onNavigateBack Callback to navigate back
@@ -97,6 +98,7 @@ fun ProfileActivationScreen(
     currentPercentage: Int = 100,
     currentTimeshiftHours: Int = 0,
     hasReuseValues: Boolean = false,
+    showNotesField: Boolean = true,
     initialTimestamp: Long,
     rh: TextResolver,
     onNavigateBack: () -> Unit,
@@ -392,14 +394,16 @@ fun ProfileActivationScreen(
                     )
 
                     // Notes
-                    TextField(
-                        value = notes,
-                        onValueChange = { notes = it },
-                        label = { Text(stringResource(CoreUiStrings.notes_label)) },
-                        modifier = itemModifier,
-                        singleLine = false,
-                        maxLines = 3
-                    )
+                    if (showNotesField) {
+                        TextField(
+                            value = notes,
+                            onValueChange = { notes = it },
+                            label = { Text(stringResource(CoreUiStrings.notes_label)) },
+                            modifier = itemModifier,
+                            singleLine = false,
+                            maxLines = 3
+                        )
+                    }
                 }
             }
 

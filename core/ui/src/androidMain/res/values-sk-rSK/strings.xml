@@ -106,6 +106,7 @@
     <string name="format_hours">%1$.2f h</string>
     <string name="format_mins">%1$d min</string>
     <string name="value_with_unit" comment="A numeric value followed by its unit, when no dedicated value template exists. %1$s = value, %2$s = unit. Example: 120 mg/dl">%1$s %2$s</string>
+    <string name="objectives">Ciele</string>
     <string name="please_wait">Čakajte prosím...</string>
     <string name="stop">Stop</string>
     <string name="stop_pressed">STLAČENÝ STOP</string>
@@ -972,6 +973,14 @@
     <!--    Search-->
     <string name="search">Hľadať</string>
     <string name="clear">Vyčistiť</string>
+    <string name="search_category_categories">Kategórie vyhľadávania</string>
+    <string name="search_category_preferences">Nastavenie kategórii vyhľadávania</string>
+    <string name="search_category_dialogs">Dialógy</string>
+    <string name="search_category_plugins">Pluginy</string>
+    <string name="search_category_wiki">Dokumentácia</string>
+    <string name="wiki_search_offline">Vyhľadávanie v dokumntácii vyžaduje internetové pripojenie</string>
+    <string name="no_search_results">Nenašli sa žiadne výsledky</string>
+    <string name="search_plugin_disabled">Plugin %1$s je deaktivovaný</string>
     <!--    Food Management -->
     <string name="food_management">Jedlo</string>
     <string name="food_deleted">Jedlo odstránené</string>

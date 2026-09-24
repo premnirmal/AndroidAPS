@@ -208,6 +208,7 @@ class LinearCalibrationPluginTest : TestBase() {
             any<String>(),
             any<NotificationLevel>(),
             any<Int>(),
+            anyOrNull(),
             any<List<NotificationAction>>(),
             anyOrNull()
         )
@@ -229,6 +230,7 @@ class LinearCalibrationPluginTest : TestBase() {
             any<String>(),
             any<NotificationLevel>(),
             any<Int>(),
+            anyOrNull(),
             any<List<NotificationAction>>(),
             anyOrNull()
         )

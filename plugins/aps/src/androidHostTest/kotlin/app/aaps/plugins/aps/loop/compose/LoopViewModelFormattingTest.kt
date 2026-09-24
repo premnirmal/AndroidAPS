@@ -10,6 +10,8 @@ import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventLoopUpdateGui
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.DecimalFormatter
+import app.aaps.core.keys.BooleanNonKey
+import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.plugins.aps.loop.events.EventLoopSetLastRunGui
 import com.google.common.truth.Truth.assertThat
@@ -23,6 +25,7 @@ import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 /**
@@ -42,6 +45,7 @@ internal class LoopViewModelFormattingTest {
     @Mock private lateinit var rxBus: RxBus
     @Mock private lateinit var dateUtil: DateUtil
     @Mock private lateinit var aapsLogger: AAPSLogger
+    @Mock private lateinit var preferences: Preferences
     @Mock private lateinit var decimalFormatter: DecimalFormatter
 
     private val updateGuiFlow = MutableSharedFlow<EventLoopUpdateGui>()
@@ -64,7 +68,7 @@ internal class LoopViewModelFormattingTest {
     }
 
     private fun viewModel() =
-        LoopViewModel(loop, rxBus, rh, dateUtil, decimalFormatter, aapsLogger, CoroutineScope(Dispatchers.Unconfined))
+        LoopViewModel(loop, rxBus, rh, dateUtil, decimalFormatter, aapsLogger, preferences, CoroutineScope(Dispatchers.Unconfined))
 
     private fun lastRunWith(tbr: PumpEnactResult? = null, smb: PumpEnactResult? = null): Loop.LastRun =
         Loop.LastRun().apply {
@@ -270,6 +274,15 @@ internal class LoopViewModelFormattingTest {
     }
 
     // ---------------------------------------------------------------- init and events
+
+    @Test
+    fun init_marksObjectivesLoopUsed() {
+        whenever(loop.lastRun).thenReturn(null)
+
+        viewModel()
+
+        verify(preferences).put(BooleanNonKey.ObjectivesLoopUsed, true)
+    }
 
     @Test
     fun setLastRunGuiEvent_replacesWholeStateWithStatusMessage() = runTest {

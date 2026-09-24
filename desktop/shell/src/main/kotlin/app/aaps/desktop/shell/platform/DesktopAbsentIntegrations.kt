@@ -2,6 +2,7 @@ package app.aaps.desktop.shell.platform
 
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.rx.weardata.EventData
@@ -133,9 +134,9 @@ class DesktopUiInteraction(
     override val mainActivity: KClass<*> = DesktopUiInteraction::class
     override val errorHelperActivity: KClass<*> = DesktopUiInteraction::class
 
-    override fun runAlarm(status: String, title: String) {
+    override fun runAlarm(status: String, title: String, sound: AlarmSound?) {
         aapsLogger.debug(LTag.CORE, "Alarm: $title - $status")
-        notificationManager.post(NotificationId.TOAST_ALARM, status)
+        notificationManager.post(NotificationId.TOAST_ALARM, status, sound = sound)
     }
 
     override fun stopAlarm(reason: String) {

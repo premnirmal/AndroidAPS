@@ -27,6 +27,8 @@ import app.aaps.core.interfaces.rx.events.EventShowDialog
 import app.aaps.core.interfaces.rx.events.EventShowSnackbar
 import app.aaps.core.interfaces.tempTargets.toJson
 import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.keys.BooleanKey
+import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.StringNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.ui.CoreUiStrings
@@ -142,6 +144,9 @@ class TempTargetManagementViewModel(
                     if (endTime > now) endTime - now else 0L
                 }
 
+                // Check if notes field should be shown
+                val showNotes = preferences.get(BooleanKey.OverviewShowNotesInDialogs)
+
                 // Check if active TT matches a preset (same reason + target value)
                 val activePresetIndex = activeTT?.let { tt ->
                     presets.indexOfFirst { preset ->
@@ -175,6 +180,7 @@ class TempTargetManagementViewModel(
                         editorName = initialPreset?.name ?: "",
                         editorTarget = targetInUserUnits,
                         editorDuration = initialDurationMs,
+                        showNotesField = showNotes,
                         isLoading = false
                     )
                 }
@@ -202,6 +208,8 @@ class TempTargetManagementViewModel(
                     if (endTime > now) endTime - now else 0L
                 }
 
+                val showNotes = preferences.get(BooleanKey.OverviewShowNotesInDialogs)
+
                 val activePresetIndex = activeTT?.let { tt ->
                     presets.indexOfFirst { preset ->
                         preset.reason == tt.reason &&
@@ -214,7 +222,8 @@ class TempTargetManagementViewModel(
                         activeTT = activeTT,
                         activePresetIndex = activePresetIndex,
                         remainingTimeMs = remainingTime,
-                        presets = presets
+                        presets = presets,
+                        showNotesField = showNotes
                     )
                 }
             } catch (e: Exception) {
@@ -741,8 +750,10 @@ class TempTargetManagementViewModel(
                             icon = ElementType.TEMP_TARGET_MANAGEMENT.icon(),
                             onOk = {
                                 appScope.launch {
-                                    if (batchExecutor.commit(prepared.id, Sources.TTDialog, label) is ActionProgress.Applied)
+                                    if (batchExecutor.commit(prepared.id, Sources.TTDialog, label) is ActionProgress.Applied) {
+                                        if (durationMinutes == 10) preferences.put(BooleanNonKey.ObjectivesTempTargetUsed, true)
                                         withContext(Dispatchers.Main) { onSuccess() }
+                                    }
                                 }
                             }
                         )

@@ -7,6 +7,7 @@ import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventLoopUpdateGui
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.DecimalFormatter
+import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.ui.R
 import app.aaps.plugins.aps.loop.events.EventLoopSetLastRunGui
 import app.aaps.shared.tests.stubTextRefResolution
@@ -28,6 +29,7 @@ internal class LoopViewModelTest {
     @Mock private lateinit var dateUtil: DateUtil
     @Mock private lateinit var decimalFormatter: DecimalFormatter
     @Mock private lateinit var aapsLogger: AAPSLogger
+    @Mock private lateinit var preferences: Preferences
 
     private val updateGuiFlow = MutableSharedFlow<EventLoopUpdateGui>()
     private val lastRunGuiFlow = MutableSharedFlow<EventLoopSetLastRunGui>()
@@ -46,7 +48,7 @@ internal class LoopViewModelTest {
     // synchronously, so the default state settles in-line. The never-completing toFlow
     // subscriptions just park; a standalone scope has no leaked-coroutine check.
     private fun viewModel() =
-        LoopViewModel(loop, rxBus, rh, dateUtil, decimalFormatter, aapsLogger, CoroutineScope(Dispatchers.Unconfined))
+        LoopViewModel(loop, rxBus, rh, dateUtil, decimalFormatter, aapsLogger, preferences, CoroutineScope(Dispatchers.Unconfined))
 
     @Test
     fun uiState_showsNotAvailable_whenNoLastRun() {

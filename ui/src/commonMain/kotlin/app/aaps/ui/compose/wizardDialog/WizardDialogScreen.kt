@@ -888,14 +888,16 @@ internal fun WizardDialogContent(
                         }
                     }
                     // Notes
-                    TextField(
-                        value = uiState.notes,
-                        onValueChange = onNotesChange,
-                        label = { Text(stringResource(CoreUiStrings.notes_label)) },
-                        modifier = itemModifier,
-                        singleLine = false,
-                        maxLines = 3
-                    )
+                    if (uiState.showNotes) {
+                        TextField(
+                            value = uiState.notes,
+                            onValueChange = onNotesChange,
+                            label = { Text(stringResource(CoreUiStrings.notes_label)) },
+                            modifier = itemModifier,
+                            singleLine = false,
+                            maxLines = 3
+                        )
+                    }
                 }
             }
 
