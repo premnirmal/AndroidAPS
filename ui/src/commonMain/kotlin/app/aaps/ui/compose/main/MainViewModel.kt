@@ -29,6 +29,7 @@ import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.logging.UserEntryLogger
+import app.aaps.core.interfaces.nsclient.ProcessedDeviceStatusData
 import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.overview.graph.ProfileDisplayData
 import app.aaps.core.interfaces.overview.graph.RunningModeDisplayData
@@ -152,6 +153,7 @@ class MainViewModel(
     private val batchExecutor: BatchExecutor,
     private val uel: UserEntryLogger,
     private val loop: Loop,
+    private val processedDeviceStatusData: ProcessedDeviceStatusData,
     private val protectionCheck: ProtectionCheck,
     private val sceneActions: SceneActions,
     private val sceneChainTargetResolver: SceneChainResolver,
@@ -243,6 +245,7 @@ class MainViewModel(
         runningMode = cachedOverviewStatus.runningMode,
         runningModeText = getModeNameString(cachedOverviewStatus.runningMode),
         lastLoopAgeMillis = persistedLastLoopTimestamp.value?.let { (dateUtil.now() - it).coerceAtLeast(0L) },
+        algorithmReasoning = currentAlgorithmReasoning(),
         pumpEndTimeMillis = cachedOverviewStatus.pumpEndTimeMillis,
         reservoirUnits = cachedOverviewStatus.reservoirUnits
     )
@@ -302,6 +305,7 @@ class MainViewModel(
             runningModeProgress = chip.runningModeProgress,
             runningModeRecordId = chip.runningModeRecordId,
             lastLoopAgeMillis = chip.lastLoopAgeMillis,
+            algorithmReasoning = chip.algorithmReasoning,
             tbrState = chip.tbrState,
             smbEnabled = ev.smbEnabled,
             pumpEndTimeMillis = chip.pumpEndTimeMillis,
@@ -353,6 +357,19 @@ class MainViewModel(
             .launchIn(viewModelScope)
         observeQuickLaunch()
     }
+
+    /**
+     * Returns the current loop reason, or null when no loop result is available.
+     *
+     * Client builds read device status because they have no local loop run. This is not cached so
+     * the text always describes the current result.
+     */
+    private fun currentAlgorithmReasoning(): String? =
+        if (config.AAPSCLIENT) {
+            processedDeviceStatusData.getAPSResult()?.reason
+        } else {
+            loop.lastRun?.constraintsProcessed?.reason
+        }
 
     private fun refreshTimeInRangeToday() {
         timeInRangeTodayJob?.cancel()
@@ -531,6 +548,7 @@ class MainViewModel(
             runningModeProgress = rmProgress,
             runningModeRecordId = if (rmExpired) 0 else rmData?.recordId ?: 0,
             lastLoopAgeMillis = (loop.lastRun?.lastAPSRun ?: persistedLastLoop)?.let { (now - it).coerceAtLeast(0L) },
+            algorithmReasoning = currentAlgorithmReasoning(),
             tbrState = if (tbrExpired) TbrState.NONE else tbrData?.state ?: TbrState.NONE,
             pumpEndTimeMillis = if (isOverviewHydrated) livePumpEndTimeMillis else cachedOverviewStatus.pumpEndTimeMillis,
             reservoirUnits = if (isOverviewHydrated) liveReservoirUnits else cachedOverviewStatus.reservoirUnits,
@@ -1138,6 +1156,7 @@ private data class ChipState(
     val runningModeProgress: Float = 0f,
     val runningModeRecordId: Long = 0,
     val lastLoopAgeMillis: Long? = null,
+    val algorithmReasoning: String? = null,
     val tbrState: TbrState = TbrState.NONE,
     val pumpEndTimeMillis: Long? = null,
     val reservoirUnits: Double? = null,
@@ -1153,6 +1172,7 @@ private fun MainUiState.toInitialChipState() = ChipState(
     runningMode = runningMode,
     runningModeText = runningModeText,
     lastLoopAgeMillis = lastLoopAgeMillis,
+    algorithmReasoning = algorithmReasoning,
     pumpEndTimeMillis = pumpEndTimeMillis,
     reservoirUnits = reservoirUnits
 )

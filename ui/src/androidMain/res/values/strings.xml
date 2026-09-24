@@ -39,6 +39,7 @@
     <string name="trio_no_glucose_source">No CGM</string>
     <string name="trio_loop_less_than_one_minute">&lt; 1 m</string>
     <string name="trio_loop_minutes" comment="%1$d=number of minutes since the last loop. Example: 4 m">%1$d m</string>
+    <string name="trio_loop_reasoning">Algorithm reasoning</string>
     <string name="trio_reservoir_over_50">50+ U</string>
     <string name="trio_reservoir_units" comment="%1$d=whole units of insulin left in the pump. Example: 24 U">%1$d U</string>
     <string name="trio_active_adjustment" comment="%1$s=temporary target name, %2$s=target range. Example: Activity - 110 mg/dL">%1$s - %2$s</string>

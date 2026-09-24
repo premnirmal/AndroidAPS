@@ -178,6 +178,7 @@ fun TrioOverviewScreen(
         runningModeProgress = runningModeProgress,
         runningModeSceneManaged = runningModeSceneManaged,
         lastLoopAgeMillis = lastLoopAgeMillis,
+        algorithmReasoning = algorithmReasoning,
         smbEnabled = smbEnabled,
         tbrState = tbrState,
         calcProgress = calcProgress,
@@ -210,7 +211,7 @@ fun TrioOverviewScreen(
         formatDuration = formatDuration,
         modifier = modifier,
         graphContent = { chartHeight ->
-            TrioOverviewGraph(
+            GlucoseChart(
                 graphViewModel = graphViewModel,
                 height = chartHeight,
                 modifier = Modifier.fillMaxWidth()
@@ -257,6 +258,7 @@ private fun TrioOverviewContent(
     runningModeProgress: Float,
     runningModeSceneManaged: Boolean,
     lastLoopAgeMillis: Long?,
+    algorithmReasoning: String?,
     smbEnabled: Boolean,
     tbrState: TbrState,
     calcProgress: Int,
@@ -517,6 +519,7 @@ private fun TrioOverviewContent(
             runningModeSceneManaged = runningModeSceneManaged,
             smbEnabled = smbEnabled,
             tbrState = tbrState,
+            algorithmReasoning = algorithmReasoning,
             iobUiState = iobUiState,
             cobUiState = cobUiState,
             sensitivityUiState = sensitivityUiState,
@@ -616,6 +619,7 @@ private fun TrioOverviewScreenPreview() {
             runningModeProgress = 0f,
             runningModeSceneManaged = false,
             lastLoopAgeMillis = 45_000L,
+            algorithmReasoning = "Glucose is predicted to stay in range. No temp basal change is needed.",
             smbEnabled = true,
             tbrState = TbrState.HIGH,
             calcProgress = 65,
@@ -1140,6 +1144,7 @@ private fun PredictionInfoBottomSheet(
     runningModeSceneManaged: Boolean,
     smbEnabled: Boolean,
     tbrState: TbrState,
+    algorithmReasoning: String?,
     iobUiState: IobUiState,
     cobUiState: CobUiState,
     sensitivityUiState: SensitivityUiState,
@@ -1153,6 +1158,7 @@ private fun PredictionInfoBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(AapsSpacing.extraLarge),
             verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
         ) {
@@ -1182,6 +1188,18 @@ private fun PredictionInfoBottomSheet(
                 commandsAllowed = commandsAllowed,
                 modifier = Modifier.fillMaxWidth()
             )
+            algorithmReasoning
+                ?.takeIf { it.isNotBlank() }
+                ?.let { reasoning ->
+                    Text(
+                        text = stringResource(R.string.trio_loop_reasoning),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = reasoning,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
         }
     }
 }

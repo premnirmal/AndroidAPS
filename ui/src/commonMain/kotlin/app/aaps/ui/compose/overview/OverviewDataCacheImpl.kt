@@ -232,8 +232,52 @@ class OverviewDataCacheImpl(
         hydratePart("temporary basal") { updateTbrFromDatabase() }
         hydratePart("BG info") { updateBgInfoFromDatabase() }
         hydratePart("predictions") { updatePredictionsFromDatabase() }
+        hydratePart("IOB/COB graph") { hydrateIobCobGraphFromMemory() }
 
         firstFailure?.let { throw it }
+    }
+
+    /**
+     * Fill the IOB and COB curves straight away from the in-memory calculator so the graph shows
+     * them as soon as the screen opens. Without this the two series stay empty until the calculation
+     * workflow finishes its last and heaviest phase (autosens), which can take several seconds after
+     * BG and predictions are already on screen. IOB is derived from treatments and temp basals, which
+     * is cheap; COB is read from the already-computed autosens table, which is a plain lookup. The
+     * workflow later overwrites both with its full-resolution result, so we only fill in when a series
+     * is still empty to avoid downgrading a fresher workflow result.
+     */
+    private suspend fun hydrateIobCobGraphFromMemory() {
+        val needIob = _iobGraphFlow.value.iob.isEmpty()
+        val needCob = _cobGraphFlow.value.cob.isEmpty()
+        if (!needIob && !needCob) return
+        val now = dateUtil.now()
+        val fromTime = _timeRangeFlow.value?.fromTime ?: (now - Constants.GRAPH_TIME_RANGE_HOURS * T.hours(1).msecs())
+
+        val iobList = ArrayList<GraphDataPoint>()
+        val cobList = ArrayList<GraphDataPoint>()
+        var time = fromTime
+        while (time <= now) {
+            if (needIob) {
+                val profile = profileFunction.getProfile(time)
+                if (profile != null) {
+                    val iob = iobCobCalculator.calculateFromTreatmentsAndTemps(time, profile)
+                    iobList.add(GraphDataPoint(time, iob.iob))
+                }
+            }
+            if (needCob) {
+                iobCobCalculator.ads.getAutosensDataAtTime(time)?.let { autosensData ->
+                    cobList.add(GraphDataPoint(time, autosensData.cob))
+                }
+            }
+            time += T.mins(5).msecs()
+        }
+
+        if (needIob && iobList.isNotEmpty()) {
+            _iobGraphFlow.value = _iobGraphFlow.value.copy(iob = iobList)
+        }
+        if (needCob && cobList.isNotEmpty()) {
+            _cobGraphFlow.value = _cobGraphFlow.value.copy(cob = cobList)
+        }
     }
 
     private suspend fun updatePredictionsFromDatabase() {

@@ -259,7 +259,7 @@ private fun GraphInfoButton(
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun PredictionLegendBottomSheet(onDismiss: () -> Unit) {
+internal fun PredictionLegendBottomSheet(onDismiss: () -> Unit) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier

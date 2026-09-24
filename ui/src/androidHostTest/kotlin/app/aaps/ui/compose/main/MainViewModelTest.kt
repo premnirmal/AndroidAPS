@@ -5,6 +5,7 @@ import app.aaps.core.data.model.RM
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.ui.UrlOpener
 import app.aaps.core.interfaces.aps.Loop
+import app.aaps.core.interfaces.aps.APSResult
 import app.aaps.core.interfaces.automation.Automation
 import app.aaps.core.interfaces.bolus.BatchExecutor
 import app.aaps.core.interfaces.bolus.WizardExecutor
@@ -14,6 +15,7 @@ import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.UserEntryLogger
+import app.aaps.core.interfaces.nsclient.ProcessedDeviceStatusData
 import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.overview.graph.ProfileDisplayData
 import app.aaps.core.interfaces.overview.graph.RunningModeDisplayData
@@ -61,6 +63,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -88,6 +91,7 @@ internal class MainViewModelTest {
     @Mock private lateinit var batchExecutor: BatchExecutor
     @Mock private lateinit var uel: UserEntryLogger
     @Mock private lateinit var loop: Loop
+    @Mock private lateinit var processedDeviceStatusData: ProcessedDeviceStatusData
     @Mock private lateinit var protectionCheck: ProtectionCheck
     @Mock private lateinit var sceneActions: SceneActions
     @Mock private lateinit var sceneChainTargetResolver: SceneChainResolver
@@ -142,7 +146,7 @@ internal class MainViewModelTest {
         activePlugin, config, urlOpener, preferences, fabricPrivacy, rh, dateUtil,
         overviewDataCache, iobCobCalculator, profileFunction, profileUtil, constraintChecker, quickWizard,
         automation, persistenceLayer, aapsLogger, quickLaunchResolver, wizardExecutor,
-        batchExecutor, uel, loop, protectionCheck, sceneActions, sceneChainTargetResolver,
+        batchExecutor, uel, loop, processedDeviceStatusData, protectionCheck, sceneActions, sceneChainTargetResolver,
         activeSceneManager, rxBus, nsClient, visibilityContext,
         CoroutineScope(UnconfinedTestDispatcher())
     )
@@ -158,6 +162,32 @@ internal class MainViewModelTest {
         assertThat(state.runningMode).isEqualTo(RM.Mode.DISABLED_LOOP)
         assertThat(state.tempTargetState).isEqualTo(TempTargetChipState.None)
         assertThat(state.quickWizardItems).isEmpty()
+    }
+
+    @Test
+    fun `algorithm reasoning uses the local loop result`() {
+        val result = mock<APSResult> {
+            on { reason }.thenReturn("Keep basal rate")
+        }
+        whenever(config.AAPSCLIENT).thenReturn(false)
+        whenever(loop.lastRun).thenReturn(Loop.LastRun().apply { constraintsProcessed = result })
+
+        sut = createViewModel()
+
+        assertThat(sut.uiState.value.algorithmReasoning).isEqualTo("Keep basal rate")
+    }
+
+    @Test
+    fun `algorithm reasoning uses the client device status result`() {
+        val result = mock<APSResult> {
+            on { reason }.thenReturn("Reduce basal rate")
+        }
+        whenever(config.AAPSCLIENT).thenReturn(true)
+        whenever(processedDeviceStatusData.getAPSResult()).thenReturn(result)
+
+        sut = createViewModel()
+
+        assertThat(sut.uiState.value.algorithmReasoning).isEqualTo("Reduce basal rate")
     }
 
     @Test

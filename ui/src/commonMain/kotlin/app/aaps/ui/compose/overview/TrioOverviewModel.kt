@@ -25,6 +25,7 @@ data class TrioOverviewModel(
     val runningModeProgress: Float,
     val runningModeSceneManaged: Boolean,
     val lastLoopAgeMillis: Long?,
+    val algorithmReasoning: String?,
     val smbEnabled: Boolean,
     val tbrState: TbrState,
     val profileCardTempTargetStateFlow: StateFlow<TempTargetUiState>,

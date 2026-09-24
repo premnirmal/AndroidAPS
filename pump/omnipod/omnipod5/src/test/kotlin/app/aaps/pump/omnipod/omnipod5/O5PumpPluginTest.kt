@@ -10,10 +10,12 @@ import app.aaps.core.interfaces.pump.BolusProgressData
 import app.aaps.core.interfaces.pump.DetailedBolusInfo
 import app.aaps.core.interfaces.pump.PumpSync
 import app.aaps.core.interfaces.pump.PumpInsulin
+import app.aaps.core.interfaces.pump.PumpTimeRemaining
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.queue.CommandQueue
 import app.aaps.core.interfaces.queue.CustomCommand
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.O5BleManager
+import app.aaps.pump.omnipod.omnipod5.history.O5History
 import app.aaps.pump.omnipod.common.bledriver.event.PodEvent
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.ActivationProgress
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.AlarmType
@@ -36,6 +38,7 @@ import app.aaps.shared.tests.TestBaseWithProfile
 import com.google.common.truth.Truth.assertThat
 import io.reactivex.rxjava3.core.Observable
 import kotlinx.coroutines.runBlocking
+import java.time.Duration
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -65,6 +68,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
     @Mock lateinit var bleManager: O5BleManager
     @Mock lateinit var podStateManager: O5PodStateManager
+    @Mock lateinit var history: O5History
     @Mock lateinit var pumpSync: PumpSync
     @Mock lateinit var commandQueue: CommandQueue
     @Mock lateinit var bolusProgressData: BolusProgressData
@@ -76,7 +80,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
     @BeforeEach
     fun setup() {
         plugin = O5PumpPlugin(
-            aapsLogger, rh, preferences, commandQueue, bleManager, podStateManager, pumpSync,
+            aapsLogger, rh, preferences, commandQueue, bleManager, podStateManager, history, pumpSync,
             notificationManager, pumpEnactResultProvider, bolusProgressData, protectionCheck, blePreCheck, config
         )
         whenever(rh.gs(R.string.omnipod_5_error_not_enough_insulin)).thenReturn("Not enough insulin")
@@ -136,6 +140,24 @@ class O5PumpPluginTest : TestBaseWithProfile() {
         assertThat(plugin.isConnected()).isFalse()
     }
 
+    @Test
+    fun `expected end time exposes the current pod expiry`() {
+        whenever(podStateManager.podLifeInHours).thenReturn(72)
+        whenever(podStateManager.minutesSinceActivation).thenReturn(60)
+        whenever(podStateManager.lastStatusResponseReceived).thenReturn(System.currentTimeMillis())
+
+        val expected = System.currentTimeMillis() + Duration.ofHours(63).toMillis()
+
+        assertThat(plugin).isInstanceOf(PumpTimeRemaining::class.java)
+        assertThat(requireNotNull(plugin.expectedEndTimeMillis())).isWithin(10_000L).of(expected)
+    }
+
+    @Test
+    fun `expected end time is unavailable when pod expiry is unknown`() {
+        whenever(podStateManager.podLifeInHours).thenReturn(null)
+
+        assertThat(plugin.expectedEndTimeMillis()).isNull()
+    }
 
     @Test
     fun `deliverTreatment rejects carbs`() {

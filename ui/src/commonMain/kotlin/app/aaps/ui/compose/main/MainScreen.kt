@@ -158,6 +158,7 @@ fun MainScreen(
                         runningModeProgress = uiState.runningModeProgress,
                         runningModeRecordId = uiState.runningModeRecordId,
                         lastLoopAgeMillis = uiState.lastLoopAgeMillis,
+                        algorithmReasoning = uiState.algorithmReasoning,
                         tbrState = uiState.tbrState,
                         smbEnabled = uiState.smbEnabled,
                         profileCardTempTargetStateFlow = mainViewModel.profileCardTempTargetStateFlow,

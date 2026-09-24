@@ -41,6 +41,7 @@ data class MainUiState(
     val runningModeProgress: Float = 0f, // 0-1 progress for temporary modes
     val runningModeRecordId: Long = 0, // DB record ID (for scene override detection)
     val lastLoopAgeMillis: Long? = null,
+    val algorithmReasoning: String? = null,
     // Running TBR state for chip (HIGH / LOW / NONE)
     val tbrState: TbrState = TbrState.NONE,
     // SMB enabled in APS preferences — drives a small triangle marker on the running-mode chip
