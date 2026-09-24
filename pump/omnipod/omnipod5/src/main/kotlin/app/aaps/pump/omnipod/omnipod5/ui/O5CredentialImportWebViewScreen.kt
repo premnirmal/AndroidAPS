@@ -17,7 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.pump.omnipod.common.R
 
 /**
@@ -43,12 +43,12 @@ fun O5CredentialImportWebViewScreen(
 
     Column(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(AapsSpacing.large)
     ) {
         if (failed) {
             Column(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                modifier = Modifier.padding(horizontal = AapsSpacing.extraLarge),
+                verticalArrangement = Arrangement.spacedBy(AapsSpacing.large)
             ) {
                 Text(
                     text = stringResource(R.string.omnipod_5_credential_import_failed),
