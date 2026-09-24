@@ -75,12 +75,10 @@ private const val FUTURE_POSITION_FRACTION = 0.25
 private val ZOOM_CYCLE_MILLIS = listOf(12 * HOUR_MILLIS, 6 * HOUR_MILLIS, 3 * HOUR_MILLIS)
 private const val MIN_FLING_VELOCITY_PX_PER_SEC = 50f
 // Kept at 0 so the plot spans the full width and the Y-axis value labels overlay the left of the
-// plot (as in TrioOverviewGraph) instead of sitting in a reserved blank strip. The gutter term is
-// left in the layout maths as the plot origin in case a non-zero gutter is ever wanted again.
+// plot. The gutter term is left in the layout maths as the plot origin in case a non-zero gutter is ever wanted again.
 private val LEFT_GUTTER = 0.dp
 // Small inset so the Y-axis value labels are not flush against the very left edge. The labels are
-// drawn on top of the plot (as in TrioOverviewGraph) rather than in a reserved gutter, so there is
-// no blank strip on the left.
+// drawn on top of the plot so there is no blank strip on the left.
 private val Y_LABEL_INSET = 2.dp
 private val BOTTOM_LABEL_GAP = 4.dp
 private val BOTTOM_SAFETY_MARGIN = 6.dp
@@ -229,7 +227,7 @@ fun GlucoseChart(
     var inspectX by remember { mutableStateOf<Float?>(null) }
     // A tap picks the nearest reading or bolus and keeps it selected until the user taps elsewhere.
     var tapSelection by remember { mutableStateOf<ChartTapSelection?>(null) }
-    // Info button opens the prediction/gesture legend, same as the original TrioOverviewGraph.
+    // Info button opens the prediction/gesture legend
     var showPredictionInfo by remember { mutableStateOf(false) }
 
     val leftGutterPx = with(density) { LEFT_GUTTER.toPx() }
@@ -456,7 +454,7 @@ fun GlucoseChart(
                 return glucoseBottom - (((clamped - yMin) / ySpan).toFloat()) * glucoseChartHeight
             }
 
-            // Target BG range as a light translucent green band (as in the original TrioOverviewGraph).
+            // Target BG range as a light translucent green band .
             val targetTop = yFor(highMark)
             val targetBottom = yFor(lowMark)
             drawRect(
@@ -481,25 +479,24 @@ fun GlucoseChart(
                 yValue += yStep
             }
 
-            // Dashed low/high target lines.
-            val dash = PathEffect.dashPathEffect(floatArrayOf(12f, 8f))
-            drawLine(
-                color = lowColor,
-                start = Offset(leftGutter, yFor(lowMark)),
-                end = Offset(size.width, yFor(lowMark)),
-                strokeWidth = 1.5.dp.toPx(),
-                pathEffect = dash,
-            )
-            drawLine(
-                color = highColor,
-                start = Offset(leftGutter, yFor(highMark)),
-                end = Offset(size.width, yFor(highMark)),
-                strokeWidth = 1.5.dp.toPx(),
-                pathEffect = dash,
-            )
+            // // Dashed low/high target lines.
+            // val dash = PathEffect.dashPathEffect(floatArrayOf(12f, 8f))
+            // drawLine(
+            //     color = lowColor,
+            //     start = Offset(leftGutter, yFor(lowMark)),
+            //     end = Offset(size.width, yFor(lowMark)),
+            //     strokeWidth = 1.5.dp.toPx(),
+            //     pathEffect = dash,
+            // )
+            // drawLine(
+            //     color = highColor,
+            //     start = Offset(leftGutter, yFor(highMark)),
+            //     end = Offset(size.width, yFor(highMark)),
+            //     strokeWidth = 1.5.dp.toPx(),
+            //     pathEffect = dash,
+            // )
 
-            // Time grid lines; spacing adapts to keep lines roughly a finger apart, like the
-            // original TrioOverviewGraph, so a zoomed-in chart shows more lines.
+            // Time grid lines; spacing adapts to keep lines roughly a finger apart
             val tickIntervalMillis = chooseTimeGridInterval(viewportDurationMillis, chartWidth)
             var tick = (viewportStartMillis / tickIntervalMillis) * tickIntervalMillis
             if (tick < viewportStartMillis) tick += tickIntervalMillis

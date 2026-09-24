@@ -1192,6 +1192,7 @@ private fun PredictionInfoBottomSheet(
                 ?.takeIf { it.isNotBlank() }
                 ?.let { reasoning ->
                     Text(
+                        modifier = Modifier.padding(top = 4.dp),
                         text = stringResource(R.string.trio_loop_reasoning),
                         style = MaterialTheme.typography.titleMedium
                     )
