@@ -26,7 +26,6 @@ data class InsulinDialogUiState(
     val eatingSoonTtTarget: Double = 0.0,
     val eatingSoonTtDuration: Int = 0,
     val units: GlucoseUnit = GlucoseUnit.MGDL,
-    val showNotesFromPreferences: Boolean = false,
     val simpleMode: Boolean = true,
     val isAapsClient: Boolean = false,
     val forcedRecordOnly: Boolean = false

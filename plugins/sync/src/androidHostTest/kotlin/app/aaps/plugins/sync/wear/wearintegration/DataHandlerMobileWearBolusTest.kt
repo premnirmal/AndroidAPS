@@ -428,7 +428,7 @@ class DataHandlerMobileWearBolusTest : TestBaseWithProfile() {
         // Delivery itself is not racy: the collector subscribes UNDISPATCHED, so it is registered
         // before send() is reached.
         rxBus.send(EventData.SnoozeAlert(0L))
-        verify(uiInteraction, timeout(2000)).stopAlarm("Muted from wear")
+        verify(uiInteraction, timeout(2000)).stopAlarm("Dismissed from wear")
     }
     @Test fun `onEvent dispatches a posted ActionBolusPreCheck to the suspend handler`() {
         // onEvent wraps the handler in rxCompletable, which runs the coroutine off the posting thread —

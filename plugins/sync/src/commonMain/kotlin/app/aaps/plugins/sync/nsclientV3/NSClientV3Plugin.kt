@@ -36,7 +36,6 @@ import app.aaps.core.interfaces.sync.Sync
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.keys.BooleanKey
-import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.LongNonKey
 import app.aaps.core.keys.StringKey
@@ -789,7 +788,6 @@ class NSClientV3Plugin(
                 result.identifier?.let {
                     dataPair.value.ids.nightscoutId = it
                     storeDataForDb.addToNsIdDeviceStatuses(dataPair.value)
-                    preferences.put(BooleanNonKey.ObjectivesPumpStatusIsAvailableInNS, true)
                 }
                 slowDown()
                 return true

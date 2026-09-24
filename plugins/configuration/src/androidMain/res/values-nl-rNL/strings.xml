@@ -28,7 +28,6 @@
     <string name="setupwizard_sensitivity_url">https://wiki.aaps.app/nl/latest/DailyLifeWithAaps/SensitivityDetectionAndCob.html</string>
     <string name="setupwizard_pump_waiting_for_riley_link_connection">Configureer uw RileyLink hieronder. Na het selecteren van een RileyLink, kun je doorgaan zodra de RileyLink status \"Verbonden\" is. Dit kan even duren.\n</string>
     <string name="setupwizard_pump_pump_not_initialized"><b>Opmerking:</b> Je kunt doorgaan zodra de pomp is ingesteld.\n</string>
-    <string name="startobjective">Start je eerste Doel</string>
     <string name="setupwizard_pump_riley_link_status">RileyLink Status:</string>
     <string name="readstatus">Lees status</string>
     <!-- Provider-agnostic cloud export/import strings -->

@@ -76,7 +76,7 @@ fun MaintenanceBottomSheet(
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface
     ) {
-        MaintenanceBottomSheetContent(
+        MaintenanceContent(
             onDismiss = onDismiss,
             onLogSettingsClick = onLogSettingsClick,
             onSendLogsClick = onSendLogsClick,
@@ -106,7 +106,7 @@ fun MaintenanceBottomSheet(
  * @see MaintenanceBottomSheetContentPreview
  */
 @Composable
-internal fun MaintenanceBottomSheetContent(
+internal fun MaintenanceContent(
     onDismiss: () -> Unit = {},
     onLogSettingsClick: () -> Unit = {},
     onSendLogsClick: () -> Unit = {},
@@ -127,7 +127,8 @@ internal fun MaintenanceBottomSheetContent(
     onToggleLogCloud: (Boolean) -> Unit = {},
     onToggleCsvLocal: (Boolean) -> Unit = {},
     onToggleCsvCloud: (Boolean) -> Unit = {},
-    isDirectoryAccessGranted: Boolean = false
+    isDirectoryAccessGranted: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
     MaterialTheme.colorScheme.error
@@ -136,7 +137,7 @@ internal fun MaintenanceBottomSheetContent(
     val hasCloudCredentials = exportConfig?.hasCloudCredentials == true
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .consumeOverscroll()
             .verticalScroll(rememberScrollState())
             .padding(bottom = 24.dp)

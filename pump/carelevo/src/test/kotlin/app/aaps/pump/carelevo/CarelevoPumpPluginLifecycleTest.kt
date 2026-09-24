@@ -24,7 +24,6 @@ import app.aaps.core.interfaces.queue.CommandQueue
 import app.aaps.core.interfaces.queue.CustomCommand
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.AapsSchedulers
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.sharedPreferences.KeyValueStore
 import app.aaps.core.interfaces.sharedPreferences.SP
 import app.aaps.core.interfaces.ui.IconsProvider
@@ -821,7 +820,7 @@ class CarelevoPumpPluginLifecycleTest {
 
         alarmHandler().invoke(emptyList())
 
-        verify(uiInteraction, never()).runAlarm(any(), any(), any())
+        verify(uiInteraction, never()).runAlarm(any(), any())
         verify(carelevoAlarmNotifier).showTopNotification(eq(emptyList()))
     }
 
@@ -832,7 +831,7 @@ class CarelevoPumpPluginLifecycleTest {
         alarmHandler().invoke(listOf(alarm(AlarmCause.ALARM_NOTICE_LGS_START)))
 
         verify(carelevoAlarmNotifier).showTopNotification(any())
-        verify(uiInteraction, never()).runAlarm(any(), any(), any())
+        verify(uiInteraction, never()).runAlarm(any(), any())
     }
 
     @Test
@@ -845,7 +844,7 @@ class CarelevoPumpPluginLifecycleTest {
         // Critical (WARNING/ALERT tier) alarms additionally escalate through the shared full-screen
         // alarm — see handleAlarms KDoc. Sound/full-screen wake-up alone does not clear the alarm;
         // the top-notification card's own action button does that (CarelevoAlarmNotifier).
-        verify(uiInteraction).runAlarm(any(), any(), eq(AlarmSound.ERROR))
+        verify(uiInteraction).runAlarm(any(), any())
     }
 
     @Test
@@ -855,7 +854,7 @@ class CarelevoPumpPluginLifecycleTest {
         alarmHandler().invoke(listOf(alarm(AlarmCause.ALARM_ALERT_OUT_OF_INSULIN)))
 
         verify(carelevoAlarmNotifier).showTopNotification(any())
-        verify(uiInteraction).runAlarm(any(), any(), eq(AlarmSound.ERROR))
+        verify(uiInteraction).runAlarm(any(), any())
     }
 
     @Test
@@ -871,7 +870,7 @@ class CarelevoPumpPluginLifecycleTest {
 
         verify(carelevoAlarmNotifier).showTopNotification(any())
         // Only the critical member rings the shared alarm — still exactly once per call.
-        verify(uiInteraction).runAlarm(any(), any(), any())
+        verify(uiInteraction).runAlarm(any(), any())
     }
 
     @Test
@@ -887,7 +886,7 @@ class CarelevoPumpPluginLifecycleTest {
         // The card re-posts every time (that's how the user always sees current state)...
         verify(carelevoAlarmNotifier, times(3)).showTopNotification(eq(alarms))
         // ...but the same still-active id must not re-ring the shared alarm on every reconnect poll.
-        verify(uiInteraction, times(1)).runAlarm(any(), any(), any())
+        verify(uiInteraction, times(1)).runAlarm(any(), any())
     }
 
     @Test
@@ -905,7 +904,7 @@ class CarelevoPumpPluginLifecycleTest {
 
         verify(carelevoAlarmNotifier, times(2)).showTopNotification(any())
         // "a" only rings once (already seen); "b" is new on the second call → 2 rings total.
-        verify(uiInteraction, times(2)).runAlarm(any(), any(), any())
+        verify(uiInteraction, times(2)).runAlarm(any(), any())
     }
 
     @Test
@@ -921,7 +920,7 @@ class CarelevoPumpPluginLifecycleTest {
         verify(carelevoAlarmNotifier, times(3)).showTopNotification(any())
         // Dropping out of the incoming set (resolved/acknowledged) clears the dedup id, so the same id
         // recurring later is treated as new again — rings twice (first appearance + recurrence).
-        verify(uiInteraction, times(2)).runAlarm(any(), any(), any())
+        verify(uiInteraction, times(2)).runAlarm(any(), any())
     }
 
     @Test
@@ -938,7 +937,7 @@ class CarelevoPumpPluginLifecycleTest {
         // Both "a" and "b" are new on the first call, but only ONE ring per handleAlarms invocation
         // (the first fresh id) — matching EOPatch-style "announce one, the card lists the rest".
         // The second call has no fresh id ("a" already seen), so no additional ring.
-        verify(uiInteraction, times(1)).runAlarm(any(), any(), any())
+        verify(uiInteraction, times(1)).runAlarm(any(), any())
     }
 
     // ---- foreground refresh ---------------------------------------------------------------------

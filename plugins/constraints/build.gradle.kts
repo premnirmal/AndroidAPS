@@ -8,8 +8,8 @@ plugins {
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.metro)
     // Restated from all-open-dependencies, which applies com.android.library and so cannot be used
-    // here. SntpClient is @OpenForTesting and its test mocks it, which needs the class to be open in
-    // a release build without opening it in the source.
+    // here. StorageConstraintPlugin is @OpenForTesting and its test mocks it, which needs the class
+    // to be open in a release build without opening it in the source.
     kotlin("plugin.allopen")
 }
 
@@ -21,8 +21,8 @@ allOpen {
 // Metro's @Qualifier - ConstraintsBucketsTest is the guard.
 
 // Generates ConstraintsStrings (commonMain) and ConstraintsStringIds (androidMain) from this module's
-// res/values, the same generator the other plugins use. The objectives and exam text is the bulk of
-// it. The strings themselves do not move, and AAPT keeps resolving them on Android exactly as before.
+// res/values, the same generator the other plugins use. The strings themselves do not move, and AAPT
+// keeps resolving them on Android exactly as before.
 val generateConstraintsStrings = tasks.register<GenerateKeyStringsTask>("generateConstraintsStrings") {
     resDir.set(layout.projectDirectory.dir("src/androidMain/res"))
     packageName.set("app.aaps.plugins.constraints")
@@ -64,16 +64,9 @@ kotlin {
     // plain jvm() target, so no special target name is needed.
     jvm()
 
-    // Android and desktop share what is plain JVM - the SNTP client. Applied explicitly, because
-    // the manual dependsOn below would otherwise switch the automatic hierarchy off and silently
-    // unwire iosMain.
     applyDefaultHierarchyTemplate()
 
     sourceSets {
-        val jvmSharedMain = create("jvmSharedMain") { dependsOn(commonMain.get()) }
-        androidMain.get().dependsOn(jvmSharedMain)
-        jvmMain.get().dependsOn(jvmSharedMain)
-
         // What ConstraintsCheckerImpl needs. androidMain inherits these, so the rest of the module
         // keeps compiling unchanged; only the modules no common file uses yet stay android only.
         commonMain {

@@ -12,7 +12,6 @@ import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.di.PumpDriver
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
 import app.aaps.core.interfaces.notifications.NotificationManager
@@ -221,8 +220,7 @@ class OmnipodDashPumpPlugin(
                 if (podStateManager.isSuspended) {
                     showNotification(
                         NotificationId.OMNIPOD_POD_SUSPENDED,
-                        rh.gs(R.string.insulin_delivery_suspended),
-                        AlarmSound.BOLUS_ERROR
+                        rh.gs(R.string.insulin_delivery_suspended)
                     )
                 } else {
                     notificationManager.dismiss(NotificationId.OMNIPOD_POD_SUSPENDED)
@@ -398,8 +396,7 @@ class OmnipodDashPumpPlugin(
                     if (!commandQueue.isCustomCommandInQueue(CommandDeactivatePod::class)) {
                         showNotification(
                             NotificationId.OMNIPOD_POD_FAULT,
-                            it.toString(),
-                            AlarmSound.BOLUS_ERROR
+                            it.toString()
                         )
                     }
                     pumpSync.insertAnnouncement(
@@ -483,7 +480,6 @@ class OmnipodDashPumpPlugin(
                 notifyOnUnconfirmed(
                     NotificationId.FAILED_UPDATE_PROFILE,
                     rh.gs(R.string.suspend_delivery_is_unconfirmed),
-                    AlarmSound.BOLUS_ERROR,
                     level = NotificationLevel.IMPORTANT
                 )
             }
@@ -717,13 +713,11 @@ class OmnipodDashPumpPlugin(
                     notifyOnUnconfirmed(
                         NotificationId.OMNIPOD_UNCERTAIN_SMB,
                         "Unable to verify whether SMB bolus ($requestedBolusAmount U) succeeded. " +
-                            "Refresh pod status to confirm or deny this command.",
-                        AlarmSound.BOLUS_ERROR
+                            "Refresh pod status to confirm or deny this command."
                     )
                 } else {
                     if (podStateManager.activeCommand != null) {
-                        val sound = if (hasBolusErrorBeepEnabled()) AlarmSound.BOLUS_ERROR else null
-                        showErrorDialog(rh.gs(R.string.bolus_delivery_status_uncertain), sound)
+                        showErrorDialog(rh.gs(R.string.bolus_delivery_status_uncertain))
                     }
                 }
             }.toSingle {
@@ -925,7 +919,6 @@ class OmnipodDashPumpPlugin(
             notifyOnUnconfirmed(
                 NotificationId.OMNIPOD_TBR_ALERTS,
                 rh.gs(R.string.setting_temp_basal_might_have_basal_failed),
-                AlarmSound.BOLUS_ERROR,
             )
         }.toPumpEnactResultImpl()
 
@@ -983,7 +976,6 @@ class OmnipodDashPumpPlugin(
                     notifyOnUnconfirmed(
                         NotificationId.OMNIPOD_TBR_ALERTS,
                         rh.gs(R.string.cancelling_temp_basal_might_have_failed),
-                        AlarmSound.BOLUS_ERROR,
                     )
                 }
             }
@@ -1005,9 +997,6 @@ class OmnipodDashPumpPlugin(
     private fun hasBasalBeepEnabled(): Boolean =
         preferences.get(OmnipodBooleanPreferenceKey.BasalBeepsEnabled)
 
-    private fun hasBolusErrorBeepEnabled(): Boolean =
-        preferences.get(OmnipodBooleanPreferenceKey.SoundUncertainBolusNotification)
-
     override suspend fun cancelTempBasal(enforceNew: Boolean): PumpEnactResult {
         if (!podStateManager.tempBasalActive &&
             pumpSync.expectedPumpState().temporaryBasal == null
@@ -1023,15 +1012,18 @@ class OmnipodDashPumpPlugin(
             notifyOnUnconfirmed(
                 NotificationId.OMNIPOD_TBR_ALERTS,
                 rh.gs(R.string.cancel_temp_basal_result_is_uncertain),
-                AlarmSound.BOLUS_ERROR, // TODO: add setting for this
             )
         }.toPumpEnactResultImpl()
     }
 
-    private fun notifyOnUnconfirmed(notificationId: NotificationId, msg: String, sound: AlarmSound?, level: NotificationLevel = NotificationLevel.IMPORTANT) {
+    private fun notifyOnUnconfirmed(
+        notificationId: NotificationId,
+        msg: String,
+        level: NotificationLevel = NotificationLevel.IMPORTANT
+    ) {
         if (podStateManager.activeCommand != null) {
             aapsLogger.debug(LTag.PUMP, "Notification for active command: ${podStateManager.activeCommand}")
-            showNotification(notificationId, msg, sound, level = level)
+            showNotification(notificationId, msg, level = level)
         }
     }
 
@@ -1146,7 +1138,6 @@ class OmnipodDashPumpPlugin(
                 notifyOnUnconfirmed(
                     NotificationId.FAILED_UPDATE_PROFILE,
                     rh.gs(R.string.unconfirmed_resumedelivery_command_please_refresh_pod_status),
-                    AlarmSound.BOLUS_ERROR,
                     level = NotificationLevel.IMPORTANT
                 )
             }.toPumpEnactResultImpl()
@@ -1521,8 +1512,7 @@ class OmnipodDashPumpPlugin(
         if (tbr != null && podStateManager.deliveryStatus?.basalActive() == true) {
             aapsLogger.error(LTag.PUMP, "AAPS expected a TBR running but pump has no TBR running! AAPS: ${expectedState.temporaryBasal} Pump: ${podStateManager.deliveryStatus}")
             // Alert user
-            val sound = if (hasBolusErrorBeepEnabled()) AlarmSound.BOLUS_ERROR else null
-            showErrorDialog(rh.gs(R.string.temp_basal_out_of_sync), sound)
+            showErrorDialog(rh.gs(R.string.temp_basal_out_of_sync))
             // Sync stopped basal with AAPS
             val ret = pumpSync.syncStopTemporaryBasalWithPumpId(
                 System.currentTimeMillis(), // Note: It would be nice if TBR end could be estimated, but this will add a lot of complexity
@@ -1535,8 +1525,7 @@ class OmnipodDashPumpPlugin(
         } else if (tbr == null && podStateManager.deliveryStatus?.tempBasalActive() == true) {
             aapsLogger.error(LTag.PUMP, "AAPS expected no TBR running but pump has a TBR running! AAPS: ${expectedState.temporaryBasal} Pump: ${podStateManager.deliveryStatus}")
             // Alert user
-            val sound = if (hasBolusErrorBeepEnabled()) AlarmSound.BOLUS_ERROR else null
-            showErrorDialog(rh.gs(R.string.temp_basal_out_of_sync), sound)
+            showErrorDialog(rh.gs(R.string.temp_basal_out_of_sync))
             // If this is reached is reached there is probably a something wrong with the time (maybe it has changed?).
             // No way to calculate the TBR end time and update pumpSync properly.
             // Cancel TBR running on Pump
@@ -1548,26 +1537,17 @@ class OmnipodDashPumpPlugin(
         }
     }
 
-    private fun showErrorDialog(message: String, sound: AlarmSound?) {
-        uiInteraction.runAlarm(message, rh.gs(app.aaps.core.ui.R.string.error), sound)
+    private fun showErrorDialog(message: String) {
+        uiInteraction.runAlarm(message, rh.gs(app.aaps.core.ui.R.string.error))
     }
 
-    private fun showNotification(id: NotificationId, message: String, sound: AlarmSound?, level: NotificationLevel = id.defaultLevel) {
+    private fun showNotification(id: NotificationId, message: String, level: NotificationLevel = id.defaultLevel) {
         notificationManager.post(
             id,
             message,
-            level = level,
-            sound = if (sound != null && soundEnabledForNotificationType(id)) sound else null
+            level = level
         )
     }
-
-    private fun soundEnabledForNotificationType(notificationType: NotificationId): Boolean =
-        when (notificationType) {
-            NotificationId.OMNIPOD_TBR_ALERTS    -> preferences.get(OmnipodBooleanPreferenceKey.SoundUncertainTbrNotification)
-            NotificationId.OMNIPOD_UNCERTAIN_SMB -> preferences.get(OmnipodBooleanPreferenceKey.SoundUncertainSmbNotification)
-            NotificationId.OMNIPOD_POD_SUSPENDED -> preferences.get(DashBooleanPreferenceKey.SoundDeliverySuspendedNotification)
-            else                                 -> true
-        }
 
     override fun clearAllTables() = dashHistoryDatabase.clearAllTables()
 
@@ -1598,17 +1578,6 @@ class OmnipodDashPumpPlugin(
                     OmnipodIntPreferenceKey.ExpirationAlarmHours,
                     OmnipodBooleanPreferenceKey.LowReservoirAlert,
                     OmnipodIntPreferenceKey.LowReservoirAlertUnits
-                )
-            ),
-            // Notifications subscreen
-            PreferenceSubScreenDef(
-                key = "omnipod_dash_notifications",
-                titleResId = app.aaps.pump.omnipod.common.R.string.omnipod_common_preferences_category_notifications,
-                items = listOf(
-                    OmnipodBooleanPreferenceKey.SoundUncertainTbrNotification,
-                    OmnipodBooleanPreferenceKey.SoundUncertainSmbNotification,
-                    OmnipodBooleanPreferenceKey.SoundUncertainBolusNotification,
-                    DashBooleanPreferenceKey.SoundDeliverySuspendedNotification
                 )
             )
         ),

@@ -1,6 +1,5 @@
 package app.aaps.di.metro
 
-import app.aaps.plugins.constraints.objectives.compose.ObjectivesViewModel
 import app.aaps.plugins.sync.nsclientV3.clientcontrol.compose.AuthorizedClientsViewModel
 import app.aaps.plugins.sync.nsclientV3.clientcontrol.compose.PairWithMasterViewModel
 import app.aaps.plugins.sync.nsclientV3.compose.NSClientViewModel
@@ -23,11 +22,6 @@ import org.junit.jupiter.api.Test
  * moment the screen opens, with "no binding for view model", which is the worst place to find out.
  */
 class ContributedViewModelsTest {
-
-    @Test
-    fun `the objectives view model is contributed to the root graph`() {
-        assertThat(testRoot().viewModelProviders.keys).contains(ObjectivesViewModel::class)
-    }
 
     @Test
     fun `every sync view model reaches the factory`() {
@@ -71,7 +65,7 @@ class ContributedViewModelsTest {
         // A view model holds one screen's state. Scoping it would hand the next screen the previous
         // screen's state, and the annotation that does that is a single word.
         val root = testRoot()
-        val provider = root.viewModelProviders.getValue(ObjectivesViewModel::class)
+        val provider = root.viewModelProviders.getValue(NSClientViewModel::class)
         assertThat(provider()).isNotSameInstanceAs(provider())
     }
 }

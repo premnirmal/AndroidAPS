@@ -11,7 +11,6 @@ import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.insulin.InsulinType
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
@@ -24,7 +23,6 @@ import app.aaps.core.interfaces.source.NSClientSource
 import app.aaps.core.interfaces.sync.NsClient
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.keys.BooleanKey
-import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.LongNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.TextRef
@@ -98,9 +96,6 @@ class NsIncomingDataProcessor(
      * @return true if there was an accepted SGV
      */
     fun processSgvs(sgvs: Any, doFullSync: Boolean): Boolean {
-        // Objective0
-        preferences.put(BooleanNonKey.ObjectivesBgIsAvailableInNs, true)
-
         if (!nsClientSource.isEnabled() && !preferences.get(BooleanKey.NsClientAcceptCgmData) && !doFullSync) return false
 
         var latestDateInReceivedData: Long = 0
@@ -217,7 +212,6 @@ class NsIncomingDataProcessor(
                                         id = NotificationId.NS_ANNOUNCEMENT,
                                         text = therapyEvent.note ?: "",
                                         validTo = dateUtil.now() + T.mins(60).msecs(),
-                                        sound = AlarmSound.ALARM,
                                         actions = listOf(NotificationAction(CoreUiStrings.snooze) { })
                                     )
                             }

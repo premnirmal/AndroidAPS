@@ -17,7 +17,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
-/** Robolectric composable test for [MaintenanceBottomSheetContent] (all-default params): renders the
+/** Robolectric composable test for [MaintenanceContent] (all-default params): renders the
  *  file-management section + rows and fires the Log-settings row callback — headless JVM, no emulator. */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -42,7 +42,7 @@ class MaintenanceBottomSheetContentTest {
         var logSettingsClicked = false
         compose.setContent {
             MaterialTheme {
-                MaintenanceBottomSheetContent(onLogSettingsClick = { logSettingsClicked = true })
+                MaintenanceContent(onLogSettingsClick = { logSettingsClicked = true })
             }
         }
 

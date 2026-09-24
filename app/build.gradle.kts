@@ -125,6 +125,7 @@ android {
         buildConfigField("String", "REMOTE", "\"${generateGitRemote()}\"")
         buildConfigField("String", "HEAD", "\"${generateGitBuild()}\"")
         buildConfigField("String", "COMMITTED", "\"${allCommitted()}\"")
+        buildConfigField("boolean", "FIREBASE_ENABLED", "true")
 
         // Runner for instrumentation tests in this module.
         testInstrumentationRunner = "app.aaps.runners.AapsTestRunner"
@@ -136,10 +137,10 @@ android {
             isDefault = true
             applicationId = "info.nightscout.androidaps"
             dimension = "standard"
-            resValue("string", "app_name", "AAPS")
+            resValue("string", "app_name", "Trio")
             versionName = Versions.appVersion
-            manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher"
-            manifestPlaceholders["appIconRound"] = "@mipmap/ic_launcher_round"
+            manifestPlaceholders["appIcon"] = "@drawable/ic_launcher"
+            manifestPlaceholders["appIconRound"] = "@drawable/ic_launcher"
         }
         create("pumpcontrol") {
             applicationId = "info.nightscout.aapspumpcontrol"
@@ -185,8 +186,12 @@ android {
 
 
     sourceSets {
-        getByName("aapsclient2") { kotlin.directories.add("src/aapsclient/kotlin") }
-        getByName("aapsclient3") { kotlin.directories.add("src/aapsclient/kotlin") }
+        getByName("main") { kotlin.directories.add("src/androidaps/kotlin") }
+        getByName("full") { kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/withPumps/kotlin")) }
+        getByName("pumpcontrol") { kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/withPumps/kotlin")) }
+        getByName("aapsclient") { kotlin.directories.add("src/aaps/kotlin") }
+        getByName("aapsclient2") { kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/aapsclient/kotlin")) }
+        getByName("aapsclient3") { kotlin.directories.addAll(listOf("src/aaps/kotlin", "src/aapsclient/kotlin")) }
 
         // Instrumented tests that drive one pump, added only where that pump is in the build. An e2e
         // test for a Dana emulator has nothing to test without :pump:dana:danar, so it should not compile
@@ -237,6 +242,8 @@ dependencies {
     implementation(project(":database:persistence"))
     implementation(project(":pump:virtual"))
     implementation(project(":workflow"))
+    implementation(libs.androidx.car.app)
+    implementation(libs.androidx.core)
 
     // Pump drivers — only for full + pumpcontrol flavors. Derived from the :pump:* modules included
     // in settings.gradle (single source of truth) minus one exception:
@@ -260,7 +267,6 @@ dependencies {
             "fullImplementation"(project(it.path))
             "pumpcontrolImplementation"(project(it.path))
         }
-
     implementation(libs.androidx.lifecycle.process)
 
     testImplementation(project(":shared:tests"))

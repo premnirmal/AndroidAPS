@@ -9,7 +9,7 @@ import app.aaps.core.interfaces.maintenance.ExportConfig
 @Composable
 internal fun MaintenanceBottomSheetContentPreview() {
     MaterialTheme {
-        MaintenanceBottomSheetContent(
+        MaintenanceContent(
             exportConfig = ExportConfig(
                 isCloudActive = true,
                 isCloudError = false,

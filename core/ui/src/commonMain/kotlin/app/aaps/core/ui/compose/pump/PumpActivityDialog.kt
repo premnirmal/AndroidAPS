@@ -45,7 +45,7 @@ import app.aaps.core.ui.compose.stringResource
 @Composable
 fun PumpActivityDialog(
     bolusState: BolusProgressState?,
-    pumpStatus: String,
+    pumpStatus: String?,
     queueStatus: AnnotatedString?,
     isModal: Boolean,
     onStop: () -> Unit,
@@ -100,7 +100,7 @@ fun PumpActivityDialog(
 @Composable
 internal fun PumpActivityCard(
     bolusState: BolusProgressState?,
-    pumpStatus: String,
+    pumpStatus: String?,
     queueStatus: AnnotatedString?,
     onStop: () -> Unit,
     onDismiss: () -> Unit
@@ -130,7 +130,7 @@ internal fun PumpActivityCard(
             val hideStatus = bolusState != null && bolusState.percent > 0
 
             // Pump status section
-            if (!hideStatus && pumpStatus.isNotEmpty()) {
+            if (!hideStatus && !pumpStatus.isNullOrEmpty()) {
                 if (bolusState != null) Spacer(modifier = Modifier.height(AapsSpacing.extraLarge))
                 Text(
                     text = pumpStatus,

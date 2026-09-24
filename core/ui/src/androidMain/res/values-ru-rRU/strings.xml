@@ -55,7 +55,6 @@
     <string name="goingtodeliver">Будет подано %1$.2f ед инс</string>
     <string name="androidaps_start">AAPS запущен</string>
     <string name="format_hours">%1$.2f ч</string>
-    <string name="objectives">Цели</string>
     <string name="please_wait">Подождите…</string>
     <string name="stop">Стоп</string>
     <string name="invalid_profile">Недопустимый профиль!</string>

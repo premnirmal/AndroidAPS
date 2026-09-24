@@ -44,7 +44,6 @@ import app.aaps.ui.UiStrings
  * @param eventTime Activation timestamp
  * @param eventTimeChanged Whether user modified the activation time
  * @param notes Activation notes
- * @param showNotesField Whether notes field should be shown
  * @param units Current glucose units
  * @param rh Resource helper
  * @param onNameChange Callback when name changes
@@ -64,7 +63,6 @@ fun TempTargetEditor(
     eventTime: Long,
     eventTimeChanged: Boolean,
     notes: String,
-    showNotesField: Boolean,
     units: GlucoseUnit,
     rh: TextResolver,
     onNameChange: (String) -> Unit,
@@ -199,17 +197,15 @@ fun TempTargetEditor(
             )
         }
 
-        // Notes field (conditional)
-        if (showNotesField) {
-            OutlinedTextField(
-                value = notes,
-                onValueChange = onNotesChange,
-                label = { Text(stringResource(CoreUiStrings.notes_label)) },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 2,
-                maxLines = 4,
-                colors = OutlinedTextFieldDefaults.colors()
-            )
-        }
+        // Notes field
+        OutlinedTextField(
+            value = notes,
+            onValueChange = onNotesChange,
+            label = { Text(stringResource(CoreUiStrings.notes_label)) },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 2,
+            maxLines = 4,
+            colors = OutlinedTextFieldDefaults.colors()
+        )
     }
 }

@@ -3,7 +3,6 @@ package app.aaps.implementation.notifications
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.AapsNotification
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
@@ -18,7 +17,6 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -37,10 +35,6 @@ class CommonNotificationManagerTest {
     private class RecordingPlatform : SystemNotificationPlatform {
 
         val calls = mutableListOf<String>()
-        var audibleKey: Int? = null
-        var audibleSound: AlarmSound? = null
-        var audibleCallCount = 0
-
         /** The last notification handed over, so tests can assert on fields Android decides with. */
         var lastShown: AapsNotification? = null
 
@@ -56,13 +50,6 @@ class CommonNotificationManagerTest {
 
         override fun cancelAll() {
             calls.add("cancelAll")
-        }
-
-        override fun setAudibleAlarm(instanceKey: Int?, sound: AlarmSound?) {
-            audibleKey = instanceKey
-            audibleSound = sound
-            audibleCallCount++
-            calls.add("audible:$instanceKey")
         }
 
         override fun onDismissed(callback: (Int) -> Unit) {}
@@ -228,89 +215,15 @@ class CommonNotificationManagerTest {
         assertTrue(sut.notifications.value.isEmpty())
     }
 
-    // ---------------------------------------------------------------------------------------------
-    // Alarm ownership - the part most worth pinning, because it is a handoff and not a flag.
-    // ---------------------------------------------------------------------------------------------
-
     @Test
-    fun `an urgent notification with a sound takes the audio`() = runTest {
+    fun `dismiss all alarms clears urgent alarms but leaves other notifications`() = runTest {
         val sut = createSut()
+        sut.post(NotificationId.TOAST_ALARM, "urgent")
+        sut.post(NotificationId.SCENE_ENDED, "info", level = NotificationLevel.INFO)
 
-        val handle = sut.post(NotificationId.TOAST_ALARM, "alarm", sound = AlarmSound.ERROR)
+        sut.dismissAllAlarms()
 
-        assertEquals(handle.instanceKey, platform.audibleKey)
-        assertEquals(AlarmSound.ERROR, platform.audibleSound)
-    }
-
-    /** Sound is gated on URGENT: a sound on a lower level is deliberately ignored. */
-    @Test
-    fun `a sound below urgent never rings`() = runTest {
-        val sut = createSut()
-
-        sut.post(NotificationId.SCENE_ENDED, "quiet", level = NotificationLevel.INFO, sound = AlarmSound.ERROR)
-
-        assertNull(platform.audibleKey)
-    }
-
-    /** The whole point of the owner slot: a second alarm must not restart the first one's sound. */
-    @Test
-    fun `a newer alarm takes over the audio`() = runTest {
-        val sut = createSut()
-        sut.post(NotificationId.TOAST_ALARM, "older", date = 1_000L, sound = AlarmSound.ERROR)
-
-        val newer = sut.post(NotificationId.EOFLOW_PATCH_ALERT, "newer", date = 2_000L, sound = AlarmSound.ALARM)
-
-        assertEquals(newer.instanceKey, platform.audibleKey)
-        assertEquals(AlarmSound.ALARM, platform.audibleSound)
-    }
-
-    /** Dismissing the audible one promotes the next remaining alarm rather than going silent. */
-    @Test
-    fun `dismissing the sounding alarm promotes the next one`() = runTest {
-        val sut = createSut()
-        val older = sut.post(NotificationId.EOFLOW_PATCH_ALERT, "older", date = 1_000L, sound = AlarmSound.ERROR)
-        val newer = sut.post(NotificationId.EOFLOW_PATCH_ALERT, "newer", date = 2_000L, sound = AlarmSound.ALARM)
-        assertEquals(newer.instanceKey, platform.audibleKey)
-
-        sut.dismiss(newer)
-
-        assertEquals(older.instanceKey, platform.audibleKey)
-        assertEquals(AlarmSound.ERROR, platform.audibleSound)
-    }
-
-    /** Reposting while the same alarm still owns the audio must not re-trigger the sound. */
-    @Test
-    fun `the owner is not reset while it keeps owning`() = runTest {
-        val sut = createSut()
-        sut.post(NotificationId.TOAST_ALARM, "alarm", sound = AlarmSound.ERROR)
-        val callsAfterFirst = platform.audibleCallCount
-
-        sut.post(NotificationId.SCENE_ENDED, "unrelated", level = NotificationLevel.INFO)
-
-        assertEquals(callsAfterFirst, platform.audibleCallCount)
-    }
-
-    @Test
-    fun `the last alarm going away silences the audio`() = runTest {
-        val sut = createSut()
-        val handle = sut.post(NotificationId.TOAST_ALARM, "alarm", sound = AlarmSound.ERROR)
-
-        sut.dismiss(handle)
-
-        assertNull(platform.audibleKey)
-        assertNull(platform.audibleSound)
-    }
-
-    @Test
-    fun `mute all clears audible alarms but leaves quiet notifications`() = runTest {
-        val sut = createSut()
-        sut.post(NotificationId.TOAST_ALARM, "loud", sound = AlarmSound.ERROR)
-        sut.post(NotificationId.SCENE_ENDED, "quiet", level = NotificationLevel.INFO)
-
-        sut.muteAllAlarms()
-
-        assertEquals(listOf("quiet"), texts(sut))
-        assertNull(platform.audibleKey)
+        assertEquals(listOf("info"), texts(sut))
         assertContains(platform.calls, "cancelAll")
     }
 
@@ -321,20 +234,16 @@ class CommonNotificationManagerTest {
     /**
      * Pins what the platform is given, because Android decides with it.
      *
-     * `NotificationManagerImpl` posts an urgent notification that carries a sound *silently*, since
-     * the ramping audio is driven separately, and gates the plain visual one on a preference and on
-     * there being no actions. An implementation can only do that if the registry hands over `sound`
-     * and `actions`, so this asserts it does.
+     * The platform decides how to display actions, so the registry must hand them over.
      */
     @Test
-    fun `the platform is given the sound and the actions`() = runTest {
+    fun `the platform is given the actions`() = runTest {
         val sut = createSut()
         val action = NotificationAction(TextRef.Literal("Snooze")) {}
 
-        sut.post(NotificationId.TOAST_ALARM, "alarm", sound = AlarmSound.ERROR, actions = listOf(action))
+        sut.post(NotificationId.TOAST_ALARM, "alarm", actions = listOf(action))
 
         val shown = platform.lastShown
-        assertEquals(AlarmSound.ERROR, shown?.sound)
         assertEquals(1, shown?.actions?.size)
         assertEquals(NotificationLevel.URGENT, shown?.level)
     }

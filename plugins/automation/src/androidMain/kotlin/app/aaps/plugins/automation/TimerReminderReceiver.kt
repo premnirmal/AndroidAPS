@@ -5,7 +5,6 @@ import android.content.Intent
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.core.objects.workflow.MetroBroadcastReceiver
@@ -34,7 +33,7 @@ class TimerReminderReceiver : MetroBroadcastReceiver() {
         super.onReceive(context, intent)
         val text = intent.getStringExtra(EXTRA_TEXT)?.takeIf { it.isNotBlank() } ?: rh.gs(config.appName)
         aapsLogger.debug(LTag.AUTOMATION, "TimerReminderReceiver fired: $text")
-        uiInteraction.runAlarm(status = text, title = rh.gs(config.appName), sound = AlarmSound.ALARM)
+        uiInteraction.runAlarm(status = text, title = rh.gs(config.appName))
     }
 
     companion object {

@@ -49,7 +49,6 @@ data class FillDialogUiState(
 
     // Config
     val showBolus: Boolean = true,
-    val showNotesFromPreferences: Boolean = false,
     val simpleMode: Boolean = true,
     val concentrationEnabled: Boolean = false
 ) {

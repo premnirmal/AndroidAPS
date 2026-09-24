@@ -44,8 +44,7 @@ internal fun PreviewSiteChange() {
             maxInsulin = 10.0,
             presetButton1 = 0.3,
             presetButton2 = 0.5,
-            presetButton3 = 1.0,
-            showNotesFromPreferences = true
+            presetButton3 = 1.0
         )
     )
 }

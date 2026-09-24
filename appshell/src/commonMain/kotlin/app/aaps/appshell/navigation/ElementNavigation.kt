@@ -12,9 +12,7 @@ import app.aaps.ui.compose.careDialog.CareportalEventType
 import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.keys.StringKey
-import app.aaps.core.ui.search.SearchableItem
 import app.aaps.ui.compose.quickLaunch.QuickLaunchAction
-import app.aaps.ui.search.SearchIndexEntry
 import app.aaps.core.ui.compose.ScreenMode
 import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.ui.compose.main.MainViewModel
@@ -46,11 +44,10 @@ class ElementNavigator(
     private val dexcomBoyda: DexcomBoyda,
     private val onOpenCgmApp: (packageName: String) -> Unit,
     private val onExit: () -> Unit,
-    val onRequestDirectoryAccess: () -> Unit,
-    val onOpenUrl: (url: String) -> Unit
+    val onRequestDirectoryAccess: () -> Unit
 ) {
 
-    /** Where a tap in the drawer, a search result or a quick launch tile goes. */
+    /** Where a tap in the drawer or a quick launch tile goes. */
     fun handleNavigationRequest(request: NavigationRequest) {
         when (request) {
             is NavigationRequest.Element           -> navigateProtected(request.type)
@@ -65,9 +62,15 @@ class ElementNavigator(
                 openPlugin(plugin, navController, activePlugin)
             }
 
+            is NavigationRequest.PluginCategory    -> guarded(ElementType.CONFIGURATION.protection) {
+                navController.navigate(AppRoute.PluginCategory.createRoute(request.type.ordinal))
+            }
+
             is NavigationRequest.PluginPreferences -> guarded(ElementType.SETTINGS.protection) {
                 navController.navigate(AppRoute.PluginPreferences.createRoute(request.pluginKey))
             }
+
+            NavigationRequest.TrioStatistics       -> navController.navigate(AppRoute.TrioStats.route)
         }
     }
 
@@ -118,7 +121,6 @@ class ElementNavigator(
 
             ElementType.PROFILE_HELPER          -> navController.navigate(AppRoute.ProfileHelper.route)
             ElementType.HISTORY_BROWSER         -> navController.navigate(AppRoute.HistoryBrowser.route)
-            ElementType.SETUP_WIZARD            -> navController.navigate(AppRoute.SetupWizard.route)
             ElementType.MAINTENANCE             -> mainViewModel.setShowMaintenanceSheet(true)
             ElementType.CONFIGURATION           -> navController.navigate(AppRoute.Configuration.route)
             ElementType.ABOUT                   -> mainViewModel.setShowAboutDialog(true)
@@ -248,28 +250,5 @@ fun ElementNavigator.handleNotificationAction(notificationId: NotificationId) {
         NotificationId.AAPS_DIR_NOT_SELECTED   -> onRequestDirectoryAccess()
 
         else                                   -> Unit
-    }
-}
-
-/**
- * A search result.
- *
- * The search stays active on purpose, so back returns to the results rather than to the overview.
- */
-fun ElementNavigator.handleSearchResultClick(entry: SearchIndexEntry) {
-    when (val item = entry.item) {
-        is SearchableItem.Category   -> guarded(ProtectionCheck.Protection.PREFERENCES) {
-            navController.navigate(AppRoute.PreferenceScreen.createRoute(item.screenDef.key))
-        }
-
-        is SearchableItem.Preference -> guarded(ProtectionCheck.Protection.PREFERENCES) {
-            val screenKey = item.parentScreenKey
-            if (screenKey != null) navController.navigate(AppRoute.PreferenceScreen.createRoute(screenKey, item.preferenceKey.key))
-            else navController.navigate(AppRoute.Preferences.route)
-        }
-
-        is SearchableItem.Dialog     -> handleNavigationRequest(NavigationRequest.Element(item.elementType))
-        is SearchableItem.Plugin     -> openPlugin(item.pluginRef, navController, activePlugin)
-        is SearchableItem.Wiki       -> onOpenUrl(item.url)
     }
 }

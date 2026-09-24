@@ -28,6 +28,7 @@ import app.aaps.core.interfaces.configuration.ExternalOptions
 import app.aaps.core.interfaces.di.MetroMemberInjector
 import app.aaps.core.interfaces.insulin.InsulinType
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.maintenance.BackupDatabaseConstants
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
@@ -51,6 +52,7 @@ import app.aaps.core.keys.StringNonKey
 import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.objects.profile.ProfileSealed
+import app.aaps.core.ui.UiMode
 import app.aaps.core.ui.compose.MetroViewModelFactoryOwner
 import app.aaps.core.ui.locale.LocaleHelper
 import app.aaps.di.metro.MetroGraphs
@@ -62,7 +64,6 @@ import app.aaps.implementation.receivers.ChargingStateReceiver
 import app.aaps.implementation.receivers.KeepAliveWorker
 import app.aaps.implementation.receivers.NetworkChangeReceiver
 import app.aaps.implementation.receivers.TimeDateOrTZChangeReceiver
-import app.aaps.plugins.constraints.objectives.keys.ObjectivesLongComposedKey
 import app.aaps.ui.activityMonitor.ActivityMonitor
 import app.aaps.utils.configureLeakCanary
 import com.google.firebase.Firebase
@@ -79,15 +80,17 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.io.File
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
-import rxdogtag2.RxDogTag
 import java.io.IOException
 import java.util.Locale
 import kotlin.reflect.KMutableProperty
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.time.Duration.Companion.milliseconds
+import org.json.JSONObject
+import rxdogtag2.RxDogTag
 
 class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, Configuration.Provider {
 
@@ -171,6 +174,7 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     override fun onCreate() {
+        applyPendingDatabaseRestorePreInitIfNeeded()
         super.onCreate()
 
         GeneratedStringOwners.registerAll()
@@ -326,7 +330,7 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
         aapsLogger.debug("Remote: " + config.REMOTE)
         aapsLogger.debug("Phone: " + Build.MANUFACTURER + " " + Build.MODEL)
         registerLocalBroadcastReceiver()
-        setupRemoteConfig()
+        if (BuildConfig.FIREBASE_ENABLED) setupRemoteConfig()
 
         // trigger here to see the new version on app start after an update
         handler.postDelayed({ versionCheckersUtils.triggerCheckVersion() }, 30000)
@@ -512,11 +516,13 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
         // 3.3
         if (preferences.get(UnitDoubleKey.OverviewLowMark) == 0.0) preferences.remove(UnitDoubleKey.OverviewLowMark)
         if (preferences.get(UnitDoubleKey.OverviewHighMark) == 0.0) preferences.remove(UnitDoubleKey.OverviewHighMark)
-        // These three migrate bidirectionally-synced keys. Skip on a client: it adopts the value from
-        // the master via sync, and a local put here would now trigger a client→master round-trip (modal)
-        // at startup. The master migrates and publishes; the client follows.
-        if (!config.AAPSCLIENT && preferences.getIfExists(BooleanKey.GeneralSimpleMode) == null)
-            preferences.put(BooleanKey.GeneralSimpleMode, !preferences.get(BooleanNonKey.GeneralSetupWizardProcessed))
+        // Trio does not use the setup wizard and starts in simple mode.
+        if (preferences.getIfExists(BooleanNonKey.GeneralSetupWizardProcessed) == null) {
+            preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
+        }
+        if (preferences.getIfExists(BooleanKey.GeneralSimpleMode) == null) {
+            preferences.put(BooleanKey.GeneralSimpleMode, true)
+        }
         // Migrate from OpenAPSSMBDynamicISFPlugin
         if (sp.getBoolean("ConfigBuilder_APS_OpenAPSSMBDynamicISFPlugin_Enabled", false)) {
             sp.remove("ConfigBuilder_APS_OpenAPSSMBDynamicISFPlugin_Enabled")
@@ -559,25 +565,6 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
                     preferences.put(LongComposedKey.ActivityMonitorStart, activity, value = SafeParse.stringToLong(value))
                 else
                     preferences.put(LongComposedKey.ActivityMonitorStart, activity, value = value as Long)
-                sp.remove(key)
-            }
-        }
-        // Migrate Objectives
-        for ((key, value) in keys) {
-            if (key.startsWith("Objectives_") && key.endsWith("_started")) {
-                val objective = key.split("_")[1]
-                if (value is String)
-                    preferences.put(ObjectivesLongComposedKey.Started, objective, value = SafeParse.stringToLong(value))
-                else
-                    preferences.put(ObjectivesLongComposedKey.Started, objective, value = value as Long)
-                sp.remove(key)
-            }
-            if (key.startsWith("Objectives_") && key.endsWith("_accomplished")) {
-                val objective = key.split("_")[1]
-                if (value is String)
-                    preferences.put(ObjectivesLongComposedKey.Accomplished, objective, value = SafeParse.stringToLong(value))
-                else
-                    preferences.put(ObjectivesLongComposedKey.Accomplished, objective, value = value as Long)
                 sp.remove(key)
             }
         }
@@ -902,6 +889,71 @@ class MainApp : Application(), MetroMemberInjector, MetroViewModelFactoryOwner, 
                 level = NotificationLevel.IMPORTANT
             )
         }
+
+    private fun copyPendingDatabaseFilePreInit(
+        pendingDir: File,
+        databaseDir: File,
+        fileName: String,
+        required: Boolean
+    ): Boolean {
+        val pendingFile = File(pendingDir, fileName)
+        val targetFile = File(databaseDir, fileName)
+
+        if (!pendingFile.exists()) {
+            if (!required && targetFile.exists()) {
+                targetFile.delete()
+            }
+            return !required
+        }
+
+        return try {
+            pendingFile.inputStream().use { input ->
+                targetFile.outputStream().use { output ->
+                    input.copyTo(output)
+                    output.flush()
+                }
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun applyPendingDatabaseRestorePreInitIfNeeded() {
+        val sharedPreferences = getSharedPreferences("${packageName}${BackupDatabaseConstants.SHARED_PREFERENCES_SUFFIX}", MODE_PRIVATE)
+        if (!sharedPreferences.getBoolean(BackupDatabaseConstants.PENDING_DB_RESTORE_FLAG, false)) return
+
+        val pendingDir = getDir(BackupDatabaseConstants.PENDING_DB_RESTORE_DIR, MODE_PRIVATE)
+        val databaseDir = getDatabasePath(BackupDatabaseConstants.DATABASE_MAIN_FILE).parentFile ?: return
+        databaseDir.mkdirs()
+
+        val mainCopied = copyPendingDatabaseFilePreInit(
+            pendingDir = pendingDir,
+            databaseDir = databaseDir,
+            fileName = BackupDatabaseConstants.DATABASE_MAIN_FILE,
+            required = true
+        )
+        if (!mainCopied) {
+            sharedPreferences.edit().putBoolean(BackupDatabaseConstants.PENDING_DB_RESTORE_FLAG, false).apply()
+            return
+        }
+
+        copyPendingDatabaseFilePreInit(
+            pendingDir = pendingDir,
+            databaseDir = databaseDir,
+            fileName = BackupDatabaseConstants.DATABASE_WAL_FILE,
+            required = false
+        )
+        copyPendingDatabaseFilePreInit(
+            pendingDir = pendingDir,
+            databaseDir = databaseDir,
+            fileName = BackupDatabaseConstants.DATABASE_SHM_FILE,
+            required = false
+        )
+
+        pendingDir.listFiles()?.forEach { it.delete() }
+        sharedPreferences.edit().putBoolean(BackupDatabaseConstants.PENDING_DB_RESTORE_FLAG, false).apply()
+    }
 
     private val timeDateReceiver = TimeDateOrTZChangeReceiver()
     private val networkReceiver = NetworkChangeReceiver()

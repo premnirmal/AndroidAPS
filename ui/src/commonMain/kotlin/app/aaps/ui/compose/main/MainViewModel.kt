@@ -9,6 +9,7 @@ import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.RM
 import app.aaps.core.data.model.SceneLifecycle
 import app.aaps.core.data.model.TT
+import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.data.time.T
 import app.aaps.core.data.ue.Action
 import app.aaps.core.data.ue.Sources
@@ -26,6 +27,7 @@ import app.aaps.core.interfaces.constraints.ConstraintsChecker
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.logging.UserEntryLogger
 import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.overview.graph.ProfileDisplayData
@@ -37,12 +39,17 @@ import app.aaps.core.interfaces.overview.graph.TempTargetState
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.profile.Profile
 import app.aaps.core.interfaces.profile.ProfileFunction
+import app.aaps.core.interfaces.profile.ProfileUtil
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.protection.ProtectionResult
 import app.aaps.core.interfaces.pump.Pump
+import app.aaps.core.interfaces.pump.PumpTimeRemaining
 import app.aaps.core.interfaces.pump.defs.determineCorrectBolusStepSize
 import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.rx.events.EventLoopUpdateGui
+import app.aaps.core.interfaces.rx.events.EventPumpStatusChanged
+import app.aaps.core.interfaces.rx.events.EventQueueChanged
 import app.aaps.core.interfaces.rx.events.EventShowDialog
 import app.aaps.core.interfaces.scenes.ActiveSceneSync
 import app.aaps.core.interfaces.scenes.SceneActions
@@ -51,9 +58,15 @@ import app.aaps.core.interfaces.sync.NsClient
 import app.aaps.core.interfaces.ui.UrlOpener
 import app.aaps.core.interfaces.ui.IconsProvider
 import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.interfaces.utils.MidnightTime
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
+import app.aaps.core.keys.BooleanNonKey
+import app.aaps.core.keys.DoubleNonKey
+import app.aaps.core.keys.IntNonKey
+import app.aaps.core.keys.LongNonKey
 import app.aaps.core.keys.StringNonKey
+import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.core.keys.interfaces.AppPlatform
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.VisibilityContext
@@ -73,6 +86,7 @@ import app.aaps.core.ui.compose.icons.IcTtActivity
 import app.aaps.core.ui.compose.icons.IcTtEatingSoon
 import app.aaps.core.ui.compose.icons.IcTtHypo
 import app.aaps.core.ui.compose.icons.IcTtManual
+import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.extensions.toStringFull
 import app.aaps.ui.UiStrings
 import app.aaps.ui.compose.aboutDialog.AboutDialogData
@@ -88,7 +102,10 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -96,9 +113,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -121,6 +141,7 @@ class MainViewModel(
     private val overviewDataCache: OverviewDataCache,
     private val iobCobCalculator: IobCobCalculator,
     private val profileFunction: ProfileFunction,
+    private val profileUtil: ProfileUtil,
     private val constraintChecker: ConstraintsChecker,
     private val quickWizard: QuickWizard,
     private val automation: Automation,
@@ -191,7 +212,40 @@ class MainViewModel(
     val actionConfirmation: StateFlow<ActionConfirmation?> = _actionConfirmation.asStateFlow()
 
     val versionName: String get() = config.VERSION_NAME
+    val appTitle: String get() = rh.gs(config.appName)
     val calcProgressFlow: StateFlow<Int> = overviewDataCache.calcProgressFlow
+    private val _timeInRangeTodayPercent = MutableStateFlow<Int?>(null)
+    val timeInRangeTodayPercent: StateFlow<Int?> = _timeInRangeTodayPercent.asStateFlow()
+    private var timeInRangeTodayJob: Job? = null
+    private var overviewRefreshJob: Job? = null
+    private val runtimeRefresh = MutableStateFlow(0)
+    private val overviewHydrated = MutableStateFlow(false)
+    private val persistedLastLoopTimestamp = MutableStateFlow(
+        preferences.get(LongNonKey.LastLoopRunTimestamp).takeIf { it > 0L }
+    )
+    private var cachedOverviewStatus = CachedOverviewStatus(
+        profileName = preferences.get(StringNonKey.LastOverviewProfileName),
+        isProfileModified = preferences.get(BooleanNonKey.LastOverviewProfileModified),
+        profilePercentage = preferences.get(IntNonKey.LastOverviewProfilePercentage),
+        profileTargetRangeText = preferences.get(StringNonKey.LastOverviewProfileTargetRange),
+        runningMode = preferences.get(StringNonKey.LastOverviewRunningMode)
+            .let { name -> RM.Mode.entries.firstOrNull { it.name == name } }
+            ?: RM.Mode.DISABLED_LOOP,
+        pumpEndTimeMillis = preferences.get(LongNonKey.LastPumpExpectedEndTimeMillis).takeIf { it > dateUtil.now() },
+        reservoirUnits = preferences.get(DoubleNonKey.LastPumpReservoirUnits).takeIf { it >= 0.0 }
+    )
+    private val initialUiState = MainUiState(
+        isProfileLoaded = cachedOverviewStatus.profileName.isNotEmpty(),
+        profileName = cachedOverviewStatus.profileName,
+        isProfileModified = cachedOverviewStatus.isProfileModified,
+        profilePercentage = cachedOverviewStatus.profilePercentage,
+        profileTargetRangeText = cachedOverviewStatus.profileTargetRangeText,
+        runningMode = cachedOverviewStatus.runningMode,
+        runningModeText = getModeNameString(cachedOverviewStatus.runningMode),
+        lastLoopAgeMillis = persistedLastLoopTimestamp.value?.let { (dateUtil.now() - it).coerceAtLeast(0L) },
+        pumpEndTimeMillis = cachedOverviewStatus.pumpEndTimeMillis,
+        reservoirUnits = cachedOverviewStatus.reservoirUnits
+    )
 
     // Ticker for time-based progress updates (every 30 seconds). Cold flow — only runs while
     // the chipStateFlow it feeds has subscribers (via uiState's WhileSubscribed below).
@@ -210,20 +264,27 @@ class MainViewModel(
         overviewDataCache.tbrFlow,
         // Re-emit the latest tick whenever QuickWizard entries change (local edit or synced from the
         // main phone) so the carousel rebuilds. changes is a StateFlow (initial 0) → never blocks.
-        combine(progressTicker, quickWizard.changes) { now, _ -> now }
-    ) { ttData, profileData, rmData, tbrData, now ->
-        buildChipState(ttData, profileData, rmData, tbrData, now)
+        combine(progressTicker, quickWizard.changes, runtimeRefresh, persistedLastLoopTimestamp, overviewHydrated) {
+                now,
+                _,
+                _,
+                lastLoop,
+                isHydrated ->
+            RuntimeState(now, lastLoop, isHydrated)
+        }
+    ) { ttData, profileData, rmData, tbrData, runtime ->
+        buildChipState(ttData, profileData, rmData, tbrData, runtime.now, runtime.lastLoopTimestamp, runtime.isOverviewHydrated)
     }
 
-    /**
-     * Derived UI state. Combines event-driven state with ticker-derived chip state.
-     * `WhileSubscribed(5_000)` stops the upstream combine (and thus the progressTicker) 5s
-     * after the last observer disappears — real battery savings when the overview isn't
-     * on screen. 5s grace handles config changes (rotation, dark-mode) without thrashing.
-     */
-    val uiState: StateFlow<MainUiState> = combine(_eventState, chipStateFlow) { ev, chip ->
+    private val chipState: StateFlow<ChipState> = chipStateFlow.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        initialUiState.toInitialChipState()
+    )
+
+    /** Derived UI state. Starts immediately so the first overview frame has current values. */
+    val uiState: StateFlow<MainUiState> = combine(_eventState, chipState) { ev, chip ->
         MainUiState(
-            isDrawerOpen = ev.isDrawerOpen,
             isSimpleMode = ev.isSimpleMode,
             showAboutDialog = ev.showAboutDialog,
             showMaintenanceSheet = ev.showMaintenanceSheet,
@@ -233,30 +294,127 @@ class MainViewModel(
             profilePsId = chip.profilePsId,
             isProfileModified = chip.isProfileModified,
             profileProgress = chip.profileProgress,
-            tempTargetText = chip.tempTargetText,
-            tempTargetState = chip.tempTargetState,
-            tempTargetProgress = chip.tempTargetProgress,
-            tempTargetReason = chip.tempTargetReason,
-            tempTargetRecordId = chip.tempTargetRecordId,
+            profilePercentage = chip.profilePercentage,
+            profileTargetRangeText = chip.profileTargetRangeText,
             runningMode = chip.runningMode,
             runningModeText = chip.runningModeText,
             runningModeRemaining = chip.runningModeRemaining,
             runningModeProgress = chip.runningModeProgress,
             runningModeRecordId = chip.runningModeRecordId,
+            lastLoopAgeMillis = chip.lastLoopAgeMillis,
             tbrState = chip.tbrState,
             smbEnabled = ev.smbEnabled,
+            pumpEndTimeMillis = chip.pumpEndTimeMillis,
+            reservoirUnits = chip.reservoirUnits,
             quickWizardItems = chip.quickWizardItems
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MainUiState())
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, initialUiState)
+
+    val profileCardTempTargetStateFlow: StateFlow<TempTargetUiState> = chipState
+        .map { state ->
+            TempTargetUiState(
+                text = state.tempTargetText,
+                rangeText = state.tempTargetRangeText,
+                remainingText = state.tempTargetRemainingText,
+                state = state.tempTargetState,
+                progress = state.tempTargetProgress,
+                reason = state.tempTargetReason,
+                recordId = state.tempTargetRecordId
+            )
+        }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TempTargetUiState())
 
     init {
+        refreshOverviewState()
         preferences.observe(BooleanKey.GeneralSimpleMode)
             .onEach { simple -> _eventState.update { it.copy(isSimpleMode = simple) } }
             .launchIn(viewModelScope)
         preferences.observe(BooleanKey.ApsUseSmb)
             .onEach { smb -> _eventState.update { it.copy(smbEnabled = smb) } }
             .launchIn(viewModelScope)
+        refreshTimeInRangeToday()
+        calcProgressFlow
+            .onEach { progress ->
+                if (progress == 100) refreshTimeInRangeToday()
+            }
+            .launchIn(viewModelScope)
+        merge(
+            rxBus.toFlow(EventLoopUpdateGui::class),
+            rxBus.toFlow(EventPumpStatusChanged::class),
+            rxBus.toFlow(EventQueueChanged::class)
+        )
+            .onEach { event ->
+                if (event is EventLoopUpdateGui) {
+                    loop.lastRun?.lastAPSRun?.let(::cacheLastLoopTimestamp)
+                }
+                runtimeRefresh.update { value -> value + 1 }
+            }
+            .launchIn(viewModelScope)
         observeQuickLaunch()
+    }
+
+    private fun refreshTimeInRangeToday() {
+        timeInRangeTodayJob?.cancel()
+        timeInRangeTodayJob = viewModelScope.launch {
+            updateTimeInRangeToday()
+        }
+    }
+
+    private suspend fun updateTimeInRangeToday() {
+        val start = MidnightTime.calc(dateUtil.now())
+        val end = dateUtil.now()
+        val lowMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewLowMark))
+        val highMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewHighMark))
+        val readings = persistenceLayer.getBgReadingsDataFromTimeToTime(start, end, true)
+            .filter { it.value >= 39.0 }
+        _timeInRangeTodayPercent.value = if (readings.isEmpty()) null
+        else {
+            val inRange = readings.count { it.value in lowMgdl..highMgdl }
+            (inRange * 100.0 / readings.size).roundToInt()
+        }
+    }
+
+    fun refreshOverviewState() {
+        overviewRefreshJob?.cancel()
+        overviewRefreshJob = viewModelScope.launch {
+            config.initProgressFlow.first { it.done }
+            refreshOverviewPart("overview data") {
+                overviewDataCache.hydrateOverviewData()
+            }
+            refreshOverviewPart("last loop timestamp") {
+                val now = dateUtil.now()
+                persistenceLayer
+                    .getApsResults(now - T.days(1).msecs(), now)
+                    .maxOfOrNull { it.date }
+                    ?.let(::cacheLastLoopTimestamp)
+            }
+            refreshOverviewPart("time in range") {
+                timeInRangeTodayJob?.cancel()
+                updateTimeInRangeToday()
+            }
+            if (overviewHydrated.value) {
+                runtimeRefresh.update { it + 1 }
+            } else {
+                overviewHydrated.value = true
+            }
+        }
+    }
+
+    private suspend fun refreshOverviewPart(name: String, block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            aapsLogger.error(LTag.UI, "MainViewModel: Failed to refresh $name", e)
+        }
+    }
+
+    private fun cacheLastLoopTimestamp(timestamp: Long) {
+        if (timestamp <= (persistedLastLoopTimestamp.value ?: 0L)) return
+        persistedLastLoopTimestamp.value = timestamp
+        preferences.put(LongNonKey.LastLoopRunTimestamp, timestamp)
     }
 
     /**
@@ -269,7 +427,9 @@ class MainViewModel(
         profileData: ProfileDisplayData?,
         rmData: RunningModeDisplayData?,
         tbrData: TbrDisplayData?,
-        now: Long
+        now: Long,
+        persistedLastLoop: Long?,
+        isOverviewHydrated: Boolean
     ): ChipState {
         // Detect expired chips and schedule a cache refresh. Duration >= 30 days is
         // effectively permanent (e.g. loop disabled uses Int.MAX_VALUE minutes, or scene
@@ -303,6 +463,9 @@ class MainViewModel(
             } else {
                 ttData.targetRangeText
             }
+        } else ""
+        val ttRemainingText = if (ttIsFinite && !ttExpired) {
+            dateUtil.untilString(ttData.timestamp + ttData.duration, rh)
         } else ""
 
         // Profile progress and display text
@@ -341,26 +504,74 @@ class MainViewModel(
             }
         } else ""
 
-        return ChipState(
-            isProfileLoaded = profileData?.isLoaded ?: false,
-            profileName = profileText,
+        val liveReservoirUnits = profileFunction.getProfile()?.let { profile ->
+            activePlugin.activePump.reservoirLevel.value.iU(profile.insulinConcentration())
+        }
+        val livePumpEndTimeMillis = (activePlugin.activePumpInternal as? PumpTimeRemaining)?.expectedEndTimeMillis()
+
+        val liveState = ChipState(
+            isProfileLoaded = profileData?.isLoaded ?: cachedOverviewStatus.profileName.isNotEmpty(),
+            profileName = profileData?.let { profileText } ?: cachedOverviewStatus.profileName,
             profilePsId = profileData?.originalPsId ?: 0,
-            isProfileModified = profileData?.isModified ?: false,
+            isProfileModified = profileData?.isModified ?: cachedOverviewStatus.isProfileModified,
             profileProgress = profileProgress,
+            profilePercentage = profileData?.percentage ?: cachedOverviewStatus.profilePercentage,
+            profileTargetRangeText = ttData?.targetRangeText ?: cachedOverviewStatus.profileTargetRangeText,
             tempTargetText = ttText,
+            tempTargetRangeText = if (ttExpired) "" else ttData?.targetRangeText.orEmpty(),
+            tempTargetRemainingText = ttRemainingText,
             tempTargetState = if (ttExpired) TempTargetChipState.None
             else ttData?.state?.toChipState() ?: TempTargetChipState.None,
             tempTargetProgress = ttProgress,
             tempTargetReason = if (ttExpired) null else ttData?.reason,
             tempTargetRecordId = if (ttExpired) 0 else ttData?.recordId ?: 0,
-            runningMode = rmData?.mode ?: RM.Mode.DISABLED_LOOP,
-            runningModeText = rmText,
+            runningMode = rmData?.mode ?: cachedOverviewStatus.runningMode,
+            runningModeText = rmData?.let { rmText } ?: getModeNameString(cachedOverviewStatus.runningMode),
             runningModeRemaining = rmRemaining,
             runningModeProgress = rmProgress,
             runningModeRecordId = if (rmExpired) 0 else rmData?.recordId ?: 0,
+            lastLoopAgeMillis = (loop.lastRun?.lastAPSRun ?: persistedLastLoop)?.let { (now - it).coerceAtLeast(0L) },
             tbrState = if (tbrExpired) TbrState.NONE else tbrData?.state ?: TbrState.NONE,
+            pumpEndTimeMillis = if (isOverviewHydrated) livePumpEndTimeMillis else cachedOverviewStatus.pumpEndTimeMillis,
+            reservoirUnits = if (isOverviewHydrated) liveReservoirUnits else cachedOverviewStatus.reservoirUnits,
             quickWizardItems = computeQuickWizardItems(rmData?.mode)
         )
+        if (isOverviewHydrated) {
+            cacheOverviewStatus(
+                state = liveState,
+                profileName = profileData?.profileName ?: cachedOverviewStatus.profileName
+            )
+        }
+        return liveState
+    }
+
+    private fun cacheOverviewStatus(state: ChipState, profileName: String) {
+        val snapshot = CachedOverviewStatus(
+            profileName = profileName,
+            isProfileModified = state.isProfileModified,
+            profilePercentage = state.profilePercentage,
+            profileTargetRangeText = state.profileTargetRangeText,
+            runningMode = state.runningMode,
+            pumpEndTimeMillis = state.pumpEndTimeMillis,
+            reservoirUnits = state.reservoirUnits
+        )
+        if (snapshot == cachedOverviewStatus) return
+        val previous = cachedOverviewStatus
+        cachedOverviewStatus = snapshot
+        if (snapshot.profileName != previous.profileName)
+            preferences.put(StringNonKey.LastOverviewProfileName, snapshot.profileName)
+        if (snapshot.isProfileModified != previous.isProfileModified)
+            preferences.put(BooleanNonKey.LastOverviewProfileModified, snapshot.isProfileModified)
+        if (snapshot.profilePercentage != previous.profilePercentage)
+            preferences.put(IntNonKey.LastOverviewProfilePercentage, snapshot.profilePercentage)
+        if (snapshot.profileTargetRangeText != previous.profileTargetRangeText)
+            preferences.put(StringNonKey.LastOverviewProfileTargetRange, snapshot.profileTargetRangeText)
+        if (snapshot.runningMode != previous.runningMode)
+            preferences.put(StringNonKey.LastOverviewRunningMode, snapshot.runningMode.name)
+        if (snapshot.pumpEndTimeMillis != previous.pumpEndTimeMillis)
+            preferences.put(LongNonKey.LastPumpExpectedEndTimeMillis, snapshot.pumpEndTimeMillis ?: 0L)
+        if (snapshot.reservoirUnits != previous.reservoirUnits)
+            preferences.put(DoubleNonKey.LastPumpReservoirUnits, snapshot.reservoirUnits ?: -1.0)
     }
 
     private suspend fun computeQuickWizardItems(runningMode: RM.Mode?): List<QuickWizardItem> {
@@ -573,20 +784,19 @@ class MainViewModel(
         RM.Mode.RESUME            -> rh.gs(CoreUiStrings.resumeloop)
     }
 
+    fun bgSourceNavigationRequest(): NavigationRequest {
+        val activeBgSource = activePlugin.getSpecificPluginsList(PluginType.BGSOURCE)
+            .firstOrNull { it.isEnabled(PluginType.BGSOURCE) }
+        return activeBgSource?.let { plugin ->
+            plugin::class.simpleName?.let(NavigationRequest::Plugin)
+        } ?: NavigationRequest.PluginCategory(PluginType.BGSOURCE)
+    }
+
     // Map cache state to UI chip state
     private fun TempTargetState.toChipState(): TempTargetChipState = when (this) {
         TempTargetState.NONE     -> TempTargetChipState.None
         TempTargetState.ACTIVE   -> TempTargetChipState.Active
         TempTargetState.ADJUSTED -> TempTargetChipState.Adjusted
-    }
-
-    // Drawer state
-    fun openDrawer() {
-        _eventState.update { it.copy(isDrawerOpen = true) }
-    }
-
-    fun closeDrawer() {
-        _eventState.update { it.copy(isDrawerOpen = false) }
     }
 
     // About dialog state
@@ -895,7 +1105,6 @@ class MainViewModel(
  * observers. Kept in a MutableStateFlow because these fields are not derived from other flows.
  */
 private data class EventState(
-    val isDrawerOpen: Boolean = false,
     val isSimpleMode: Boolean = true,
     val smbEnabled: Boolean = false,
     val showAboutDialog: Boolean = false,
@@ -914,7 +1123,11 @@ private data class ChipState(
     val profilePsId: Long = 0,
     val isProfileModified: Boolean = false,
     val profileProgress: Float = 0f,
+    val profilePercentage: Int = 100,
+    val profileTargetRangeText: String = "",
     val tempTargetText: String = "",
+    val tempTargetRangeText: String = "",
+    val tempTargetRemainingText: String = "",
     val tempTargetState: TempTargetChipState = TempTargetChipState.None,
     val tempTargetProgress: Float = 0f,
     val tempTargetReason: TT.Reason? = null,
@@ -924,6 +1137,38 @@ private data class ChipState(
     val runningModeRemaining: String = "",
     val runningModeProgress: Float = 0f,
     val runningModeRecordId: Long = 0,
+    val lastLoopAgeMillis: Long? = null,
     val tbrState: TbrState = TbrState.NONE,
+    val pumpEndTimeMillis: Long? = null,
+    val reservoirUnits: Double? = null,
     val quickWizardItems: List<QuickWizardItem> = emptyList()
+)
+
+private fun MainUiState.toInitialChipState() = ChipState(
+    isProfileLoaded = isProfileLoaded,
+    profileName = profileName,
+    isProfileModified = isProfileModified,
+    profilePercentage = profilePercentage,
+    profileTargetRangeText = profileTargetRangeText,
+    runningMode = runningMode,
+    runningModeText = runningModeText,
+    lastLoopAgeMillis = lastLoopAgeMillis,
+    pumpEndTimeMillis = pumpEndTimeMillis,
+    reservoirUnits = reservoirUnits
+)
+
+private data class RuntimeState(
+    val now: Long,
+    val lastLoopTimestamp: Long?,
+    val isOverviewHydrated: Boolean
+)
+
+private data class CachedOverviewStatus(
+    val profileName: String,
+    val isProfileModified: Boolean,
+    val profilePercentage: Int,
+    val profileTargetRangeText: String,
+    val runningMode: RM.Mode,
+    val pumpEndTimeMillis: Long?,
+    val reservoirUnits: Double?
 )

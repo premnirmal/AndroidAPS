@@ -46,6 +46,7 @@ sealed class AppRoute(val route: String) {
     data object ProfileHelper : AppRoute("profile_helper")
     data object HistoryBrowser : AppRoute("history_browser")
     data object Preferences : AppRoute("preferences")
+    data object Maintenance : AppRoute("maintenance")
     data object PluginPreferences : AppRoute("plugin_preferences/{pluginKey}") {
 
         fun createRoute(pluginKey: String) = "plugin_preferences/$pluginKey"
@@ -123,7 +124,11 @@ sealed class AppRoute(val route: String) {
 
     data object FoodManagement : AppRoute("food_management")
     data object SiteRotationManagement : AppRoute("siteRotationManagement")
-    data object SetupWizard : AppRoute("setup_wizard")
     data object AuthorizedClients : AppRoute("authorized_clients")
     data object PairWithMaster : AppRoute("pair_with_master")
+    data object TrioTreatments : AppRoute("trio_treatments")
+    data object TrioTreatmentList : AppRoute("trio_treatment_list")
+    data object TrioHistory : AppRoute("trio_history")
+    data object TrioStats : AppRoute("trio_stats")
+    data object TrioSettings : AppRoute("trio_settings")
 }

@@ -17,7 +17,6 @@ import app.aaps.core.interfaces.constraints.ConstraintsChecker
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.plugin.ActivePlugin
@@ -216,7 +215,7 @@ class CommandQueueImplementation(
      * [PumpEnactResult]; none post profile-set notifications themselves). `internal` so it can be unit-tested.
      *
      *  - failure (timeout `result == null`, or `!success`): post the persistent [NotificationId.FAILED_UPDATE_PROFILE]
-     *    "wrong basal until fixed" card, rung via [AlarmSound.BOLUS_ERROR]; the driver's `comment` supplies
+     *    "wrong basal until fixed" card; the driver's `comment` supplies
      *    the reason (a timeout has none). Deliberately NOT a full-screen `runAlarm` — a wrong base profile is serious
      *    but persistent, so a dismissible alarm-notification is the right weight (a failed TBR is even quieter,
      *    surfaced only in the loop status).
@@ -239,8 +238,7 @@ class CommandQueueImplementation(
         if (result == null || !result.success) {
             notificationManager.post(
                 NotificationId.FAILED_UPDATE_PROFILE,
-                result?.comment?.takeIf { it.isNotBlank() } ?: rh.gs(CoreUiStrings.failed_update_basal_profile),
-                sound = AlarmSound.BOLUS_ERROR
+                result?.comment?.takeIf { it.isNotBlank() } ?: rh.gs(CoreUiStrings.failed_update_basal_profile)
             )
             return false
         }

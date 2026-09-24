@@ -17,7 +17,6 @@ import android.os.SystemClock
 import androidx.core.app.ActivityCompat
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventPumpStatusChanged
@@ -356,20 +355,20 @@ class BLECommonService internal constructor(
             if (message is InjectionBlockReportPacket) {
                 message.handleMessage(data)
                 diaconnG8Pump.bolusBlocked = true
-                uiInteraction.runAlarm(rh.gs(R.string.injectionblocked), rh.gs(R.string.injectionblocked), AlarmSound.BOLUS_ERROR)
+                uiInteraction.runAlarm(rh.gs(R.string.injectionblocked), rh.gs(R.string.injectionblocked))
                 return
             }
             // battery warning report
             if (message is BatteryWarningReportPacket) {
                 message.handleMessage(data)
-                uiInteraction.runAlarm(rh.gs(R.string.needbatteryreplace), rh.gs(R.string.batterywarning), AlarmSound.BOLUS_ERROR)
+                uiInteraction.runAlarm(rh.gs(R.string.needbatteryreplace), rh.gs(R.string.batterywarning))
                 return
             }
 
             // insulin lack warning report
             if (message is InsulinLackReportPacket) {
                 message.handleMessage(data)
-                uiInteraction.runAlarm(rh.gs(R.string.needinsullinreplace), rh.gs(R.string.insulinlackwarning), AlarmSound.BOLUS_ERROR)
+                uiInteraction.runAlarm(rh.gs(R.string.needinsullinreplace), rh.gs(R.string.insulinlackwarning))
                 return
             }
 

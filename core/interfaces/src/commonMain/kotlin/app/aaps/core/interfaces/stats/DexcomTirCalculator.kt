@@ -35,4 +35,11 @@ interface DexcomTirCalculator {
      * @return DexcomTIR object containing all calculated statistics and percentages
      */
     suspend fun calculate(): DexcomTIR
+
+    /**
+     * Calculates statistics ending at the current time for a selectable recent range.
+     *
+     * @param days number of recent days, or null for all available glucose history
+     */
+    suspend fun calculateRecent(days: Long?): DexcomTIR
 }

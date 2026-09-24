@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.data.configuration.Constants
@@ -100,6 +101,8 @@ private val CONFIGURABLE_SERIES = SeriesType.entries.filter {
 fun GraphsSection(
     graphViewModel: GraphViewModel,
     isSimpleMode: Boolean,
+    mainChartOnly: Boolean = false,
+    mainChartHeight: Dp? = null,
     modifier: Modifier = Modifier,
     fitWholeWindow: Boolean = false
 ) {
@@ -344,14 +347,16 @@ fun GraphsSection(
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         // Treatment Belt Graph - running mode background + therapy events
-        TreatmentBeltGraphCompose(
-            viewModel = graphViewModel,
-            scrollState = beltScrollState,
-            zoomState = beltZoomState,
-            derivedTimeRange = derivedTimeRange,
-            nowTimestamp = nowTimestamp,
-            modifier = Modifier.fillMaxWidth()
-        )
+        if (!mainChartOnly) {
+            TreatmentBeltGraphCompose(
+                viewModel = graphViewModel,
+                scrollState = beltScrollState,
+                zoomState = beltZoomState,
+                derivedTimeRange = derivedTimeRange,
+                nowTimestamp = nowTimestamp,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
         // BG Graph - primary interactive graph
         var editingBgOverlays by remember { mutableStateOf(false) }
         Box(modifier = Modifier.offset(y = (-16).dp)) {
@@ -365,9 +370,9 @@ fun GraphsSection(
                 visibleTimeRange = bgVisibleTimeRange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(graphConfig.bgHeight.dp)
+                    .height(mainChartHeight ?: graphConfig.bgHeight.dp)
             )
-            if (!isSimpleMode) {
+            if (!isSimpleMode && !mainChartOnly) {
                 GraphEditButton(
                     onClick = { editingBgOverlays = true },
                     modifier = Modifier
@@ -376,7 +381,7 @@ fun GraphsSection(
                 )
             }
         }
-        if (editingBgOverlays) {
+        if (editingBgOverlays && !mainChartOnly) {
             GraphSeriesBottomSheet(
                 title = stringResource(CoreUiStrings.graph_bg),
                 selectedSeries = graphConfig.bgOverlays,
@@ -393,6 +398,7 @@ fun GraphsSection(
                 onDismiss = { editingBgOverlays = false }
             )
         }
+        if (!mainChartOnly) {
         // Fixed IOB graph (Graph 1) with optional Activity overlay
         var editingIobOverlays by remember { mutableStateOf(false) }
         Box(modifier = Modifier.offset(y = (-8).dp)) {
@@ -560,8 +566,11 @@ fun GraphsSection(
                 )
             }
         }
-        // Spacer so the last graph / Add button isn't covered by QuickLaunch toolbar
-        Spacer(Modifier.height(48.dp))
+        }
+        if (!mainChartOnly) {
+            // Spacer so the last graph / Add button isn't covered by QuickLaunch toolbar
+            Spacer(Modifier.height(48.dp))
+        }
     }
 }
 

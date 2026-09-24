@@ -21,7 +21,6 @@ import app.aaps.core.interfaces.bolus.WizardBolusExecutor
 import app.aaps.core.interfaces.constraints.Constraint
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.UserEntryLogger
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
@@ -947,7 +946,7 @@ class WizardBolusExecutorImplTest : TestBaseWithProfile() {
         // The async delivery failure raises the single URGENT alarm from the executor (not the now-gone dialog).
         verify(notificationManager).post(
             eq(NotificationId.BOLUS_DELIVERY_FAILED), any<String>(), any<NotificationLevel>(), any<Int>(),
-            anyOrNull<AlarmSound>(), any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
+            any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
         )
     }
 
@@ -966,8 +965,338 @@ class WizardBolusExecutorImplTest : TestBaseWithProfile() {
         // A user-initiated cancel is not a failure: no URGENT alarm even though the command result is unsuccessful.
         verify(notificationManager, never()).post(
             eq(NotificationId.BOLUS_DELIVERY_FAILED), any<String>(), any<NotificationLevel>(), any<Int>(),
+            any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
+        )
+    }
+
+    /**
+     * A bolus dropped from the queue on purpose (a settings import clears it) is not a pump failure, so it must
+     * not ring the alarm — but it must NOT be silent either. Nothing re-sends a bolus: the user pressed the
+     * button, no insulin was given, and the entry dialog is already gone.
+     */
+    @Test
+    fun bolus_whenDroppedFromQueue_postsSilentCancelledNoticeNotTheAlarm() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).cancelled(true).comment("import"))
+        val executor = create()
+
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { }
+        )
+
+        verify(notificationManager, never()).post(
+            eq(NotificationId.BOLUS_DELIVERY_FAILED), any<String>(), any<NotificationLevel>(), any<Int>(),
             anyOrNull<AlarmSound>(), any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
         )
+        // BOLUS_CANCELLED is declared IMPORTANT, which is silent by definition — no sound is passed at the post site.
+        verify(notificationManager).post(
+            eq(NotificationId.BOLUS_CANCELLED), any<String>(), any<NotificationLevel>(), any<Int>(),
+            isNull(), any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
+        )
+    }
+
+    /**
+     * The async bolus result arrives long after confirm() returned, so the RETURN value cannot carry it — the
+     * callback is the only way the relay learns a bolus was dropped rather than failed. Without the flag the
+     * master writes an ExecutionFailed ack and the paired client rings its own BOLUS_ERROR alarm for a bolus
+     * that nothing tried to give.
+     */
+    @Test
+    fun bolus_whenDroppedFromQueue_tellsTheCallerItWasCancelled() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).cancelled(true).comment("import"))
+        val executor = create()
+
+        var failure: WizardBolusExecutor.Failure? = null
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { failure = it }
+        )
+
+        assertThat(failure).isNotNull()
+        assertThat(failure!!.cancelled).isTrue()
+    }
+
+    /** The same shape when the pump really failed — the caller must still be able to tell the two apart. */
+    @Test
+    fun bolus_whenPumpFailed_tellsTheCallerItWasNotCancelled() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).comment("pump said no"))
+        val executor = create()
+
+        var failure: WizardBolusExecutor.Failure? = null
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { failure = it }
+        )
+
+        assertThat(failure).isNotNull()
+        assertThat(failure!!.cancelled).isFalse()
+    }
+
+    /**
+     * A bolus dropped from the queue on purpose (a settings import clears it) is not a pump failure, so it must
+     * not ring the alarm — but it must NOT be silent either. Nothing re-sends a bolus: the user pressed the
+     * button, no insulin was given, and the entry dialog is already gone.
+     */
+    @Test
+    fun bolus_whenDroppedFromQueue_postsSilentCancelledNoticeNotTheAlarm() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).cancelled(true).comment("import"))
+        val executor = create()
+
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { }
+        )
+
+        verify(notificationManager, never()).post(
+            eq(NotificationId.BOLUS_DELIVERY_FAILED), any<String>(), any<NotificationLevel>(), any<Int>(),
+            anyOrNull<AlarmSound>(), any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
+        )
+        // BOLUS_CANCELLED is declared IMPORTANT, which is silent by definition — no sound is passed at the post site.
+        verify(notificationManager).post(
+            eq(NotificationId.BOLUS_CANCELLED), any<String>(), any<NotificationLevel>(), any<Int>(),
+            isNull(), any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
+        )
+    }
+
+    /**
+     * The async bolus result arrives long after confirm() returned, so the RETURN value cannot carry it — the
+     * callback is the only way the relay learns a bolus was dropped rather than failed. Without the flag the
+     * master writes an ExecutionFailed ack and the paired client rings its own BOLUS_ERROR alarm for a bolus
+     * that nothing tried to give.
+     */
+    @Test
+    fun bolus_whenDroppedFromQueue_tellsTheCallerItWasCancelled() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).cancelled(true).comment("import"))
+        val executor = create()
+
+        var failure: WizardBolusExecutor.Failure? = null
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { failure = it }
+        )
+
+        assertThat(failure).isNotNull()
+        assertThat(failure!!.cancelled).isTrue()
+    }
+
+    /** The same shape when the pump really failed — the caller must still be able to tell the two apart. */
+    @Test
+    fun bolus_whenPumpFailed_tellsTheCallerItWasNotCancelled() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).comment("pump said no"))
+        val executor = create()
+
+        var failure: WizardBolusExecutor.Failure? = null
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { failure = it }
+        )
+
+        assertThat(failure).isNotNull()
+        assertThat(failure!!.cancelled).isFalse()
+    }
+
+    /**
+     * A bolus dropped from the queue on purpose (a settings import clears it) is not a pump failure, so it must
+     * not ring the alarm — but it must NOT be silent either. Nothing re-sends a bolus: the user pressed the
+     * button, no insulin was given, and the entry dialog is already gone.
+     */
+    @Test
+    fun bolus_whenDroppedFromQueue_postsSilentCancelledNoticeNotTheAlarm() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).cancelled(true).comment("import"))
+        val executor = create()
+
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { }
+        )
+
+        verify(notificationManager, never()).post(
+            eq(NotificationId.BOLUS_DELIVERY_FAILED), any<String>(), any<NotificationLevel>(), any<Int>(),
+            anyOrNull<AlarmSound>(), any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
+        )
+        // BOLUS_CANCELLED is declared IMPORTANT, which is silent by definition — no sound is passed at the post site.
+        verify(notificationManager).post(
+            eq(NotificationId.BOLUS_CANCELLED), any<String>(), any<NotificationLevel>(), any<Int>(),
+            isNull(), any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
+        )
+    }
+
+    /**
+     * The async bolus result arrives long after confirm() returned, so the RETURN value cannot carry it — the
+     * callback is the only way the relay learns a bolus was dropped rather than failed. Without the flag the
+     * master writes an ExecutionFailed ack and the paired client rings its own BOLUS_ERROR alarm for a bolus
+     * that nothing tried to give.
+     */
+    @Test
+    fun bolus_whenDroppedFromQueue_tellsTheCallerItWasCancelled() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).cancelled(true).comment("import"))
+        val executor = create()
+
+        var failure: WizardBolusExecutor.Failure? = null
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { failure = it }
+        )
+
+        assertThat(failure).isNotNull()
+        assertThat(failure!!.cancelled).isTrue()
+    }
+
+    /** The same shape when the pump really failed — the caller must still be able to tell the two apart. */
+    @Test
+    fun bolus_whenPumpFailed_tellsTheCallerItWasNotCancelled() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).comment("pump said no"))
+        val executor = create()
+
+        var failure: WizardBolusExecutor.Failure? = null
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { failure = it }
+        )
+
+        assertThat(failure).isNotNull()
+        assertThat(failure!!.cancelled).isFalse()
+    }
+
+    /**
+     * A bolus dropped from the queue on purpose (a settings import clears it) is not a pump failure, so it must
+     * not ring the alarm — but it must NOT be silent either. Nothing re-sends a bolus: the user pressed the
+     * button, no insulin was given, and the entry dialog is already gone.
+     */
+    @Test
+    fun bolus_whenDroppedFromQueue_postsSilentCancelledNoticeNotTheAlarm() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).cancelled(true).comment("import"))
+        val executor = create()
+
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { }
+        )
+
+        verify(notificationManager, never()).post(
+            eq(NotificationId.BOLUS_DELIVERY_FAILED), any<String>(), any<NotificationLevel>(), any<Int>(),
+            anyOrNull<AlarmSound>(), any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
+        )
+        // BOLUS_CANCELLED is declared IMPORTANT, which is silent by definition — no sound is passed at the post site.
+        verify(notificationManager).post(
+            eq(NotificationId.BOLUS_CANCELLED), any<String>(), any<NotificationLevel>(), any<Int>(),
+            isNull(), any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
+        )
+    }
+
+    /**
+     * The async bolus result arrives long after confirm() returned, so the RETURN value cannot carry it — the
+     * callback is the only way the relay learns a bolus was dropped rather than failed. Without the flag the
+     * master writes an ExecutionFailed ack and the paired client rings its own BOLUS_ERROR alarm for a bolus
+     * that nothing tried to give.
+     */
+    @Test
+    fun bolus_whenDroppedFromQueue_tellsTheCallerItWasCancelled() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).cancelled(true).comment("import"))
+        val executor = create()
+
+        var failure: WizardBolusExecutor.Failure? = null
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { failure = it }
+        )
+
+        assertThat(failure).isNotNull()
+        assertThat(failure!!.cancelled).isTrue()
+    }
+
+    /** The same shape when the pump really failed — the caller must still be able to tell the two apart. */
+    @Test
+    fun bolus_whenPumpFailed_tellsTheCallerItWasNotCancelled() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).comment("pump said no"))
+        val executor = create()
+
+        var failure: WizardBolusExecutor.Failure? = null
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { failure = it }
+        )
+
+        assertThat(failure).isNotNull()
+        assertThat(failure!!.cancelled).isFalse()
+    }
+
+    /**
+     * A bolus dropped from the queue on purpose (a settings import clears it) is not a pump failure, so it must
+     * not ring the alarm — but it must NOT be silent either. Nothing re-sends a bolus: the user pressed the
+     * button, no insulin was given, and the entry dialog is already gone.
+     */
+    @Test
+    fun bolus_whenDroppedFromQueue_postsSilentCancelledNoticeNotTheAlarm() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).cancelled(true).comment("import"))
+        val executor = create()
+
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { }
+        )
+
+        verify(notificationManager, never()).post(
+            eq(NotificationId.BOLUS_DELIVERY_FAILED), any<String>(), any<NotificationLevel>(), any<Int>(),
+            anyOrNull<AlarmSound>(), any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
+        )
+        // BOLUS_CANCELLED is declared IMPORTANT, which is silent by definition — no sound is passed at the post site.
+        verify(notificationManager).post(
+            eq(NotificationId.BOLUS_CANCELLED), any<String>(), any<NotificationLevel>(), any<Int>(),
+            isNull(), any<List<NotificationAction>>(), anyOrNull<() -> Boolean>()
+        )
+    }
+
+    /**
+     * The async bolus result arrives long after confirm() returned, so the RETURN value cannot carry it — the
+     * callback is the only way the relay learns a bolus was dropped rather than failed. Without the flag the
+     * master writes an ExecutionFailed ack and the paired client rings its own BOLUS_ERROR alarm for a bolus
+     * that nothing tried to give.
+     */
+    @Test
+    fun bolus_whenDroppedFromQueue_tellsTheCallerItWasCancelled() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).cancelled(true).comment("import"))
+        val executor = create()
+
+        var failure: WizardBolusExecutor.Failure? = null
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { failure = it }
+        )
+
+        assertThat(failure).isNotNull()
+        assertThat(failure!!.cancelled).isTrue()
+    }
+
+    /** The same shape when the pump really failed — the caller must still be able to tell the two apart. */
+    @Test
+    fun bolus_whenPumpFailed_tellsTheCallerItWasNotCancelled() = runTest {
+        whenever(runningModeGuard.rejectionMessage(any())).thenReturn(null)
+        whenever(commandQueue.bolus(anyOrNull())).thenReturn(pumpEnactResultProvider().success(false).comment("pump said no"))
+        val executor = create()
+
+        var failure: WizardBolusExecutor.Failure? = null
+        executor.deliverWizardBolus(
+            insulin = 1.0, carbs = 0, carbTimeMinutes = 0, mgdlGlucose = null,
+            bolusCalculatorResult = null, notes = null, source = Sources.QuickWizard, onError = { failure = it }
+        )
+
+        assertThat(failure).isNotNull()
+        assertThat(failure!!.cancelled).isFalse()
     }
 
     /**
