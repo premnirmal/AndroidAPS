@@ -24,6 +24,8 @@ AAPS.Omnipod.suspend_delivery_button_enabled|ErosBooleanPreferenceKey|true
 AAPS.Omnipod.tbr_beeps_enabled|OmnipodBooleanPreferenceKey|true
 AAPS.Omnipod.tbrs_set|ErosLongNonPreferenceKey|true
 AAPS.Omnipod.time_change_enabled|ErosBooleanPreferenceKey|true
+AAPS.Omnipod5.pod_state|O5StringNonPreferenceKey|true
+AAPS.Omnipod5.registration_data_encrypted|O5StringNonPreferenceKey|false
 AAPS.OmnipodDash.pod_state|DashStringNonPreferenceKey|true
 AAPS.RileyLink.LastGoodDeviceFrequency|RileyLinkDoubleKey|true
 AAPS.RileyLink.lastGoodDeviceCommunicationTime|RileyLinkLongKey|true
@@ -33,10 +35,8 @@ CARELEVO_LOW_INSULIN_EXPIRATION_REMINDER_HOURS|CarelevoIntPreferenceKey|true
 CARELEVO_PATCH_EXPIRATION_REMINDER_HOURS|CarelevoIntPreferenceKey|true
 ConfigBuilder_Enabled_%s|BooleanComposedKey|true
 Diaconn G8|DiaconnStringNonKey|true
-DisabledTo_%s|ObjectivesLongComposedKey|true
 DynISFAdjust|IntKey|true
 Enable alternative activation of SMB always|BooleanKey|true
-ExamTask_%s|ObjectivesBooleanComposedKey|true
 I_understand|BooleanNonKey|true
 LocalProfile_basal_%d|ProfileComposedStringKey|true
 LocalProfile_ic_%d|ProfileComposedStringKey|true
@@ -49,20 +49,9 @@ LocalProfile_targetlow_%d|ProfileComposedStringKey|true
 Monitor_resumed_%s|LongComposedKey|true
 Monitor_start_%s|LongComposedKey|true
 Monitor_total_%s|LongComposedKey|true
-ObjectivesDisconnectUsed|BooleanNonKey|true
-ObjectivesLoopUsed|BooleanNonKey|true
-ObjectivesProfileSwitchUsed|BooleanNonKey|true
-ObjectivesReconnectUsed|BooleanNonKey|true
-ObjectivesScaleUsed|BooleanNonKey|true
-ObjectivesTempTargetUsed|BooleanNonKey|true
-Objectives_accomplished_%s|ObjectivesLongComposedKey|true
-Objectives_started_%s|ObjectivesLongComposedKey|true
-ObjectivesbgIsAvailableInNS|BooleanNonKey|true
 ObjectivesmanualEnacts|IntNonKey|true
-ObjectivespumpStatusIsAvailableInNS|BooleanNonKey|true
 QuickWizard|StringNonKey|true
 TBB|StringNonKey|true
-UITask_%s|ObjectivesBooleanComposedKey|true
 aaps_directory|StringKey|true
 absorption_cutoff|DoubleKey|true
 absorption_maxtime|DoubleKey|true
@@ -259,8 +248,16 @@ last_bolus_time|MedtrumLongNonKey|true
 last_cleanup_run|LongNonKey|true
 last_connection|MedtrumLongNonKey|true
 last_expired_version_checker_warning|VersionCheckerLongKey|true
+last_loop_run_timestamp|LongNonKey|false
+last_overview_profile_modified|BooleanNonKey|false
+last_overview_profile_name|StringNonKey|false
+last_overview_profile_percentage|IntNonKey|false
+last_overview_profile_target_range|StringNonKey|false
+last_overview_running_mode|StringNonKey|false
 last_processed_glunovo_timestamp|GlunovoLongKey|false
 last_processed_intelligo_timestamp|IntelligoLongKey|false
+last_pump_expected_end_time_millis|LongNonKey|false
+last_pump_reservoir_units|DoubleNonKey|false
 last_revoked_certs_check|SignatureVerifierLongKey|true
 last_successful_version_check_timestamp|VersionCheckerLongKey|true
 last_vacuum_run|LongNonKey|true
@@ -348,6 +345,8 @@ nsclientinternal_api_secret|StringKey|true
 nsclientinternal_url|StringKey|true
 oh_charging_only|BooleanKey|true
 oh_wifi_only|BooleanKey|true
+omnipod_5_certificate_store|O5IntentKey|false
+omnipod_5_history|O5IntentKey|false
 openaps_smb_min_5m_carbimpact|DoubleKey|true
 openapsama_autosens_period|IntKey|true
 openapsama_current_basal_safety_multiplier|DoubleKey|true
@@ -470,6 +469,7 @@ tidepool_service_configuration|TidepoolStringNonKey|true
 tidepool_subscription_id|TidepoolStringNonKey|true
 treatmentssafety_maxbolus|DoubleKey|true
 treatmentssafety_maxcarbs|IntKey|true
+trio_glycemic_metric_units|StringKey|true
 uamsmbmaxminutes|IntKey|true
 ukf_last_processed_timestamp|UkfLongNonKey|false
 ukf_last_saved_timestamp|UkfLongNonKey|true

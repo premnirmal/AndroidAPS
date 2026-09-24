@@ -76,9 +76,9 @@ class RawPreferenceStoreScanTest {
         "implementation/src/commonMain/kotlin/app/aaps/implementation/maintenance/cloud/GoogleTokens.kt" to "holds the cloud token store the providers above use",
 
         // --- Runs before DI exists ---
-        "implementation/src/androidMain/kotlin/app/aaps/implementation/utils/fabric/FabricPrivacyImpl.kt" to "reads before the graph is built (DI cycle)",
-        "implementation/src/iosMain/kotlin/app/aaps/implementation/utils/fabric/FabricPrivacyImpl.kt" to "same, on iOS",
+        "implementation/src/iosMain/kotlin/app/aaps/implementation/utils/fabric/FabricPrivacyImpl.kt" to "reads before the graph is built (DI cycle), on iOS",
         "core/ui/src/androidMain/kotlin/app/aaps/core/ui/locale/LocaleHelper.kt" to "reads the language before DI exists",
+        "app/src/main/kotlin/app/aaps/MainApp.kt" to "reads the pending database restore flag in attachBaseContext, long before the graph is built",
 
         // --- Wiring, which hands the store to the things above ---
         "app/src/main/kotlin/app/aaps/di/metro/AppAndroidBindings.kt" to "DI wiring",
@@ -89,6 +89,7 @@ class RawPreferenceStoreScanTest {
         "ios/shell/src/iosMain/kotlin/app/aaps/ios/shell/di/IosPlatformBindings.kt" to "DI wiring, iOS",
         "ios/shell/src/iosMain/kotlin/app/aaps/ios/shell/di/IosProbeGraph.kt" to "DI wiring, iOS probe graph",
         "shared/clientbindings/src/commonMain/kotlin/app/aaps/shared/clientbindings/ClientGraphBindings.kt" to "DI wiring, shared client bindings",
+        "shared/impl/src/main/kotlin/app/aaps/shared/impl/di/SharedImplModule.kt" to "DI wiring, it builds SPImpl over the Android store",
     )
 
     /**
