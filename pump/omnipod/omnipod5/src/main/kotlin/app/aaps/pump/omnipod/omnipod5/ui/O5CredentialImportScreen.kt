@@ -19,6 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.keys.interfaces.TextRef
+import app.aaps.core.ui.compose.stringResource
+import app.aaps.pump.omnipod.common.R
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
 
 /**
@@ -60,14 +63,14 @@ private fun O5CredentialImportContent(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Omnipod 5 Credential",
+            text = stringResource(TextRef.AndroidRes(R.string.omnipod_5_certificate_store)),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
 
         when (importResult) {
             is ImportResult.Success -> Text(
-                text = "Imported credential for controller 0x%08X".format(importResult.controllerId),
+                text = stringResource(TextRef.AndroidRes(R.string.omnipod_5_certificate_store_imported),"0x%08X".format(importResult.controllerId)),
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.labelLarge
             )
@@ -83,7 +86,7 @@ private fun O5CredentialImportContent(
 
         if (installedCredentials.isNotEmpty()) {
             Text(
-                text = "Installed credentials",
+                text = stringResource(TextRef.AndroidRes(R.string.omnipod_5_certificate_store_installed_credentials)),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -98,7 +101,7 @@ private fun O5CredentialImportContent(
                         ) {
                             Column {
                                 Text(
-                                    text = "Controller 0x%08X".format(row.controllerId),
+                                    text = stringResource(TextRef.AndroidRes(R.string.omnipod_5_certificate_store_controller_id), "0x%08X".format(row.controllerId)),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
@@ -107,7 +110,7 @@ private fun O5CredentialImportContent(
                                 )
                             }
                             TextButton(onClick = { removeCredential(row.controllerId) }) {
-                                Text("Remove")
+                                Text(stringResource(TextRef.AndroidRes(app.aaps.core.ui.R.string.remove)))
                             }
                         }
                     }
