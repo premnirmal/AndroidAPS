@@ -28,6 +28,8 @@ import app.aaps.pump.omnipod.common.R
  * - On a successful import [onImported] is called, which opens the Omnipod 5 setup wizard.
  * - On a failed import a "Try again" button is shown that re-launches the WebView (reloads
  *   [url] from scratch).
+ *
+ * The host provides toolbar navigation for leaving this full-screen flow.
  */
 @Composable
 fun O5CredentialImportWebViewScreen(

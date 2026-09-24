@@ -64,6 +64,8 @@ class OmnipodO5ComposeContent(
             credentialImportContent = { onImported, onBack ->
                 val context = LocalContext.current
                 val title = stringResource(R.string.omnipod_5_certificate_store_import)
+                val importedMessage = stringResource(R.string.omnipod_5_credential_imported)
+                val importErrorMessage = stringResource(R.string.omnipod_5_credential_import_error)
                 LaunchedEffect(title) {
                     setToolbarConfig(
                         ToolbarConfig(
@@ -81,12 +83,12 @@ class OmnipodO5ComposeContent(
                     url = stringResource(R.string.omnipod_5_login),
                     onImportCredential = credentialViewModel::importFromWebMessage,
                     onImported = {
-                        Toast.makeText(context, "Omnipod 5 credential imported", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, importedMessage, Toast.LENGTH_LONG).show()
                         onImported()
                     },
                     onFailed = { throwable ->
                         credentialViewModel.importError(throwable)
-                        Toast.makeText(context, "Error importing certificate", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, importErrorMessage, Toast.LENGTH_LONG).show()
                     }
                 )
             },
