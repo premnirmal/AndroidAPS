@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -67,6 +69,7 @@ fun HistoryScreen(
     title: String,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
+    showTopBar: Boolean = true,
     viewModel: HistoryViewModel = metroViewModel()
 ) {
     // viewModelFactory/initializer rather than an anonymous ViewModelProvider.Factory: the factory's
@@ -91,18 +94,21 @@ fun HistoryScreen(
     }
 
     Scaffold(
+        contentWindowInsets = if (showTopBar) ScaffoldDefaults.contentWindowInsets else WindowInsets(0),
         topBar = {
-            AapsTopAppBar(
-                title = { Text(title) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(CoreUiStrings.back)
-                        )
+            if (showTopBar) {
+                AapsTopAppBar(
+                    title = { Text(title) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = stringResource(CoreUiStrings.back)
+                            )
+                        }
                     }
-                }
-            )
+                )
+            }
         },
         modifier = modifier.fillMaxSize()
     ) { paddingValues ->

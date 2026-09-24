@@ -37,7 +37,7 @@ kotlin {
         compileSdk = Versions.compileSdk
         minSdk = min(Versions.minSdk, Versions.wearMinSdk)  // Compatible with wear module
         // Off by default for a multiplatform library, unlike a plain android library. This module is
-        // where most of the app's strings, drawables and raw alarm sounds live, so it must be on.
+        // where most of the app's strings and drawables live, so it must be on.
         androidResources { enable = true }
         // Creates the androidHostTest compilation, which also pulls in commonTest.
         // isIncludeAndroidResources is what makes Robolectric work: the Compose UI tests here need a

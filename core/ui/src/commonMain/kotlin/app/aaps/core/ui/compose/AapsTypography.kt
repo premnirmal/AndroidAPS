@@ -50,8 +50,8 @@ data class AapsTypography(
  */
 val LocalAapsTypography = compositionLocalOf {
     AapsTypography(
-        bgValue = TextStyle(fontSize = 50.sp, fontWeight = FontWeight.Bold, lineHeight = 52.sp),
-        bgSecondary = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Bold, lineHeight = 19.sp),
+        bgValue = TextStyle(fontSize = 50.sp, fontWeight = FontWeight.Medium, lineHeight = 52.sp),
+        bgSecondary = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.Medium, lineHeight = 19.sp),
         bgTimeAgo = TextStyle(fontSize = 17.sp, lineHeight = 19.sp),
         treatmentValue = TextStyle(fontSize = 14.sp),
         treatmentDetail = TextStyle(fontSize = 12.sp),
@@ -71,8 +71,8 @@ fun aapsTypography(scale: Float = 1f): AapsTypography {
     val mt = MaterialTheme.typography
     return remember(mt, scale) {
         AapsTypography(
-            bgValue = mt.displayMedium.copy(fontSize = (50 * scale).sp, fontWeight = FontWeight.Bold, lineHeight = (52 * scale).sp),
-            bgSecondary = mt.bodySmall.copy(fontSize = (17 * scale).sp, fontWeight = FontWeight.Bold, lineHeight = (19 * scale).sp),
+            bgValue = mt.displayMedium.copy(fontSize = (50 * scale).sp, fontWeight = FontWeight.Medium, lineHeight = (52 * scale).sp),
+            bgSecondary = mt.bodySmall.copy(fontSize = (17 * scale).sp, fontWeight = FontWeight.Medium, lineHeight = (19 * scale).sp),
             bgTimeAgo = mt.bodySmall.copy(fontSize = (17 * scale).sp, lineHeight = (19 * scale).sp),
             treatmentValue = mt.bodyMedium.copy(fontSize = (14 * scale).sp),
             treatmentDetail = mt.bodySmall.copy(fontSize = (12 * scale).sp),

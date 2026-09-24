@@ -139,8 +139,7 @@ class LoopPlugin(
                 rh = rh,
                 dateUtil = dateUtil,
                 decimalFormatter = decimalFormatter,
-                aapsLogger = aapsLogger,
-                preferences = preferences
+                aapsLogger = aapsLogger
             )
         }
         .icon(IcLoopClosed)

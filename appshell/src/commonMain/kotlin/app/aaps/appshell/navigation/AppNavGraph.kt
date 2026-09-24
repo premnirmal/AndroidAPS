@@ -3,7 +3,9 @@ package app.aaps.appshell.navigation
 import androidx.navigation.NavBackStackEntry
 import androidx.savedstate.read
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -39,20 +41,15 @@ import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.data.model.TE
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.configuration.ConfigBuilder
-import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.maintenance.PrefsFileInfo
 import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.interfaces.plugin.ActivePlugin
-import app.aaps.core.interfaces.plugin.PermissionGroup
 import app.aaps.core.interfaces.plugin.PluginBase
-import app.aaps.core.interfaces.plugin.PluginPermissions
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventShowSnackbar
-import app.aaps.core.keys.BooleanKey
-import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.interfaces.Preferences
@@ -70,8 +67,6 @@ import app.aaps.core.ui.search.SearchableItem
 import app.aaps.core.ui.search.SearchableProvider
 import app.aaps.core.ui.compose.siteRotation.SiteLocationPickerScreen
 import app.aaps.plugins.automation.AutomationRuntime
-import app.aaps.plugins.configuration.setupwizard.SWDefinition
-import app.aaps.plugins.configuration.setupwizard.SetupWizardScreen
 import app.aaps.plugins.sync.nsclientV3.clientcontrol.compose.AuthorizedClientsScreen
 import app.aaps.plugins.sync.nsclientV3.clientcontrol.compose.PairWithMasterScreen
 import app.aaps.ui.compose.calibrationDialog.CalibrationDialogScreen
@@ -86,9 +81,13 @@ import app.aaps.ui.compose.history.HistoryScreen
 import app.aaps.ui.compose.insulinDialog.InsulinDialogScreen
 import app.aaps.ui.compose.insulinManagement.InsulinManagementScreen
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
+import app.aaps.ui.compose.main.VersionOverlay
+import app.aaps.ui.compose.main.TrioNavTab
 import app.aaps.ui.compose.maintenance.ImportSettingsScreen
 import app.aaps.ui.compose.maintenance.ImportSource
 import app.aaps.ui.compose.maintenance.ImportViewModel
+import app.aaps.ui.compose.maintenance.MaintenanceScreen
+import app.aaps.ui.compose.maintenance.MaintenanceViewModel
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.preferences.AllPreferencesScreen
 import app.aaps.ui.compose.preferences.PreferenceScreenView
@@ -110,6 +109,7 @@ import app.aaps.ui.compose.scenes.wizard.SceneWizardScreen
 import app.aaps.ui.compose.siteRotationDialog.SiteRotationManagementScreen
 import app.aaps.ui.compose.siteRotationDialog.viewModels.SiteRotationManagementViewModel
 import app.aaps.ui.compose.stats.StatsScreen
+import app.aaps.ui.compose.stats.TrioStatsScreen
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import app.aaps.ui.compose.tempBasalDialog.TempBasalDialogScreen
 import app.aaps.ui.compose.tempTarget.TempTargetManagementScreen
@@ -118,6 +118,7 @@ import app.aaps.ui.compose.treatmentDialog.TreatmentDialogScreen
 import app.aaps.ui.compose.treatments.TreatmentsScreen
 import app.aaps.ui.compose.treatments.viewmodels.TreatmentsViewModel
 import app.aaps.ui.compose.wizardDialog.WizardDialogScreen
+import app.aaps.ui.UiStrings
 import app.aaps.ui.search.BuiltInSearchables
 import kotlinx.coroutines.launch
 
@@ -154,10 +155,8 @@ fun NavGraphBuilder.appNavGraph(
     graphViewModel: app.aaps.ui.compose.overview.graphs.GraphViewModel,
     chipsViewModel: ChipsViewModel,
     // Dependencies
-    swDefinition: SWDefinition,
     rxBus: RxBus,
     activePlugin: ActivePlugin,
-    pluginPermissions: PluginPermissions,
     automationRuntime: AutomationRuntime,
     preferences: Preferences,
     rh: TextResolver,
@@ -173,8 +172,20 @@ fun NavGraphBuilder.appNavGraph(
     requestEditModeAuthorization: (onGranted: () -> Unit) -> Unit,
     onRefreshPermissions: () -> Unit,
     onExecuteQuickWizard: (guid: String) -> Unit,
-    onRequestDirectoryAccess: () -> Unit,
-    onRequestPermission: (PermissionGroup) -> Unit,
+    onNavigateToTrioTab: (TrioNavTab) -> Unit,
+    trioTabScaffold: @Composable (
+        selectedTab: TrioNavTab,
+        title: String,
+        showTopBar: Boolean,
+        topBarActions: @Composable RowScope.() -> Unit,
+        content: @Composable (PaddingValues) -> Unit
+    ) -> Unit,
+    maintenanceViewModel: MaintenanceViewModel? = null,
+    onMaintenanceDirectoryClick: () -> Unit = {},
+    onMaintenanceRecreateActivity: () -> Unit = {},
+    onMaintenanceLaunchBrowser: (String) -> Unit = {},
+    onMaintenanceBringToForeground: () -> Unit = {},
+    onMaintenanceSnackbar: suspend (String) -> Unit = {},
     /**
      * The overview, which is the app home screen.
      *
@@ -440,7 +451,6 @@ fun NavGraphBuilder.appNavGraph(
             currentPercentage = reuseValues?.first ?: 100,
             currentTimeshiftHours = reuseValues?.second ?: 0,
             hasReuseValues = reuseValues != null,
-            showNotesField = preferences.get(BooleanKey.OverviewShowNotesInDialogs),
             initialTimestamp = profileManagementViewModel.dateUtil.nowWithoutMilliseconds(),
             rh = rh,
             onNavigateBack = { navController.safePopBackStack() },
@@ -514,11 +524,56 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
+    composable(AppRoute.TrioTreatmentList.route) {
+            trioTabScaffold(
+                TrioNavTab.Treatments,
+                stringResource(CoreUiStrings.treatments),
+                false,
+                {}
+            ) { paddingValues ->
+                TreatmentsScreen(
+                    viewModel = treatmentsViewModel,
+                    onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .consumeWindowInsets(paddingValues)
+                )
+            }
+        }
+
+        composable(AppRoute.TrioTreatments.route) {
+            trioTabScaffold(
+                TrioNavTab.Adjustments,
+                stringResource(UiStrings.trio_tab_adjustments),
+                false,
+                {}
+            ) { paddingValues ->
+                TempTargetManagementScreen(
+                    viewModel = tempTargetManagementViewModel,
+                    initialMode = ScreenMode.EDIT,
+                    onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
+                    onRequestEditMode = {
+                        requestEditModeAuthorization { tempTargetManagementViewModel.setScreenMode(ScreenMode.EDIT) }
+                    },
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .consumeWindowInsets(paddingValues)
+                )
+            }
+        }
+
     composable(AppRoute.Stats.route) {
         StatsScreen(
             viewModel = statsViewModel,
             onNavigateBack = { navController.safePopBackStack() }
         )
+    }
+
+    composable(AppRoute.TrioStats.route) {
+            TrioStatsScreen(
+                viewModel = statsViewModel,
+                onNavigateBack = { navController.safePopBackStack() }
+            )
     }
 
     composable(AppRoute.ProfileHelper.route) {
@@ -535,14 +590,50 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
+    composable(AppRoute.TrioHistory.route) {
+            trioTabScaffold(
+                TrioNavTab.Adjustments,
+                stringResource(MainStrings.nav_history_browser),
+                true,
+                {}
+            ) { paddingValues ->
+                HistoryScreen(
+                    title = stringResource(MainStrings.nav_history_browser),
+                    onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
+                    modifier = Modifier
+                        .padding(paddingValues)
+                        .consumeWindowInsets(paddingValues),
+                    showTopBar = false
+                )
+        }
+    }
+
     composable(AppRoute.Preferences.route) {
         AllPreferencesScreen(
             activePlugin = activePlugin,
             rh = rh,
             builtInSearchables = builtInSearchables,
             configBuilder = configBuilder,
-            onBackClick = { navController.safePopBackStack() }
+            onBackClick = { navController.safePopBackStack() },
+            onMaintenanceClick = maintenanceViewModel?.let { { navController.navigate(AppRoute.Maintenance.route) } }
         )
+    }
+
+    maintenanceViewModel?.let { viewModel ->
+        composable(AppRoute.Maintenance.route) {
+            MaintenanceScreen(
+                maintenanceViewModel = viewModel,
+                onDirectoryClick = onMaintenanceDirectoryClick,
+                onImportSettingsNavigate = { source ->
+                    navController.navigate(AppRoute.ImportSettings.createRoute(source.name))
+                },
+                onRecreateActivity = onMaintenanceRecreateActivity,
+                onLaunchBrowser = onMaintenanceLaunchBrowser,
+                onBringToForeground = onMaintenanceBringToForeground,
+                onSnackbar = onMaintenanceSnackbar,
+                onNavigateBack = { navController.safePopBackStack() }
+            )
+        }
     }
 
     composable(
@@ -622,6 +713,7 @@ fun NavGraphBuilder.appNavGraph(
         val configState by configurationViewModel.uiState.collectAsStateWithLifecycle()
         ConfigurationScreen(
             categories = configState.categories,
+            visibleTypes = null,
             hardwarePumpConfirmation = configState.hardwarePumpConfirmation,
             onNavigateBack = { navController.safePopBackStack() },
             onNavigateToCategory = { type ->
@@ -633,6 +725,34 @@ fun NavGraphBuilder.appNavGraph(
             },
             onDismissHardwarePump = { configurationViewModel.dismissHardwarePumpDialog() }
         )
+    }
+
+    composable(AppRoute.TrioSettings.route) {
+            trioTabScaffold(
+                TrioNavTab.Settings,
+                stringResource(CoreUiStrings.settings),
+                true,
+                {
+                    VersionOverlay()
+                }
+        ) { paddingValues ->
+            AllPreferencesScreen(
+                activePlugin = activePlugin,
+                rh = rh,
+                builtInSearchables = builtInSearchables,
+                configBuilder = configBuilder,
+                onBackClick = { onNavigateToTrioTab(TrioNavTab.Overview) },
+                modifier = Modifier
+                    .padding(paddingValues)
+                    .consumeWindowInsets(paddingValues),
+                showTopBar = false,
+                showSimpleModeHiddenPreferences = true,
+                onConfigurationClick = {
+                    navController.navigate(AppRoute.Configuration.route)
+                },
+                onMaintenanceClick = maintenanceViewModel?.let { { navController.navigate(AppRoute.Maintenance.route) } }
+            )
+        }
     }
 
     composable(
@@ -753,40 +873,6 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
-    composable(AppRoute.SetupWizard.route) {
-        SetupWizardScreen(
-            swDefinition = swDefinition,
-            onFinish = {
-                preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
-                navController.safePopBackStack()
-            },
-            onBack = { navController.safePopBackStack() },
-            onImportSettings = { navController.navigate(AppRoute.ImportSettings.createRoute("LOCAL")) },
-            onPluginPreferences = { pluginId -> navController.navigate(AppRoute.PluginPreferences.createRoute(pluginId)) },
-            onPluginOpen = { pluginId -> onNavigationRequest(NavigationRequest.Plugin(pluginId), navController) },
-            onSetMasterPassword = { navController.navigate(AppRoute.PreferenceScreen.createRoute("protection", StringKey.ProtectionMasterPassword.key)) },
-            onManageInsulin = { navController.navigate(AppRoute.InsulinManagement.createRoute()) },
-            onManageProfile = { navController.navigate(AppRoute.Profile.createRoute()) },
-            onProfileSwitch = { navController.navigate(AppRoute.ProfileActivation.createRoute(0)) },
-            onOpenAuthorizedClients = { navController.navigate(AppRoute.AuthorizedClients.route) },
-            onPairWithMaster = { navController.navigate(AppRoute.PairWithMaster.route) },
-            onOpenNsReceiveSettings = { navController.navigate(AppRoute.PreferenceScreen.createRoute("ns_client_synchronization")) },
-            onRunObjectives = {
-                val index = activePlugin.getPluginsList().indexOfFirst { it is Objectives }
-                if (index >= 0) navController.navigate(AppRoute.PluginContent.createRoute(index))
-            },
-            onRequestDirectoryAccess = onRequestDirectoryAccess,
-            onRequestPermission = onRequestPermission,
-            permissionItems = {
-                val allGroups = pluginPermissions.collectAllPermissions()
-                val missingGroups = pluginPermissions.collectMissingPermissions()
-                val missingSets = missingGroups.map { it.permissions.toSet() }.toSet()
-                allGroups.map { group -> group to (group.permissions.toSet() !in missingSets) }
-            },
-            isDirectoryAccessGranted = { prefFileList.isDirectoryAccessGranted() },
-            rxBus = rxBus
-        )
-    }
 }
 
 @Composable

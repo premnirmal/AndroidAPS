@@ -9,7 +9,6 @@ import kotlinx.datetime.LocalDateTime
 import dev.zacsweers.metro.Inject
 import app.aaps.core.objects.workflow.WorkOutcome
 import app.aaps.core.data.configuration.Constants
-import app.aaps.core.data.model.SourceSensor
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.aps.Loop
 import app.aaps.core.interfaces.configuration.Config
@@ -17,10 +16,8 @@ import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.nsclient.ProcessedDeviceStatusData
 import app.aaps.core.interfaces.overview.OverviewData
-import app.aaps.core.interfaces.overview.graph.BgDataPoint
-import app.aaps.core.interfaces.overview.graph.BgRange
-import app.aaps.core.interfaces.overview.graph.BgType
 import app.aaps.core.interfaces.overview.graph.OverviewDataCache
+import app.aaps.core.interfaces.overview.graph.toPredictionDataPoints
 import app.aaps.core.interfaces.profile.ProfileUtil
 import app.aaps.core.interfaces.widget.WidgetUpdater
 import app.aaps.core.interfaces.workflow.CalculationSignalsEmitter
@@ -113,32 +110,9 @@ class PostCalculationRunner(
         val highMarkInUnits = preferences.get(UnitDoubleKey.OverviewHighMark)
         val lowMarkInUnits = preferences.get(UnitDoubleKey.OverviewLowMark)
 
-        val predictionDataPoints = apsResult?.predictionsAsGv
-            ?.filter { it.value >= 40 }
-            ?.map { gv ->
-                val valueInUnits = profileUtil.fromMgdlToUnits(gv.value)
-                BgDataPoint(
-                    timestamp = gv.timestamp,
-                    value = valueInUnits,
-                    range = when {
-                        valueInUnits > highMarkInUnits -> BgRange.HIGH
-                        valueInUnits < lowMarkInUnits  -> BgRange.LOW
-                        else                           -> BgRange.IN_RANGE
-                    },
-                    type = when (gv.sourceSensor) {
-                        SourceSensor.IOB_PREDICTION   -> BgType.IOB_PREDICTION
-                        SourceSensor.COB_PREDICTION   -> BgType.COB_PREDICTION
-                        SourceSensor.A_COB_PREDICTION -> BgType.A_COB_PREDICTION
-                        SourceSensor.UAM_PREDICTION   -> BgType.UAM_PREDICTION
-                        SourceSensor.ZT_PREDICTION    -> BgType.ZT_PREDICTION
-                        else                          -> BgType.IOB_PREDICTION
-                    }
-                )
-            }
-            ?.sortedBy { it.timestamp }
-            ?: emptyList()
-
-        data.cache.updatePredictions(predictionDataPoints)
+        apsResult
+            ?.toPredictionDataPoints(profileUtil, lowMarkInUnits, highMarkInUnits)
+            ?.let(data.cache::updatePredictions)
 
         // Extend cached time range to include prediction horizon
         data.cache.timeRangeFlow.value?.let { current ->

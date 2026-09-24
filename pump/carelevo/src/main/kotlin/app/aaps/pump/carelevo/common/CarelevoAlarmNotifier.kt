@@ -45,9 +45,10 @@ import dev.zacsweers.metro.SingleIn
  *
  * [showTopNotification] deliberately never posts at [app.aaps.core.interfaces.notifications.NotificationLevel.URGENT]
  * (see the comment there) — that level is `NotificationManagerImpl`'s own alarm tier, which the
- * shared full-screen alarm's OK button silences *app-wide* on confirm (`muteAllAlarms`), wiping any
- * URGENT+sound card off the screen without actually acknowledging it. Matching `eopatch`'s
- * `AlarmManager.showNotification` pattern, the sound/full-screen escalation is left entirely to
+ * shared full-screen alarm's OK button dismisses urgent alerts app-wide on confirm
+ * (`dismissAllAlarms`), wiping any URGENT card off the screen without actually acknowledging it.
+ * Matching `eopatch`'s
+ * `AlarmManager.showNotification` pattern, the full-screen escalation is left entirely to
  * `runAlarm`, so the card survives that confirm and stays until the user genuinely clears the
  * alarm through it.
  */
@@ -66,7 +67,7 @@ class CarelevoAlarmNotifier @Inject constructor(
     private val _alarms = MutableStateFlow<List<CarelevoAlarmInfo>>(emptyList())
     val alarms = _alarms.asStateFlow()
     private var onAlarmsUpdated: ((List<CarelevoAlarmInfo>) -> Unit)? = null
-    private val channelId = "carelevo_alarm_channel"
+    private val channelId = "carelevo_alarm_channel_silent"
 
     fun startObserving(
         onAlarmsUpdated: (List<CarelevoAlarmInfo>) -> Unit
@@ -117,12 +118,11 @@ class CarelevoAlarmNotifier @Inject constructor(
             val descArgs = buildDescArgsFor(newAlarm)
             val desc = buildDescription(descRes, descArgs)
             aapsLogger.debug(LTag.PUMPCOMM, "showTopNotification titleRes=$titleRes descArgs=$descArgs desc=$desc")
-            // Critical tiers get IMPORTANT (not URGENT) — deliberately below NotificationManagerImpl's
-            // alarm tier, matching eopatch's AlarmManager.showNotification. URGENT+sound is what the
-            // shared full-screen alarm's OK button silences app-wide on confirm (muteAllAlarms), which
-            // would wipe this card without it ever being acknowledged; sound/full-screen is runAlarm's
-            // job alone (CarelevoPumpPlugin.handleAlarms). Neither severity auto-expires — an unhandled
-            // alarm, critical or not, must not disappear on its own.
+            // Critical tiers get IMPORTANT (not URGENT) — deliberately below the shared alarm tier,
+            // matching eopatch's AlarmManager.showNotification. The shared full-screen alarm's OK
+            // button dismisses urgent alerts app-wide on confirm (dismissAllAlarms), which would wipe
+            // this card without it ever being acknowledged. CarelevoPumpPlugin.handleAlarms owns the
+            // full-screen alert. Neither severity auto-expires; an unhandled alarm must remain.
             val critical = newAlarm.alarmType.isCritical()
             notificationManager.post(
                 id = NotificationId.CARELEVO_PATCH_ALERT,
@@ -135,7 +135,6 @@ class CarelevoAlarmNotifier @Inject constructor(
                 ),
                 date = dateUtil.now(),
                 // No sound here on purpose (see the level comment above) - runAlarm owns the escalation.
-                sound = null,
                 validityCheck = null,
             )
         }
@@ -254,9 +253,12 @@ class CarelevoAlarmNotifier @Inject constructor(
         val importance = NotificationManager.IMPORTANCE_HIGH
         val channel = NotificationChannel(channelId, name, importance).apply {
             description = descriptionText
+            setSound(null, null)
+            enableVibration(true)
         }
         val notificationManager: NotificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.deleteNotificationChannel("carelevo_alarm_channel")
         notificationManager.createNotificationChannel(channel)
     }
 

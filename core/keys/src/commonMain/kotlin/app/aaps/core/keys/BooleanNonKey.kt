@@ -11,14 +11,6 @@ enum class BooleanNonKey(
 
     GeneralSetupWizardProcessed("startupwizard_processed", false),
     SetupWizardIUnderstand("I_understand", false),
-    ObjectivesLoopUsed("ObjectivesLoopUsed", false),
-    ObjectivesScaleUsed("ObjectivesScaleUsed", false),
-    ObjectivesPumpStatusIsAvailableInNS("ObjectivespumpStatusIsAvailableInNS", false),
-    ObjectivesBgIsAvailableInNs("ObjectivesbgIsAvailableInNS", false),
-    ObjectivesProfileSwitchUsed("ObjectivesProfileSwitchUsed", false),
-    ObjectivesDisconnectUsed("ObjectivesDisconnectUsed", false),
-    ObjectivesReconnectUsed("ObjectivesReconnectUsed", false),
-    ObjectivesTempTargetUsed("ObjectivesTempTargetUsed", false),
     AutosensUsedOnMainPhone("used_autosens_on_main_phone", false),
 
     // Wizard toggle states (persisted across restarts, not user-facing preferences)
@@ -42,6 +34,8 @@ enum class BooleanNonKey(
     StatsDexcomTirExpanded("stats_dexcom_tir_expanded", true, exportable = false),
     StatsActivityExpanded("stats_activity_expanded", true, exportable = false),
     StatsTddCycleExpanded("stats_tdd_cycle_expanded", false, exportable = false),
+
+    LastOverviewProfileModified("last_overview_profile_modified", false, exportable = false),
 
     // Set (committed) right before a startup VACUUM and cleared after it finishes. If it is still
     // set on the next launch, the previous VACUUM died below the JVM (native abort / OOM) — used to

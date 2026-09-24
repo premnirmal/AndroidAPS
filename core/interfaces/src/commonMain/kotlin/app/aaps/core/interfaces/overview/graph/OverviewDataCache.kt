@@ -46,6 +46,7 @@ interface OverviewDataCache {
     val profileFlow: StateFlow<ProfileDisplayData?>
     val runningModeFlow: StateFlow<RunningModeDisplayData?>
     val tbrFlow: StateFlow<TbrDisplayData?>
+    suspend fun hydrateOverviewData()
     fun refreshTempTarget()
     fun refreshProfile()
     fun refreshRunningMode()

@@ -13,7 +13,6 @@ import dev.zacsweers.metro.SingleIn
 /*
     This code replaces  following
     val alarm = Intent(context, DummyService::class.java)
-    alarm.putExtra("soundId", n.soundId)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(alarm) else context.startService(alarm)
 
     it fails randomly with error

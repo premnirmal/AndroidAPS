@@ -42,7 +42,6 @@ import app.aaps.core.ui.compose.icons.IcPumpBattery
 import app.aaps.core.ui.compose.icons.IcPumpCartridge
 import app.aaps.core.ui.compose.icons.IcQuestion
 import app.aaps.core.ui.compose.icons.IcQuickwizard
-import app.aaps.core.ui.compose.icons.IcSetupWizard
 import app.aaps.core.ui.compose.icons.IcSiteRotation
 import app.aaps.core.ui.compose.icons.IcSmb
 import app.aaps.core.ui.compose.icons.IcStats
@@ -105,7 +104,6 @@ fun ElementType.color(): Color = when (this) {
 
     ElementType.PROFILE_HELPER          -> AapsTheme.elementColors.profileSwitch
     ElementType.HISTORY_BROWSER,
-    ElementType.SETUP_WIZARD,
     ElementType.MAINTENANCE,
     ElementType.CONFIGURATION           -> AapsTheme.elementColors.navigation
 
@@ -169,7 +167,6 @@ fun ElementType.icon(): ImageVector = when (this) {
 
     ElementType.PROFILE_HELPER          -> IcProfile
     ElementType.HISTORY_BROWSER         -> IcHistory
-    ElementType.SETUP_WIZARD            -> IcSetupWizard
     ElementType.MAINTENANCE             -> IcPluginMaintenance
     ElementType.CONFIGURATION           -> IcPluginConfigBuilder
     ElementType.ABOUT                   -> Icons.Default.Info
@@ -235,7 +232,6 @@ fun ElementType.label(): TextRef? = when (this) {
     ElementType.TDD_CYCLE_PATTERN       -> CoreUiStrings.tdd_cycle_pattern
     ElementType.PROFILE_HELPER          -> CoreUiStrings.nav_profile_helper
     ElementType.HISTORY_BROWSER         -> CoreUiStrings.nav_history_browser
-    ElementType.SETUP_WIZARD            -> CoreUiStrings.nav_setupwizard
     ElementType.MAINTENANCE             -> CoreUiStrings.maintenance
     ElementType.CONFIGURATION           -> CoreUiStrings.nav_configuration
     ElementType.ABOUT                   -> CoreUiStrings.nav_about
@@ -284,7 +280,6 @@ fun ElementType.description(): TextRef? = when (this) {
     ElementType.TDD_CYCLE_PATTERN       -> CoreUiStrings.tdd_cycle_pattern_desc
     ElementType.PROFILE_HELPER          -> CoreUiStrings.nav_profile_helper_desc
     ElementType.HISTORY_BROWSER         -> CoreUiStrings.nav_history_browser_desc
-    ElementType.SETUP_WIZARD            -> CoreUiStrings.nav_setupwizard_desc
     ElementType.MAINTENANCE             -> CoreUiStrings.description_maintenance
     ElementType.CONFIGURATION           -> CoreUiStrings.nav_configuration_desc
     ElementType.ABOUT                   -> CoreUiStrings.nav_about_desc

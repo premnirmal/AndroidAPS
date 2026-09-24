@@ -5,7 +5,6 @@ import app.aaps.core.data.model.TE
 import app.aaps.core.data.pump.defs.PumpType
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
 import app.aaps.core.interfaces.notifications.NotificationManager
@@ -120,8 +119,7 @@ class PatchManager(
                 notificationManager.post(
                     id = NotificationId.EOFLOW_PATCH_ALERT,
                     text = rh.gs(R.string.patch_activate_reminder_desc),
-                    level = NotificationLevel.URGENT,
-                    sound = AlarmSound.ALARM
+                    level = NotificationLevel.URGENT
                 )
             }
     }

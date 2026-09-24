@@ -404,16 +404,14 @@ internal fun CarbsDialogContent(
                     )
 
                     // Notes
-                    if (uiState.showNotesFromPreferences) {
-                        TextField(
-                            value = uiState.notes,
-                            onValueChange = onNotesChange,
-                            label = { Text(stringResource(CoreUiStrings.notes_label)) },
-                            modifier = itemModifier,
-                            singleLine = false,
-                            maxLines = 3
-                        )
-                    }
+                    TextField(
+                        value = uiState.notes,
+                        onValueChange = onNotesChange,
+                        label = { Text(stringResource(CoreUiStrings.notes_label)) },
+                        modifier = itemModifier,
+                        singleLine = false,
+                        maxLines = 3
+                    )
                 }
             }
 

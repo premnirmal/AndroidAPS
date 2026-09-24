@@ -4,6 +4,7 @@ import app.aaps.core.interfaces.utils.usesTwelveHourClock
 import platform.Foundation.NSDateFormatter
 import platform.Foundation.NSDateFormatterShortStyle
 import platform.Foundation.NSDateFormatterNoStyle
+import androidx.compose.material3.ColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -12,6 +13,9 @@ import kotlin.math.min
 /** iOS styles its status bar through the view controller, not from inside the composition. */
 @Composable
 actual fun SystemBarAppearance(isDark: Boolean) = Unit
+
+@Composable
+actual fun platformColorScheme(isDark: Boolean, fallback: ColorScheme): ColorScheme = fallback
 
 /**
  * Taken from the window rather than the device, which is the closest iOS equivalent. An iPad in

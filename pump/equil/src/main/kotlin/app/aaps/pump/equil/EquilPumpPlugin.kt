@@ -18,7 +18,6 @@ import app.aaps.core.interfaces.constraints.ConstraintsChecker
 import app.aaps.core.interfaces.insulin.ConcentrationHelper
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
-import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
 import app.aaps.core.interfaces.notifications.NotificationManager
@@ -145,7 +144,7 @@ class EquilPumpPlugin(
                 // (alarms now come from the GATT history read on every connection, not just from an
                 // advertisement scan caught mid-bolus). See #5040.
                 notificationManager.dismiss(NotificationId.EQUIL_ALARM)
-                notificationManager.post(NotificationId.EQUIL_ALARM, eventEquilError.tips, sound = AlarmSound.ALARM)
+                notificationManager.post(NotificationId.EQUIL_ALARM, eventEquilError.tips)
                 // But only halt bolus tracking if a bolus is actually delivering.
                 if (commandQueue.performing()?.commandType == Command.CommandType.BOLUS) {
                     stopBolusDelivering()
@@ -426,8 +425,7 @@ class EquilPumpPlugin(
             if (!alarmBattery10) {
                 notificationManager.post(
                     NotificationId.EQUIL_LOW_BATTERY,
-                    rh.gs(R.string.equil_low_battery) + battery + "%",
-                    sound = AlarmSound.ALARM
+                    rh.gs(R.string.equil_low_battery) + battery + "%"
                 )
                 preferences.put(EquilBooleanKey.AlarmBattery10, true)
             } else {
@@ -435,8 +433,7 @@ class EquilPumpPlugin(
                     notificationManager.post(
                         NotificationId.EQUIL_LOW_BATTERY,
                         rh.gs(R.string.equil_low_battery) + battery + "%",
-                        NotificationLevel.IMPORTANT,
-                        sound = AlarmSound.ALARM
+                        NotificationLevel.IMPORTANT
                     )
                 }
             }
@@ -450,8 +447,7 @@ class EquilPumpPlugin(
                         notificationManager.dismiss(NotificationId.EQUIL_ALARM_INSULIN)
                         notificationManager.post(
                             NotificationId.EQUIL_ALARM_INSULIN,
-                            rh.gs(R.string.equil_low_insulin) + insulin + "U",
-                            sound = AlarmSound.ALARM
+                            rh.gs(R.string.equil_low_insulin) + insulin + "U"
                         )
                         preferences.put(EquilBooleanKey.AlarmInsulin10, true)
                     }
@@ -463,8 +459,7 @@ class EquilPumpPlugin(
                         notificationManager.dismiss(NotificationId.EQUIL_ALARM_INSULIN)
                         notificationManager.post(
                             NotificationId.EQUIL_ALARM_INSULIN,
-                            rh.gs(R.string.equil_low_insulin) + insulin + "U",
-                            sound = AlarmSound.ALARM
+                            rh.gs(R.string.equil_low_insulin) + insulin + "U"
                         )
                         preferences.put(EquilBooleanKey.AlarmInsulin5, true)
                     }
@@ -474,8 +469,7 @@ class EquilPumpPlugin(
                     notificationManager.dismiss(NotificationId.EQUIL_ALARM_INSULIN)
                     notificationManager.post(
                         NotificationId.EQUIL_ALARM_INSULIN,
-                        rh.gs(R.string.equil_low_insulin) + insulin + "U",
-                        sound = AlarmSound.ALARM
+                        rh.gs(R.string.equil_low_insulin) + insulin + "U"
                     )
                 }
             }

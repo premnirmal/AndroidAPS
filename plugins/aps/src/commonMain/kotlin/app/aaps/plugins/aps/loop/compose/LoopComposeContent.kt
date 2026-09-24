@@ -10,7 +10,6 @@ import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.DecimalFormatter
-import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.ui.compose.ComposablePluginContent
 import app.aaps.core.ui.compose.ToolbarConfig
 
@@ -20,8 +19,7 @@ class LoopComposeContent(
     private val rh: TextResolver,
     private val dateUtil: DateUtil,
     private val decimalFormatter: DecimalFormatter,
-    private val aapsLogger: AAPSLogger,
-    private val preferences: Preferences
+    private val aapsLogger: AAPSLogger
 ) : ComposablePluginContent {
 
     @Composable
@@ -39,7 +37,6 @@ class LoopComposeContent(
                 dateUtil = dateUtil,
                 decimalFormatter = decimalFormatter,
                 aapsLogger = aapsLogger,
-                preferences = preferences,
                 scope = scope
             )
         }

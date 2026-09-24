@@ -14,16 +14,4 @@
     <string name="smbnotallowedinopenloopmode">SMB não permitido no modo open loop</string>
     <string name="maxvalueinpreferences">valor máx nas preferências</string>
     <string name="hardlimit">limite rígido</string>
-    <!-- Objectives -->
-    <string name="not_completed_yet">Não concluído ainda</string>
-    <string name="time_elapsed">Tempo decorrido</string>
-    <string name="hasbgdata">Glicose disponível da fonte seleccionada</string>
-    <string name="loopenabled">Loop activado</string>
-    <string name="apsselected">APS seleccionado</string>
-    <string name="closedmodeenabled">Modo fechado ativado</string>
-    <string name="objectives_shortname">OBJ</string>
-    <string name="description_objectives">Programa de aprendizagem</string>
-    <string name="doyouwantresetstart">Deseja reiniciar o objectivo? Pode perder seu progresso.</string>
-    <string name="objectives_button_unfinish">Reiniciar estado finalizado</string>
-    <string name="objectives_button_unstart">Reiniciar estado iniciado</string>
 </resources>

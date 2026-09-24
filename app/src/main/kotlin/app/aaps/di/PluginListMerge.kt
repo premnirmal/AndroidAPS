@@ -20,7 +20,7 @@ data class PluginSource(val name: String, val plugins: Map<Int, PluginBase>)
  *   400-550   bg sources                                  :plugins:source
  *   600-630   smoothing                                   :plugins:smoothing
  *   700-710   calibration                                 :plugins:calibration
- *   800-860   constraints (safety, objectives, …)         :plugins:constraints
+ *   800-860   constraints (safety, …)                     :plugins:constraints
  *   1000      VirtualPump (all configs)                   :pump:virtual
  *   1010+     real pump drivers (@PumpDriver, step 10)    :pump:* modules
  * ```

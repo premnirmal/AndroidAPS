@@ -23,7 +23,6 @@ enum class TempTargetChipState {
 
 @Immutable
 data class MainUiState(
-    val isDrawerOpen: Boolean = false,
     val isSimpleMode: Boolean = true,
     val isProfileLoaded: Boolean = false,
     val showAboutDialog: Boolean = false,
@@ -33,26 +32,36 @@ data class MainUiState(
     val profilePsId: Long = 0, // PS id that triggered current EPS (for scene override detection)
     val isProfileModified: Boolean = false,
     val profileProgress: Float = 0f, // 0-1 progress for temporary profile switch
-    // TempTarget state for chip
-    val tempTargetText: String = "",
-    val tempTargetState: TempTargetChipState = TempTargetChipState.None,
-    val tempTargetProgress: Float = 0f, // 0-1 progress for active temp target
-    val tempTargetReason: TT.Reason? = null, // TT reason for icon coloring
-    val tempTargetRecordId: Long = 0, // DB record ID (for scene override detection)
+    val profilePercentage: Int = 100,
+    val profileTargetRangeText: String = "",
     // Running mode state for chip
     val runningMode: RM.Mode = RM.Mode.DISABLED_LOOP,
     val runningModeText: String = "",
     val runningModeRemaining: String = "", // short remaining time, e.g. "30'" (temporary modes only)
     val runningModeProgress: Float = 0f, // 0-1 progress for temporary modes
     val runningModeRecordId: Long = 0, // DB record ID (for scene override detection)
+    val lastLoopAgeMillis: Long? = null,
     // Running TBR state for chip (HIGH / LOW / NONE)
     val tbrState: TbrState = TbrState.NONE,
     // SMB enabled in APS preferences — drives a small triangle marker on the running-mode chip
     val smbEnabled: Boolean = false,
+    val pumpEndTimeMillis: Long? = null,
+    val reservoirUnits: Double? = null,
     // QuickWizard entries for treatment bottom sheet
     val quickWizardItems: List<QuickWizardItem> = emptyList(),
     // Navigation-triggered dialogs
     val showAuthFailedDialog: Boolean = false
+)
+
+@Immutable
+data class TempTargetUiState(
+    val text: String = "",
+    val rangeText: String = "",
+    val remainingText: String = "",
+    val state: TempTargetChipState = TempTargetChipState.None,
+    val progress: Float = 0f,
+    val reason: TT.Reason? = null,
+    val recordId: Long = 0
 )
 
 @Immutable

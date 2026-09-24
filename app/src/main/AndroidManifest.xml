@@ -18,7 +18,7 @@
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
-
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission-sdk-23 android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <!-- To receive data from xdrip. -->
@@ -70,11 +70,6 @@
              Fired by AlarmManager.setAlarmClock() from AlarmNotificationManager. -->
         <receiver
             android:name="app.aaps.implementation.androidNotification.AlarmScreenWakeReceiver"
-            android:exported="false" />
-
-        <!-- "Mute" action on the background alarm notification → silences the looping alarm. -->
-        <receiver
-            android:name="app.aaps.implementation.androidNotification.AlarmMuteReceiver"
             android:exported="false" />
 
         <!-- Receive new BG readings from other local apps -->
