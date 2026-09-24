@@ -4,6 +4,7 @@ import android.app.NotificationManager as AndroidNotificationManager
 import android.content.Context
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
@@ -28,6 +29,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -120,14 +122,14 @@ class CarelevoAlarmNotifierTest {
     // ---- helpers ------------------------------------------------------------------------------
 
     /**
-     * Verify one post() to the mocked AAPS NotificationManager (the 7-arg date/validTo overload).
-     * See the class KDoc on why [showTopNotification] never posts at
-     * [NotificationLevel.URGENT].
+     * Verify one post() to the mocked AAPS NotificationManager (the 8-arg date/validTo overload).
+     * `sound` is always null — see the class KDoc on why [showTopNotification] never posts at
+     * [NotificationLevel.URGENT] (NotificationManagerImpl's own alarm/sound tier).
      */
     private fun verifyPosted(level: NotificationLevel, count: Int = 1) {
         verify(notificationManager, times(count)).post(
             eq(NotificationId.CARELEVO_PATCH_ALERT), any<String>(), eq(level),
-            any<Long>(), any<Long>(), any<List<NotificationAction>>(), anyOrNull()
+            any<Long>(), any<Long>(), isNull(), any<List<NotificationAction>>(), anyOrNull()
         )
     }
 
@@ -135,7 +137,7 @@ class CarelevoAlarmNotifierTest {
     private fun capturePostedText(): String {
         val textCaptor = argumentCaptor<String>()
         verify(notificationManager).post(
-            any(), textCaptor.capture(), any(), any<Long>(), any<Long>(),
+            any(), textCaptor.capture(), any(), any<Long>(), any<Long>(), anyOrNull(),
             any<List<NotificationAction>>(), anyOrNull()
         )
         return textCaptor.firstValue
@@ -172,7 +174,7 @@ class CarelevoAlarmNotifierTest {
 
         verify(notificationManager).dismiss(eq(NotificationId.CARELEVO_PATCH_ALERT))
         verify(notificationManager, never()).post(
-            any(), any<String>(), any(), any<Long>(), any<Long>(), any<List<NotificationAction>>(), anyOrNull()
+            any(), any<String>(), any(), any<Long>(), any<Long>(), anyOrNull(), any<List<NotificationAction>>(), anyOrNull()
         )
     }
 
@@ -216,7 +218,7 @@ class CarelevoAlarmNotifierTest {
         verify(notificationManager).dismiss(eq(NotificationId.CARELEVO_PATCH_ALERT))
         verify(notificationManager, times(2)).post(
             eq(NotificationId.CARELEVO_PATCH_ALERT), any<String>(), any(),
-            any<Long>(), any<Long>(), any<List<NotificationAction>>(), anyOrNull()
+            any<Long>(), any<Long>(), anyOrNull(), any<List<NotificationAction>>(), anyOrNull()
         )
     }
 

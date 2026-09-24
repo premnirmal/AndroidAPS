@@ -20,6 +20,7 @@ import app.aaps.core.interfaces.rx.AapsSchedulers
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.O5BleManager
+import app.aaps.pump.omnipod.omnipod5.history.O5History
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.AlarmType
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.O5PodStateManager
 import com.google.common.truth.Truth.assertThat
@@ -57,6 +58,7 @@ internal class O5OmnipodWizardViewModelTest {
     @Mock private lateinit var rh: ResourceHelper
     @Mock private lateinit var commandQueue: CommandQueue
     @Mock private lateinit var notificationManager: NotificationManager
+    @Mock private lateinit var history: O5History
     @Mock private lateinit var pumpSync: PumpSync
     @Mock private lateinit var insulinManager: InsulinManager
     @Mock private lateinit var profileFunction: ProfileFunction
@@ -74,7 +76,7 @@ internal class O5OmnipodWizardViewModelTest {
         Dispatchers.setMain(StandardTestDispatcher())
         sut = O5OmnipodWizardViewModel(
             bleManager, podStateManager, preferences, rh, commandQueue,
-            notificationManager, pumpSync, insulinManager, persistenceLayer,
+            notificationManager, history, pumpSync, insulinManager, persistenceLayer,
             profileFunction, profileRepository, pumpEnactResultProvider, logger, aapsSchedulers
         )
     }
