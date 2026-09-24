@@ -55,12 +55,6 @@ private fun O5CredentialImportContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(
-            text = stringResource(TextRef.AndroidRes(R.string.omnipod_5_certificate_store)),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
-
         when (importResult) {
             is ImportResult.Success -> Text(
                 text = stringResource(TextRef.AndroidRes(R.string.omnipod_5_certificate_store_imported),"0x%08X".format(importResult.controllerId)),
