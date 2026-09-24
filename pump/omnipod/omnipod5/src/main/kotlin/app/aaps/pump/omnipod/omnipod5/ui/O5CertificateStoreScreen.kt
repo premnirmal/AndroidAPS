@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -69,7 +68,7 @@ fun O5CertificateStoreScreen(
             if (showManualImport) {
                 O5CredentialManualImportScreen(viewModel = viewModel, rh = rh)
             } else {
-                O5CredentialImportScreen(viewModel = viewModel, rh = rh)
+                O5CredentialListScreen(viewModel = viewModel, rh = rh)
             }
         }
     }

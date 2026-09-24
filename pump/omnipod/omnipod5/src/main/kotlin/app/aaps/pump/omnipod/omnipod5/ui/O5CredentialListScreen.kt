@@ -25,17 +25,10 @@ import app.aaps.pump.omnipod.common.R
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
 
 /**
- * Settings screen for importing an Omnipod 5 credential and viewing/removing already-installed
- * ones. No dosing/pairing/connection actions live here - purely credential management, feeding
- * [O5RegistrationData] for whenever actual O5 pairing is attempted elsewhere.
- *
- * Wired in via [app.aaps.pump.omnipod.omnipod5.ui.compose.OmnipodO5ComposeContent] and
- * [app.aaps.pump.omnipod.omnipod5.ui.O5CertificateStoreScreen] - reached from the certificate
- * store subpage of the plugin settings, and auto-routed to from "Activate Pod" when no
- * registration credentials are installed yet.
+ * Settings screen for viewing/removing Omnipod5 credentials.
  */
 @Composable
-fun O5CredentialImportScreen(
+fun O5CredentialListScreen(
     viewModel: O5CredentialImportViewModel,
     rh: ResourceHelper
 ) {

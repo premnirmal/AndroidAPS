@@ -23,7 +23,7 @@ import app.aaps.core.interfaces.resources.ResourceHelper
 /**
  * Manual credential import screen: lets the user paste a credential string and install it.
  * Reached from the "import" action in the top app bar of
- * [O5CredentialImportScreen]/[O5CertificateStoreScreen]. Purely credential management - no
+ * [O5CredentialListScreen]/[O5CertificateStoreScreen]. Purely credential management - no
  * dosing/pairing actions.
  */
 @Composable
