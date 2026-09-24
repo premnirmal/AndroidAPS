@@ -30,7 +30,6 @@ import app.aaps.core.interfaces.pump.PumpPluginBase
 import app.aaps.core.interfaces.pump.PumpProfile
 import app.aaps.core.interfaces.pump.PumpRate
 import app.aaps.core.interfaces.pump.PumpSync
-import app.aaps.core.interfaces.pump.PumpTimeRemaining
 import app.aaps.core.interfaces.pump.defs.fillFor
 import app.aaps.core.interfaces.queue.Command
 import app.aaps.core.interfaces.queue.CommandQueue
@@ -151,7 +150,7 @@ class OmnipodDashPumpPlugin(
         DashStringNonPreferenceKey.entries,
     aapsLogger, rh, preferences, commandQueue
 ),
-    Pump, OmnipodDash, OwnDatabasePlugin, PumpTimeRemaining {
+    Pump, OmnipodDash, OwnDatabasePlugin {
 
     @Volatile var bolusCanceled = false
     @Volatile var bolusDeliveryInProgress = false
@@ -1057,7 +1056,6 @@ class OmnipodDashPumpPlugin(
     override fun manufacturer(): ManufacturerType = ManufacturerType.Insulet
     override fun model(): PumpType = pumpDescription.pumpType
     override fun serialNumber(): String = podStateManager.uniqueId?.toString() ?: Constants.PUMP_SERIAL_FOR_FAKE_TBR
-    override fun expectedEndTimeMillis(): Long? = podStateManager.expiry?.toInstant()?.toEpochMilli()
     override val isFakingTempsByExtendedBoluses: Boolean = false
 
     override suspend fun loadTDDs(): PumpEnactResult =
