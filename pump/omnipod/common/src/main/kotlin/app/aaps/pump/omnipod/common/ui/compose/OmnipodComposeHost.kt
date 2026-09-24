@@ -46,12 +46,12 @@ fun OmnipodComposeHost(
     activationNeedsExtraContent: () -> Boolean = { false },
     showExtraContentForHistory: Boolean = false,
     extraContent: (@Composable (onBack: () -> Unit) -> Unit)? = null,
-    credentialImportSheet: (@Composable (onImported: () -> Unit, onDismiss: () -> Unit) -> Unit)? = null
+    credentialImportContent: (@Composable (onImported: () -> Unit, onBack: () -> Unit) -> Unit)? = null
 ) {
     val context = LocalContext.current
     var showWizard by remember { mutableStateOf(false) }
     var showExtraContent by remember { mutableStateOf(false) }
-    var showCredentialSheet by remember { mutableStateOf(false) }
+    var showCredentialImport by remember { mutableStateOf(false) }
     var wizardActivationType by remember { mutableStateOf<ActivationType?>(null) }
     var isDeactivation by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
@@ -75,8 +75,8 @@ fun OmnipodComposeHost(
         }
     }
 
-    LaunchedEffect(showWizard, showExtraContent) {
-        if (!showWizard && !showExtraContent) {
+    LaunchedEffect(showWizard, showExtraContent, showCredentialImport) {
+        if (!showWizard && !showExtraContent && !showCredentialImport) {
             setToolbarConfig(ToolbarConfig(title = pluginName, navigationIcon = overviewNavIcon, actions = settingsAction))
         }
     }
@@ -87,8 +87,8 @@ fun OmnipodComposeHost(
                 is OmnipodOverviewEvent.StartActivation         -> {
                     wizardActivationType = event.activationType
                     isDeactivation = false
-                    if (activationNeedsExtraContent() && credentialImportSheet != null) {
-                        showCredentialSheet = true
+                    if (activationNeedsExtraContent() && credentialImportContent != null) {
+                        showCredentialImport = true
                     } else if (activationNeedsExtraContent()) {
                         showExtraContent = true
                     } else {
@@ -147,19 +147,15 @@ fun OmnipodComposeHost(
         )
     }
 
-    if (showCredentialSheet) {
-        credentialImportSheet?.invoke(
+    when {
+        showCredentialImport -> credentialImportContent?.invoke(
             {
-                showCredentialSheet = false
+                showCredentialImport = false
                 showWizard = true
             },
-            {
-                showCredentialSheet = false
-            }
+            { showCredentialImport = false }
         )
-    }
 
-    when {
         showWizard       -> {
             KeepScreenOnEffect()
             BlePreCheckHost(blePreCheck = blePreCheck, onFailed = { showWizard = false })

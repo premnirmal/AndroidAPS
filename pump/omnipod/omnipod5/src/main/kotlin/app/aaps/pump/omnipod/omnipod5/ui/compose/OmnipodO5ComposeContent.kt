@@ -25,9 +25,9 @@ import app.aaps.core.ui.compose.metroViewModel
 import app.aaps.pump.omnipod.common.R
 import app.aaps.pump.omnipod.common.ui.compose.OmnipodComposeHost
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
-import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialImportBottomSheet
 import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialImportScreen
 import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialImportViewModel
+import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialImportWebViewScreen
 import app.aaps.pump.omnipod.omnipod5.ui.wizard.compose.O5OmnipodWizardViewModel
 import app.aaps.core.ui.R as CoreUiR
 
@@ -61,9 +61,23 @@ class OmnipodO5ComposeContent(
             onConfirmDiscardPod = overviewViewModel::confirmDiscardPod,
             activationNeedsExtraContent = { O5RegistrationData.pickControllerId == 0L },
             showExtraContentForHistory = true,
-            credentialImportSheet = { onImported, onDismiss ->
+            credentialImportContent = { onImported, onBack ->
                 val context = LocalContext.current
-                O5CredentialImportBottomSheet(
+                val title = stringResource(R.string.omnipod_5_certificate_store_import)
+                LaunchedEffect(title) {
+                    setToolbarConfig(
+                        ToolbarConfig(
+                            title = title,
+                            navigationIcon = {
+                                IconButton(onClick = onBack) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(CoreUiR.string.back))
+                                }
+                            },
+                            actions = {}
+                        )
+                    )
+                }
+                O5CredentialImportWebViewScreen(
                     url = stringResource(R.string.omnipod_5_login),
                     onImportCredential = credentialViewModel::importFromWebMessage,
                     onImported = {
@@ -73,8 +87,7 @@ class OmnipodO5ComposeContent(
                     onFailed = { throwable ->
                         credentialViewModel.importError(throwable)
                         Toast.makeText(context, "Error importing certificate", Toast.LENGTH_LONG).show()
-                    },
-                    onDismiss = onDismiss
+                    }
                 )
             },
             extraContent = { onBack ->
