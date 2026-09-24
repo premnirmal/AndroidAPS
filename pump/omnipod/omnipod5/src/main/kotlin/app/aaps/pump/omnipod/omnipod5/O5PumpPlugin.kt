@@ -168,7 +168,7 @@ class O5PumpPlugin @Inject constructor(
     private val podStateManager: O5PodStateManager,
     private val history: O5History,
     private val pumpSync: PumpSync,
-    private val notificationManager: NotificationManager,
+    notificationManager: NotificationManager,
     private val pumpEnactResultProvider: () -> PumpEnactResult,
     private val bolusProgressData: BolusProgressData,
     private val protectionCheck: ProtectionCheck,
@@ -191,7 +191,7 @@ class O5PumpPlugin @Inject constructor(
         .description(TextRef.AndroidRes(R.string.omnipod_5_pump_description)),
     ownPreferences = OmnipodBooleanPreferenceKey.entries + OmnipodIntPreferenceKey.entries +
         DashBooleanPreferenceKey.entries + O5IntentKey.entries,
-    aapsLogger, rh, preferences, commandQueue
+    aapsLogger, rh, preferences, commandQueue, notificationManager
 ), Pump {
 
     @Volatile private var bolusCanceled = false
