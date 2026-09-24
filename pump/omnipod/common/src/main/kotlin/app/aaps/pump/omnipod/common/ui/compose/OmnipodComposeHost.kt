@@ -45,11 +45,13 @@ fun OmnipodComposeHost(
     onConfirmDiscardPod: () -> Unit,
     activationNeedsExtraContent: () -> Boolean = { false },
     showExtraContentForHistory: Boolean = false,
-    extraContent: (@Composable (onBack: () -> Unit) -> Unit)? = null
+    extraContent: (@Composable (onBack: () -> Unit) -> Unit)? = null,
+    credentialImportSheet: (@Composable (onImported: () -> Unit, onDismiss: () -> Unit) -> Unit)? = null
 ) {
     val context = LocalContext.current
     var showWizard by remember { mutableStateOf(false) }
     var showExtraContent by remember { mutableStateOf(false) }
+    var showCredentialSheet by remember { mutableStateOf(false) }
     var wizardActivationType by remember { mutableStateOf<ActivationType?>(null) }
     var isDeactivation by remember { mutableStateOf(false) }
     var showDialog by remember { mutableStateOf(false) }
@@ -83,11 +85,13 @@ fun OmnipodComposeHost(
         overviewEvents.collect { event ->
             when (event) {
                 is OmnipodOverviewEvent.StartActivation         -> {
-                    if (activationNeedsExtraContent()) {
+                    wizardActivationType = event.activationType
+                    isDeactivation = false
+                    if (activationNeedsExtraContent() && credentialImportSheet != null) {
+                        showCredentialSheet = true
+                    } else if (activationNeedsExtraContent()) {
                         showExtraContent = true
                     } else {
-                        wizardActivationType = event.activationType
-                        isDeactivation = false
                         showWizard = true
                     }
                 }
@@ -140,6 +144,18 @@ fun OmnipodComposeHost(
                 onConfirmDiscardPod()
             },
             onDismiss = { showDiscardConfirm = false }
+        )
+    }
+
+    if (showCredentialSheet) {
+        credentialImportSheet?.invoke(
+            {
+                showCredentialSheet = false
+                showWizard = true
+            },
+            {
+                showCredentialSheet = false
+            }
         )
     }
 
