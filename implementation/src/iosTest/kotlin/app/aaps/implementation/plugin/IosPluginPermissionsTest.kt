@@ -5,6 +5,17 @@ import app.aaps.core.interfaces.source.BgSource
 import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+<<<<<<< HEAD
+=======
+import app.aaps.core.interfaces.constraints.Objectives
+import app.aaps.core.interfaces.notifications.AapsNotification
+import app.aaps.core.interfaces.notifications.AlarmSound
+import app.aaps.core.interfaces.notifications.NotificationAction
+import app.aaps.core.interfaces.notifications.NotificationHandle
+import app.aaps.core.interfaces.notifications.NotificationId
+import app.aaps.core.interfaces.notifications.NotificationLevel
+import app.aaps.core.interfaces.notifications.NotificationManager
+>>>>>>> origin/dev
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PermissionGroup
 import app.aaps.core.interfaces.plugin.PermissionProvider
@@ -21,6 +32,8 @@ import app.aaps.core.interfaces.calibration.Calibration
 import app.aaps.core.interfaces.sync.Sync
 import app.aaps.core.interfaces.constraints.Safety
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -72,11 +85,24 @@ class IosPluginPermissionsTest {
         override fun shortTextMode(): Boolean = false
     }
 
+    /** PluginBase needs one; nothing here posts a notification, so every call is a no-op. */
+    private object NoNotifications : NotificationManager {
+
+        override val notifications: StateFlow<List<AapsNotification>> = MutableStateFlow(emptyList())
+        override fun cleanUp() {}
+        override fun post(id: NotificationId, text: String, level: NotificationLevel, validMinutes: Int, sound: AlarmSound?, actions: List<NotificationAction>, validityCheck: (() -> Boolean)?) = NotificationHandle(0)
+        override fun post(id: NotificationId, text: String, level: NotificationLevel, date: Long, validTo: Long, sound: AlarmSound?, actions: List<NotificationAction>, validityCheck: (() -> Boolean)?) = NotificationHandle(0)
+        override fun post(id: NotificationId, textRef: TextRef, level: NotificationLevel, validMinutes: Int, date: Long, validTo: Long, sound: AlarmSound?, actions: List<NotificationAction>, validityCheck: (() -> Boolean)?) = NotificationHandle(0)
+        override fun dismiss(id: NotificationId) {}
+        override fun dismiss(handle: NotificationHandle) {}
+        override fun muteAllAlarms() {}
+    }
+
     private class FakePlugin(
         logger: AAPSLogger,
         private val enabled: Boolean,
         private val groups: List<PermissionGroup>
-    ) : PluginBase(PluginDescription().also { it.mainType = PluginType.GENERAL }, logger, SilentText) {
+    ) : PluginBase(PluginDescription().also { it.mainType = PluginType.GENERAL }, logger, SilentText, NoNotifications) {
 
         override fun isEnabled(): Boolean = enabled
         override fun requiredPermissions(): List<PermissionGroup> = groups

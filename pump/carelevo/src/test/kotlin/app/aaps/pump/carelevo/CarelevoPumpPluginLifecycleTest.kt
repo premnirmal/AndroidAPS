@@ -24,8 +24,12 @@ import app.aaps.core.interfaces.queue.CommandQueue
 import app.aaps.core.interfaces.queue.CustomCommand
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.AapsSchedulers
+<<<<<<< HEAD
 import app.aaps.core.interfaces.sharedPreferences.KeyValueStore
 import app.aaps.core.interfaces.sharedPreferences.SP
+=======
+import app.aaps.core.interfaces.notifications.AlarmSound
+>>>>>>> origin/dev
 import app.aaps.core.interfaces.ui.IconsProvider
 import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.core.interfaces.utils.DateUtil
@@ -95,7 +99,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.clearInvocations
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -151,8 +154,6 @@ class CarelevoPumpPluginLifecycleTest {
     private lateinit var preferences: Preferences
     private lateinit var commandQueue: CommandQueue
     private lateinit var aapsSchedulers: AapsSchedulers
-    private lateinit var sp: SP
-    private lateinit var spEditor: KeyValueStore.Editor
     private lateinit var fabricPrivacy: FabricPrivacy
     private lateinit var profileFunction: ProfileFunction
     private lateinit var protectionCheck: ProtectionCheck
@@ -200,8 +201,6 @@ class CarelevoPumpPluginLifecycleTest {
         preferences = mock()
         commandQueue = mock()
         aapsSchedulers = mock()
-        sp = mock()
-        spEditor = mock()
         fabricPrivacy = mock()
         profileFunction = mock()
         protectionCheck = mock()
@@ -250,13 +249,6 @@ class CarelevoPumpPluginLifecycleTest {
         whenever(preferences.observe(CarelevoBooleanPreferenceKey.CARELEVO_BUZZER_REMINDER)).thenReturn(buzzerFlow)
         whenever(preferences.get(DoubleKey.SafetyMaxBolus)).thenReturn(7.5)
 
-        // sp.edit { … } returns Unit -> stub with doAnswer and run the block against a mock Editor.
-        doAnswer { invocation ->
-            @Suppress("UNCHECKED_CAST")
-            (invocation.getArgument<Any>(1) as KeyValueStore.Editor.() -> Unit).invoke(spEditor)
-            Unit
-        }.whenever(sp).edit(any(), any())
-
         plugin = buildPlugin()
         plugin.bleSession = bleSession
     }
@@ -289,7 +281,6 @@ class CarelevoPumpPluginLifecycleTest {
             preferences = preferences,
             commandQueue = commandQueue,
             aapsSchedulers = aapsSchedulers,
-            sp = sp,
             fabricPrivacy = fabricPrivacy,
             profileFunction = profileFunction,
             context = context,
@@ -345,7 +336,8 @@ class CarelevoPumpPluginLifecycleTest {
                 aapsSchedulers = aapsSchedulers,
                 deleteUserSettingInfoUseCase = deleteUserSettingInfoUseCase
             ),
-            activationExecutor = activationExecutor
+            activationExecutor = activationExecutor,
+            notificationManager = mock()
         )
     }
 
@@ -428,23 +420,25 @@ class CarelevoPumpPluginLifecycleTest {
 
     @Test
     fun `onStart applies the Carelevo CAGE warning and critical defaults once`() {
-        whenever(sp.getBoolean(eq(CarelevoBooleanPreferenceKey.CARELEVO_CAGE_DEFAULT_APPLIED.key), any())).thenReturn(false)
+        whenever(preferences.get(CarelevoBooleanPreferenceKey.CARELEVO_CAGE_DEFAULT_APPLIED)).thenReturn(false)
 
         start()
 
-        verify(spEditor).putInt(IntKey.OverviewCageWarning.key, 96)
-        verify(spEditor).putInt(IntKey.OverviewCageCritical.key, 168)
+        verify(preferences).put(IntKey.OverviewCageWarning, 96)
+        verify(preferences).put(IntKey.OverviewCageCritical, 168)
         // The latch itself must be written, or the defaults would stomp the user's edits every start.
-        verify(spEditor).putBoolean(CarelevoBooleanPreferenceKey.CARELEVO_CAGE_DEFAULT_APPLIED.key, true)
+        verify(preferences).put(CarelevoBooleanPreferenceKey.CARELEVO_CAGE_DEFAULT_APPLIED, true)
     }
 
     @Test
     fun `onStart does not re-apply the CAGE defaults once the latch is set`() {
-        whenever(sp.getBoolean(eq(CarelevoBooleanPreferenceKey.CARELEVO_CAGE_DEFAULT_APPLIED.key), any())).thenReturn(true)
+        whenever(preferences.get(CarelevoBooleanPreferenceKey.CARELEVO_CAGE_DEFAULT_APPLIED)).thenReturn(true)
 
         start()
 
-        verify(sp, never()).edit(any(), any())
+        verify(preferences, never()).put(eq(IntKey.OverviewCageWarning), any<Int>())
+        verify(preferences, never()).put(eq(IntKey.OverviewCageCritical), any<Int>())
+        verify(preferences, never()).put(eq(CarelevoBooleanPreferenceKey.CARELEVO_CAGE_DEFAULT_APPLIED), any<Boolean>())
     }
 
     // ---- onStart: patch init + profile ---------------------------------------------------------
@@ -634,7 +628,7 @@ class CarelevoPumpPluginLifecycleTest {
 
     @Test
     fun `an expiry threshold change is pushed to the patch with the stored hours`() {
-        whenever(sp.getInt(eq(CarelevoIntPreferenceKey.CARELEVO_PATCH_EXPIRATION_REMINDER_HOURS.key), any())).thenReturn(120)
+        whenever(preferences.get(CarelevoIntPreferenceKey.CARELEVO_PATCH_EXPIRATION_REMINDER_HOURS)).thenReturn(120)
         start()
         awaitCollector(expiryFlow)
 
@@ -646,7 +640,7 @@ class CarelevoPumpPluginLifecycleTest {
 
     @Test
     fun `a buzzer change is pushed to the patch with the stored flag`() {
-        whenever(sp.getBoolean(eq(CarelevoBooleanPreferenceKey.CARELEVO_BUZZER_REMINDER.key), any())).thenReturn(true)
+        whenever(preferences.get(CarelevoBooleanPreferenceKey.CARELEVO_BUZZER_REMINDER)).thenReturn(true)
         start()
         awaitCollector(buzzerFlow)
 
@@ -659,17 +653,18 @@ class CarelevoPumpPluginLifecycleTest {
     @Test
     fun `a zero low-insulin reminder is not enqueued but a real one is`() {
         // Zero = reminder off. Enqueuing it would wake the patch over BLE just to no-op.
-        val key = CarelevoIntPreferenceKey.CARELEVO_LOW_INSULIN_REMINDER_UNITS.key
-        whenever(sp.getInt(eq(key), any())).thenReturn(0)
+        val key = CarelevoIntPreferenceKey.CARELEVO_LOW_INSULIN_REMINDER_UNITS
+        whenever(preferences.get(key)).thenReturn(0)
         start()
         awaitCollector(lowInsulinFlow)
 
         lowInsulinFlow.value = 0
-        // Barrier: once the collector has read sp for the 0-value emission, its skip decision is made.
-        // Only then re-stub + emit again, so the two emissions cannot be conflated into one.
-        verify(sp, timeout(2_000)).getInt(eq(key), eq(0))
+        // Barrier: once the collector has read the preference for the 0-value emission, its skip
+        // decision is made. Only then re-stub + emit again, so the two emissions cannot be conflated
+        // into one.
+        verify(preferences, timeout(2_000)).get(key)
 
-        whenever(sp.getInt(eq(key), any())).thenReturn(25)
+        whenever(preferences.get(key)).thenReturn(25)
         lowInsulinFlow.value = 25
 
         // Same collector, ordered: observing the second emission's command proves the first is done.

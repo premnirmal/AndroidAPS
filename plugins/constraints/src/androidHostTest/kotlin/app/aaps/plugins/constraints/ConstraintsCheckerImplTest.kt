@@ -19,9 +19,7 @@ import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.DoubleKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
-import app.aaps.core.ui.CoreUiStrings
 import app.aaps.implementation.pump.PumpWithConcentrationImpl
-import app.aaps.plugins.aps.ApsStrings
 import app.aaps.plugins.aps.openAPSAMA.DetermineBasalAMA
 import app.aaps.plugins.aps.openAPSAMA.OpenAPSAMAPlugin
 import app.aaps.plugins.aps.openAPSSMB.DetermineBasalSMB
@@ -30,6 +28,7 @@ import app.aaps.plugins.aps.openAPSSMB.OpenAPSSMBPlugin
 import app.aaps.plugins.constraints.safety.SafetyPlugin
 import app.aaps.pump.virtual.VirtualPumpPlugin
 import app.aaps.shared.tests.TestBaseWithProfile
+import app.aaps.shared.tests.generatedTextResolver
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.BeforeEach
@@ -67,6 +66,12 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
     @Mock lateinit var passwordCheck: PasswordCheck
     @Mock lateinit var pumpWithConcentration: PumpWithConcentrationImpl
 
+    /**
+     * Real English for every reason the checker builds, so the sentences asserted below are the ones the
+     * user reads. `:shared:tests` cannot see this module, so the generated map is handed over here.
+     */
+    private val text = generatedTextResolver("constraints" to ConstraintsStringsValues::textOf)
+
     private lateinit var constraintChecker: ConstraintsCheckerImpl
     private lateinit var safetyPlugin: SafetyPlugin
     private lateinit var openAPSSMBPlugin: OpenAPSSMBPlugin
@@ -79,6 +84,7 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
             whenever(persistenceLayer.getApsResults(any(), any())).thenReturn(emptyList())
         }
 
+<<<<<<< HEAD
         whenever(rh.gs(ConstraintsStrings.closed_loop_disabled_on_dev_branch)).thenReturn("Running dev version. Closed loop is disabled.")
         whenever(rh.gs(CoreUiStrings.no_valid_basal_rate)).thenReturn("No valid basal rate read from pump")
         // :plugins:aps resolves its own strings through TextRef, so these need the ApsStrings key, not ConstraintsStrings.
@@ -107,28 +113,50 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
         whenever(rh.gs(CoreUiStrings.limitingbolus)).thenReturn("Limiting bolus to %1\$.1f U because of %2\$s")
         whenever(rh.gs(CoreUiStrings.limitingbasalratio)).thenReturn("Limiting max basal rate to %1\$.2f U/h because of %2\$s")
 
+=======
+>>>>>>> origin/dev
         whenever(activePlugin.activePump).thenReturn(pumpWithConcentration)
         whenever(pumpWithConcentration.pumpDescription).thenReturn(PumpDescription())
 
         //SafetyPlugin
-        constraintChecker = ConstraintsCheckerImpl(activePlugin, aapsLogger, ch, rh)
+        constraintChecker = ConstraintsCheckerImpl(activePlugin, aapsLogger, ch, text)
 
+<<<<<<< HEAD
+=======
+        // The real formatter rather than a mock: it is pure arithmetic over a duration, and the
+        // objectives only read it for display.
+        val durationText = PlainDurationText()
+        val objectives = listOf(
+            Objective0(preferences, text, durationText, dateUtil, activePlugin, virtualPumpPlugin, persistenceLayer, loop, iobCobCalculator, passwordCheck),
+            Objective1(preferences, text, durationText, dateUtil),
+            Objective2(preferences, text, durationText, dateUtil),
+            Objective3(preferences, text, durationText, dateUtil),
+            Objective4(preferences, text, durationText, dateUtil, profileFunction),
+            Objective5(preferences, text, durationText, dateUtil),
+            Objective6(preferences, text, durationText, dateUtil, constraintsChecker, loop),
+            Objective7(preferences, text, durationText, dateUtil),
+            Objective8(preferences, text, durationText, dateUtil),
+            Objective9(preferences, text, durationText, dateUtil)
+        )
+        objectivesPlugin = ObjectivesPlugin(aapsLogger, text, preferences, config, objectives, mock())
+        runBlocking { objectivesPlugin.onStart() }
+>>>>>>> origin/dev
         openAPSSMBPlugin =
             OpenAPSSMBPlugin(
-                aapsLogger, rxBus, constraintChecker, rh, profileFunction, profileUtil, config, activePlugin, iobCobCalculator,
+                aapsLogger, rxBus, constraintChecker, text, profileFunction, profileUtil, config, activePlugin, iobCobCalculator,
                 hardLimits, preferences, dateUtil, processedTbrEbData, persistenceLayer, smbGlucoseStatusProvider, tddCalculator, bgQualityCheck,
                 notificationManager, determineBasalSMB, profiler, GlucoseStatusCalculatorSMB(aapsLogger, iobCobCalculator, dateUtil, decimalFormatter, deltaCalculator), { apsResultProvider() }, ch,
                 fabricPrivacy
             )
         openAPSAMAPlugin =
             OpenAPSAMAPlugin(
-                aapsLogger, rxBus, constraintChecker, rh, config, profileFunction, activePlugin, iobCobCalculator, processedTbrEbData,
+                aapsLogger, rxBus, constraintChecker, text, config, profileFunction, activePlugin, iobCobCalculator, processedTbrEbData,
                 hardLimits, dateUtil, persistenceLayer, smbGlucoseStatusProvider, preferences, determineBasalAMA,
-                GlucoseStatusCalculatorSMB(aapsLogger, iobCobCalculator, dateUtil, decimalFormatter, deltaCalculator), { apsResultProvider() }, ch, fabricPrivacy
+                GlucoseStatusCalculatorSMB(aapsLogger, iobCobCalculator, dateUtil, decimalFormatter, deltaCalculator), { apsResultProvider() }, ch, fabricPrivacy, mock()
             )
         safetyPlugin =
             SafetyPlugin(
-                aapsLogger, rh, preferences, constraintChecker, activePlugin, hardLimits,
+                aapsLogger, text, preferences, constraintChecker, activePlugin, hardLimits,
                 config, persistenceLayer, dateUtil, notificationManager, decimalFormatter
             )
         val constraintsPluginsList = ArrayList<PluginBase>()

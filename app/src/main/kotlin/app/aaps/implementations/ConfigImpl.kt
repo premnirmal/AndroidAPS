@@ -21,6 +21,11 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+<<<<<<< HEAD
+=======
+import kotlinx.coroutines.flow.update
+import dev.zacsweers.metro.Inject
+>>>>>>> origin/dev
 
 // @Singleton (not @Reusable): Config owns the single app-global init-progress flow that
 // ComposeMainActivity's splash gate observes; a guaranteed single instance keeps that flow shared
@@ -75,6 +80,16 @@ class ConfigImpl(
 
     override fun initFailed(error: String) {
         _initProgressFlow.value = _initProgressFlow.value.copy(error = error)
+    }
+
+    // update() rather than a read-modify-write of .value: these are called from the import screen's
+    // dispatcher while other threads read the same flow, and update() retries on conflict.
+    override fun beginReconfiguring() {
+        _initProgressFlow.update { it.enteringReconfigure() }
+    }
+
+    override fun endReconfiguring() {
+        _initProgressFlow.update { it.leavingReconfigure() }
     }
 
     private val _initSnackbarFlow = MutableSharedFlow<String>(extraBufferCapacity = 1)

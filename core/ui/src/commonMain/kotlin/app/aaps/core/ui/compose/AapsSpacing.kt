@@ -42,6 +42,9 @@ object AapsSpacing {
     val tirPieChartCircleSize = 120.dp
     val tirPieChartStrokeWidth = 20.dp
 
+    // Trend arrow drawn next to a BG value
+    val trendArrowSize = 20.dp
+
     // Chip dimensions
     val chipCornerRadius = 8.dp
     val chipHeight = 35.dp

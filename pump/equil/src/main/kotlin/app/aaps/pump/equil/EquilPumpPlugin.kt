@@ -1,6 +1,7 @@
 package app.aaps.pump.equil
 
 import app.aaps.core.interfaces.di.PumpDriver
+import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.plugin.PluginBase
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
@@ -20,7 +21,6 @@ import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
-import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.plugin.PluginDescription
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.pump.BlePreCheck
@@ -98,7 +98,7 @@ class EquilPumpPlugin(
     private val pumpEnactResultProvider: () -> PumpEnactResult,
     private val constraintsChecker: ConstraintsChecker,
     private val ch: ConcentrationHelper,
-    private val notificationManager: NotificationManager,
+    notificationManager: NotificationManager,
     private val protectionCheck: ProtectionCheck,
     private val blePreCheck: BlePreCheck,
     private val config: Config
@@ -118,7 +118,7 @@ class EquilPumpPlugin(
         .shortName(TextRef.AndroidRes(R.string.equil_name_short))
         .description(TextRef.AndroidRes(R.string.equil_pump_description)),
     ownPreferences = EquilBooleanKey.entries + EquilBooleanPreferenceKey.entries + EquilIntPreferenceKey.entries + EquilStringKey.entries,
-    aapsLogger, rh, preferences, commandQueue
+    aapsLogger, rh, preferences, commandQueue, notificationManager
 ), Pump {
 
     override val pumpDescription: PumpDescription

@@ -604,6 +604,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                         maintenanceViewModel.emitError("Unable to launch activity. This is an Android issue")
                     }
                 },
+<<<<<<< HEAD
                 onMaintenanceRecreateActivity = { recreate() },
                 onMaintenanceLaunchBrowser = { url ->
                     try {
@@ -621,6 +622,71 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                                 Intent.FLAG_ACTIVITY_CLEAR_TOP or
                                 Intent.FLAG_ACTIVITY_NO_ANIMATION
                         )
+=======
+                onRequestPermission = { group -> permissionsViewModel.requestPermission(group) },
+                overview = {
+                    OverviewScreen(
+                        mainViewModel = mainViewModel,
+                        manageViewModel = manageViewModel,
+                        maintenanceViewModel = maintenanceViewModel,
+                        statusViewModel = statusViewModel,
+                        treatmentViewModel = treatmentViewModel,
+                        scenesViewModel = scenesViewModel,
+                        loopActionViewModel = loopActionViewModel,
+                        searchViewModel = searchViewModel,
+                        permissionsViewModel = permissionsViewModel,
+                        graphViewModel = graphViewModel,
+                        chipsViewModel = chipsViewModel,
+                        activePlugin = activePlugin,
+                        config = config,
+                        objectives = objectives,
+                        bgQualityCheck = bgQualityCheck,
+                        notificationManager = notificationManager,
+                        uiInteraction = uiInteraction,
+                        builtInSearchables = builtInSearchables,
+                        bolusProgressData = bolusProgressData,
+                        clientControlActionDispatcher = clientControlActionDispatcher,
+                        commandQueue = commandQueue,
+                        pumpCommunicationStatus = pumpCommunicationStatus,
+                        appName = stringResource(R.string.app_name),
+                        authorizationFailedMessage = stringResource(R.string.authorizationfailed),
+                        onNavigate = { request -> handleNavigationRequest(request, navController) },
+                        onSearchResultClick = { entry -> handleSearchResultClick(entry, navController) },
+                        onNotificationActionClick = { notification -> handleNotificationAction(notification.id, navController) },
+                        onQuickLaunchActionClick = { action -> handleQuickLaunchAction(action, navController) },
+                        onImportSettingsNavigate = { source -> navController.navigate(AppRoute.ImportSettings.createRoute(source.name)) },
+                        onDirectoryClick = {
+                            try {
+                                accessTree?.launch(null)
+                            } catch (_: Exception) {
+                                maintenanceViewModel.emitError("Unable to launch activity. This is an Android issue")
+                            }
+                        },
+                        onLaunchBrowser = { url ->
+                            try {
+                                val customTabsIntent = CustomTabsIntent.Builder()
+                                    .setShowTitle(true)
+                                    .build()
+                                customTabsIntent.launchUrl(this@ComposeMainActivity, url.toUri())
+                            } catch (_: Exception) {
+                                maintenanceViewModel.emitError("Unable to open browser")
+                            }
+                        },
+                        onBringToForeground = {
+                            val intent = Intent(this@ComposeMainActivity, ComposeMainActivity::class.java)
+                                .addFlags(
+                                    Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                                        or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                        or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                                        or Intent.FLAG_ACTIVITY_NO_ANIMATION
+                                )
+                            startActivity(intent)
+                        },
+                        onRecreateActivity = { recreate() },
+                        onAuthorizationFailed = { finish() },
+                        autoShowNotificationSheet = _autoShowNotifications.value,
+                        onAutoShowConsumed = { _autoShowNotifications.value = false }
+>>>>>>> origin/dev
                     )
                 },
                 onMaintenanceSnackbar = { message -> appSnackbarHostState.showSnackbar(message) },
