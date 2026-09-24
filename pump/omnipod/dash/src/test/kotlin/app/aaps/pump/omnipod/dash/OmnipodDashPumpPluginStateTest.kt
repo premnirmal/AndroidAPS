@@ -8,6 +8,7 @@ import app.aaps.core.interfaces.pump.BlePreCheck
 import app.aaps.core.interfaces.pump.BolusProgressData
 import app.aaps.core.interfaces.pump.PumpEnactResult
 import app.aaps.core.interfaces.pump.PumpSync
+import app.aaps.core.interfaces.pump.PumpTimeRemaining
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.queue.CommandQueue
 import app.aaps.core.interfaces.resources.ResourceHelper
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.time.ZonedDateTime
 
 /**
  * The pump-state answers the command queue and the loop rely on.
@@ -195,6 +197,26 @@ class OmnipodDashPumpPluginStateTest {
     fun `nothing is connecting or handshaking until a connect is started`() {
         assertThat(sut.isConnecting()).isFalse()
         assertThat(sut.isHandshakeInProgress()).isFalse()
+    }
+
+    // endregion
+
+    // region expected end time
+
+    @Test
+    fun `expected end time exposes the current pod expiry`() {
+        val expiry = ZonedDateTime.now().plusHours(1)
+        whenever(podStateManager.expiry).thenReturn(expiry)
+
+        assertThat(sut).isInstanceOf(PumpTimeRemaining::class.java)
+        assertThat(sut.expectedEndTimeMillis()).isEqualTo(expiry.toInstant().toEpochMilli())
+    }
+
+    @Test
+    fun `expected end time is unavailable when pod expiry is unknown`() {
+        whenever(podStateManager.expiry).thenReturn(null)
+
+        assertThat(sut.expectedEndTimeMillis()).isNull()
     }
 
     // endregion
