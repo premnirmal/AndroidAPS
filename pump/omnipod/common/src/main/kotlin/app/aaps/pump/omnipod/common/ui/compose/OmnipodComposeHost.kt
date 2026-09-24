@@ -153,7 +153,10 @@ fun OmnipodComposeHost(
                 showCredentialImport = false
                 showWizard = true
             },
-            { showCredentialImport = false }
+            {
+                showCredentialImport = false
+                wizardActivationType = null
+            }
         )
 
         showWizard       -> {

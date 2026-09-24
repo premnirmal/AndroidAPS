@@ -66,7 +66,7 @@ class OmnipodO5ComposeContent(
                 val title = stringResource(R.string.omnipod_5_certificate_store_import)
                 val importedMessage = stringResource(R.string.omnipod_5_credential_imported)
                 val importErrorMessage = stringResource(R.string.omnipod_5_credential_import_error)
-                LaunchedEffect(title) {
+                LaunchedEffect(Unit) {
                     setToolbarConfig(
                         ToolbarConfig(
                             title = title,
