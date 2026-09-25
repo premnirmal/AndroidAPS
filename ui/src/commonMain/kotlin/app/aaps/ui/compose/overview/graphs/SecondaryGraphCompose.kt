@@ -324,7 +324,7 @@ fun SecondaryGraphCompose(
     // IOB line processing
     val processedIob = remember(iobData, stableTimeRange) {
         if (!hasRealTimeRange || iobData == null) return@remember emptyList()
-        processPoints(iobData.iob, minTimestamp, minX, maxX)
+        processPoints(iobData.allPoints(), minTimestamp, minX, maxX)
     }
 
     // IOB treatment overlays processing
@@ -1532,4 +1532,3 @@ internal fun fractionAlignedNiceRange(niceMin: Double, niceMax: Double, targetFr
     return if (candidateMax >= niceMax) niceMin to niceUp(candidateMax)
     else niceNegativeSliver(-fraction / (1.0 - fraction) * niceMax) to niceMax
 }
-

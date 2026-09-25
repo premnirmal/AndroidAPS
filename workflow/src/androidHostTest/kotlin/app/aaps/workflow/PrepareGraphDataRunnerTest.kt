@@ -14,6 +14,7 @@ import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.nsclient.ProcessedDeviceStatusData
 import app.aaps.core.interfaces.overview.OverviewData
 import app.aaps.core.interfaces.overview.graph.OverviewDataCache
+import app.aaps.core.interfaces.overview.graph.TimeRange
 import app.aaps.core.interfaces.profiling.Profiler
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventBucketedDataCreated
@@ -32,6 +33,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import kotlin.test.assertIs
+import kotlin.test.assertEquals
 
 class PrepareGraphDataRunnerTest : TestBaseWithProfile() {
 
@@ -132,5 +134,14 @@ class PrepareGraphDataRunnerTest : TestBaseWithProfile() {
         verify(dataIobCob).clearCache()
         // Terminal-only progress not emitted when emitFinalProgress = false
         verify(signals, org.mockito.kotlin.never()).emitProgress(eq(ProgressData.DRAW_FINAL), any())
+    }
+
+    @Test
+    fun `graph data keeps the later prediction horizon`() {
+        val range = TimeRange(fromTime = 1_000L, toTime = 2_000L, endTime = 3_000L)
+
+        assertEquals(4_000L, graphDataEndTime(range, overviewEndTime = 4_000L))
+        assertEquals(3_000L, graphDataEndTime(range, overviewEndTime = 2_000L))
+        assertEquals(4_000L, graphDataEndTime(null, overviewEndTime = 4_000L))
     }
 }

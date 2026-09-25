@@ -66,6 +66,7 @@ import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.LocalDateUtil
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
+import app.aaps.ui.compose.overview.graphs.allPoints
 import app.aaps.ui.R
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -167,7 +168,7 @@ fun GlucoseChart(
     val boluses = remember(treatments) { treatments.boluses.filter { it.isValid && it.amount > 0.0 } }
     val carbEntries = remember(treatments) { treatments.carbs.filter { it.isValid && it.amount > 0.0 } }
     val basalSegments = remember(basal) { basal.actualBasal.sortedBy(GraphDataPoint::timestamp) }
-    val iobPointsAsc = remember(iobData) { iobData.iob.sortedBy(GraphDataPoint::timestamp) }
+    val iobPointsAsc = remember(iobData) { iobData.allPoints() }
     val cobPointsAsc = remember(cobData) { cobData.cob.sortedBy(GraphDataPoint::timestamp) }
     val targetPointsAsc = remember(targetLine) { targetLine.targets.sortedBy(GraphDataPoint::timestamp) }
     val basalCeiling = remember(basal) { basal.maxBasal.coerceAtLeast(0.1) }

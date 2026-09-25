@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.aaps.core.interfaces.overview.graph.IobGraphData
 import app.aaps.core.interfaces.overview.graph.SeriesType
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
@@ -209,6 +210,16 @@ val NORMALIZER_Y = listOf(0.0, 0.0)
  * than the BG chart, causing them to stop following when scrolling into the forecast area.
  */
 fun normalizerX(maxX: Double): List<Double> = listOf(0.0, maxX)
+
+/**
+ * Joins calculated IOB history with its future samples.
+ *
+ * The producer keeps these lists separate, but both belong to the same IOB curve. The historical
+ * value wins when both lists contain the boundary timestamp.
+ */
+fun IobGraphData.allPoints() = (iob + predictions)
+    .sortedBy { it.timestamp }
+    .distinctBy { it.timestamp }
 
 /**
  * Triangle shape pointing upward (apex at top center, flat base at bottom).

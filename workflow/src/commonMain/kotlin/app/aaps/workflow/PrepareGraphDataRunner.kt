@@ -676,7 +676,7 @@ class PrepareGraphDataRunner(
     private suspend fun prepareIobAutosensGraphData(data: PrepareGraphData, isStopped: () -> Boolean) {
         val cacheTimeRange = data.cache.timeRangeFlow.value
         val fromTime = cacheTimeRange?.fromTime ?: data.overviewData.fromTime
-        val endTime = cacheTimeRange?.endTime ?: data.overviewData.endTime
+        val endTime = graphDataEndTime(cacheTimeRange, data.overviewData.endTime)
 
         data.signals.emitProgress(CalculationWorkflow.ProgressData.PREPARE_IOB_AUTOSENS_DATA, 0)
 
@@ -789,3 +789,6 @@ class PrepareGraphDataRunner(
     }
 
 }
+
+internal fun graphDataEndTime(cacheTimeRange: TimeRange?, overviewEndTime: Long): Long =
+    maxOf(cacheTimeRange?.endTime ?: 0L, overviewEndTime)

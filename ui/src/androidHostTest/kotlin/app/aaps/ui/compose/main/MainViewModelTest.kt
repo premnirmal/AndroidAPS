@@ -160,7 +160,7 @@ internal class MainViewModelTest {
         val state = sut.uiState.value
         assertThat(state.isSimpleMode).isTrue()
         assertThat(state.runningMode).isEqualTo(RM.Mode.DISABLED_LOOP)
-        assertThat(state.tempTargetState).isEqualTo(TempTargetChipState.None)
+        assertThat(sut.profileCardTempTargetStateFlow.value.state).isEqualTo(TempTargetChipState.None)
         assertThat(state.quickWizardItems).isEmpty()
     }
 
