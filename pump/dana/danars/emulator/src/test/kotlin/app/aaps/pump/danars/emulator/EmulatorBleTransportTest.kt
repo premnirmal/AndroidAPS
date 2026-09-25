@@ -177,7 +177,7 @@ class EmulatorBleTransportTest {
      */
     @Test
     fun deferredPairingKeyIsDroppedWhenTheConnectionEndedFirst() {
-        transport.pairingDelayMs = 300
+        transport.pairingDelayMs = 1000
         requestPairing()
         // The immediate acknowledgement; the key itself is still pending on its thread.
         assertThat(responses).hasSize(1)

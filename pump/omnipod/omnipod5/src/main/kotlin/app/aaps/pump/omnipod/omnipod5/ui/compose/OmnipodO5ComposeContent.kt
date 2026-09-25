@@ -1,21 +1,15 @@
 package app.aaps.pump.omnipod.omnipod5.ui.compose
 
 import android.widget.Toast
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -29,7 +23,6 @@ import app.aaps.core.ui.compose.metroViewModel
 import app.aaps.pump.omnipod.common.R
 import app.aaps.pump.omnipod.common.ui.compose.OmnipodComposeHost
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
-import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialListScreen
 import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialImportViewModel
 import app.aaps.pump.omnipod.omnipod5.ui.O5CredentialImportWebViewScreen
 import app.aaps.pump.omnipod.omnipod5.ui.wizard.compose.O5OmnipodWizardViewModel
@@ -68,8 +61,8 @@ class OmnipodO5ComposeContent(
             credentialImportContent = { onImported, onBack ->
                 val context = LocalContext.current
                 val title = stringResource(R.string.omnipod_5_certificate_store_import)
-                val importedMessage = stringResource(R.string.omnipod_5_credential_imported)
-                val importErrorMessage = stringResource(R.string.omnipod_5_credential_import_error)
+                val importedMessage = stringResource(R.string.omnipod_5_certificate_imported)
+                val importErrorMessage = stringResource(R.string.omnipod_5_certificate_import_error)
                 LaunchedEffect(Unit) {
                     setToolbarConfig(
                         ToolbarConfig(
@@ -98,46 +91,27 @@ class OmnipodO5ComposeContent(
             },
             extraContent = { onBack ->
                 val title = stringResource(R.string.omnipod_5_name)
-                var showingCredentials: Boolean by remember { mutableStateOf(false) }
                 LaunchedEffect(title) {
                     setToolbarConfig(
                         ToolbarConfig(
                             title = title,
                             navigationIcon = {
-                                IconButton(onClick = {
-                                    if (showingCredentials) {
-                                        showingCredentials = false
-                                    } else {
-                                        onBack.invoke()
-                                    }
-                                }) {
+                                IconButton(onClick = { onBack.invoke() }) {
                                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(CoreUiR.string.back))
                                 }
                             },
-                            actions = {
-                                if (!showingCredentials) {
-                                    TextButton(onClick = { showingCredentials = true }) {
-                                        Text(stringResource(R.string.omnipod_5_store_credentials))
-                                    }
-                                }
-                            }
+                            actions = {}
                         )
                     )
                 }
                 val historyViewModel: O5PodHistoryViewModel = metroViewModel()
                 val records by historyViewModel.records.collectAsStateWithLifecycle()
-                Column(Modifier.fillMaxSize()) {
-                    if (showingCredentials) {
-                        O5CredentialListScreen(viewModel = credentialViewModel, rh = rh)
-                    } else {
-                        Box(Modifier.weight(1f)) {
-                            O5PodHistoryScreen(
-                                records = records,
-                                rh = historyViewModel.rh,
-                                profileUtil = historyViewModel.profileUtil
-                            )
-                        }
-                    }
+                Box(Modifier.fillMaxSize()) {
+                    O5PodHistoryScreen(
+                        records = records,
+                        rh = historyViewModel.rh,
+                        profileUtil = historyViewModel.profileUtil
+                    )
                 }
             }
         )

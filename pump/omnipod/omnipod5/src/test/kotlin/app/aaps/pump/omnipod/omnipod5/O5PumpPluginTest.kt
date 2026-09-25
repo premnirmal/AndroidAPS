@@ -34,9 +34,12 @@ import app.aaps.pump.omnipod.common.queue.command.CommandResumeDelivery
 import app.aaps.pump.omnipod.common.queue.command.CommandSilenceAlerts
 import app.aaps.pump.omnipod.common.queue.command.CommandSuspendDelivery
 import app.aaps.pump.omnipod.common.queue.command.CommandUpdateAlertConfiguration
+import app.aaps.pump.omnipod.omnipod5.history.O5History
 import app.aaps.shared.tests.TestBaseWithProfile
 import com.google.common.truth.Truth.assertThat
+import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
+import io.reactivex.rxjava3.core.Single
 import kotlinx.coroutines.runBlocking
 import java.time.Duration
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -74,6 +77,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
     @Mock lateinit var bolusProgressData: BolusProgressData
     @Mock lateinit var protectionCheck: ProtectionCheck
     @Mock lateinit var blePreCheck: BlePreCheck
+    @Mock lateinit var history: O5History
 
     private lateinit var plugin: O5PumpPlugin
 
@@ -90,6 +94,12 @@ class O5PumpPluginTest : TestBaseWithProfile() {
         whenever(rh.gs(R.string.omnipod_5_error_no_active_profile)).thenReturn("No active profile")
         whenever(rh.gs(R.string.omnipod_5_error_no_active_alerts)).thenReturn("No active alerts")
         whenever(rh.gs(R.string.omnipod_5_error_unresolved_dose_pending)).thenReturn("Earlier dose unconfirmed")
+        whenever(history.createRecord(any(), any(), any(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull(), anyOrNull())).thenReturn(Single.just(1L))
+        whenever(history.markSent(any())).thenReturn(Completable.complete())
+        whenever(history.markSuccess(any())).thenReturn(Completable.complete())
+        whenever(history.markSendingFailure(any())).thenReturn(Completable.complete())
+        whenever(history.markFailure(any())).thenReturn(Completable.complete())
+        whenever(history.setTotalAmountDelivered(any(), anyOrNull())).thenReturn(Completable.complete())
     }
 
 

@@ -185,21 +185,29 @@
 
     <!-- Omnipod 5 -->
     <string name="omnipod_5_login" translatable="false">https://api.osaid-keymanager.org/o5/aaps/start</string>
-    <string name="omnipod_5_store_credentials">Credentials</string>
+    <string name="omnipod_5_store_certificates">Certificates</string>
     <string name="omnipod_5_name">Omnipod 5</string>
     <string name="omnipod_5_name_short">O5</string>
     <string name="omnipod_5_unconfirmed_command" comment="Reason shown when a status read is triggered to reconcile an unconfirmed command. 26 characters max for translation.">Unconfirmed command</string>
     <string name="omnipod_5_pump_description">Omnipod 5 patch pump, running as a manual pod under AAPS\'s control.</string>
     <string name="omnipod_5_certificate_store">Certificate store</string>
-    <string name="omnipod_5_certificate_store_summary">Import and manage the Omnipod 5 pairing credential.</string>
+    <string name="omnipod_5_certificate_store_summary">Import and manage the Omnipod 5 pairing certificate.</string>
     <string name="omnipod_5_certificate_store_import">Import certificate</string>
-    <string name="omnipod_5_certificate_store_imported">Imported credential for controller %1$s</string>
+    <string name="omnipod_5_certificate_store_imported">Imported certificate for controller %1$s</string>
     <string name="omnipod_5_certificate_store_controller_id">Controller %1$s</string>
-    <string name="omnipod_5_certificate_store_installed_credentials">Installed credentials</string>
-    <string name="omnipod_5_credential_import_failed">Could not import the credential. Please try again.</string>
-    <string name="omnipod_5_credential_import_try_again">Try again</string>
-    <string name="omnipod_5_credential_imported">Omnipod 5 credential imported</string>
-    <string name="omnipod_5_credential_import_error">Error importing certificate</string>
+    <string name="omnipod_5_certificate_store_installed_certificates">Installed certificates</string>
+    <string name="omnipod_5_certificate_store_remove_blocked">Certificate can only be removed when there is no active pod</string>
+    <string name="omnipod_5_certificate_manual_import_title">Import Omnipod 5 certificate</string>
+    <string name="omnipod_5_certificate_manual_import_description">Paste a certificate string obtained from a trusted source. This does not pair with a pod by itself - it only makes the certificate available for pairing.</string>
+    <string name="omnipod_5_certificate_manual_import_label">Certificate string</string>
+    <string name="omnipod_5_certificate_import_paste_first">Paste a certificate string first</string>
+    <string name="omnipod_5_certificate_import_empty">Empty certificate received</string>
+    <string name="omnipod_5_certificate_import_parse_error">Could not parse that certificate - check it was copied completely</string>
+    <string name="omnipod_5_certificate_import_failed">Could not import the certificate. Please try again.</string>
+    <string name="omnipod_5_certificate_import_try_again">Try again</string>
+    <string name="omnipod_5_certificate_imported">Omnipod 5 certificate imported</string>
+    <string name="omnipod_5_certificate_import_error">Error importing certificate</string>
+    <string name="omnipod_5_certificate_bridge_unsupported">This device\'s WebView does not support the certificate bridge. Please update Android System WebView and try again.</string>
     <string name="omnipod_5_error_not_enough_insulin">Not enough insulin left in the reservoir for this bolus.</string>
     <string name="omnipod_5_error_bolus_already_in_progress">A bolus is already in progress.</string>
     <string name="omnipod_5_error_setting_basal_profile_might_have_failed">Setting the new basal profile might have failed. Refresh pod status to confirm or deny this.</string>
