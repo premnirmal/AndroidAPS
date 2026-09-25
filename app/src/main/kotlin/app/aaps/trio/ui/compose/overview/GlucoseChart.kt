@@ -135,6 +135,56 @@ private inline fun <T> List<T>.sliceByMillis(start: Long, end: Long, includeBoun
 }
 
 /**
+ * Splits a time-ordered curve (ascending by x) into the part up to [nowX] (past/actual) and the
+ * part from [nowX] onward (future/predicted), interpolating a shared point exactly at [nowX] so
+ * the two halves join without a visible gap. Used to draw the remaining IOB/COB as a dashed line,
+ * matching the solid-then-dashed treatment already used for the BG forecast. Returns two empty
+ * paths when [points] has fewer than 2 entries, since a single point cannot be drawn as a line.
+ */
+private fun splitPastFuture(points: List<Offset>, nowX: Float): Pair<Path, Path> {
+    val past = Path()
+    val future = Path()
+    if (points.size < 2) return past to future
+    var pastStarted = false
+    var futureStarted = false
+    points.forEachIndexed { index, point ->
+        if (point.x <= nowX) {
+            if (!pastStarted) {
+                past.moveTo(point.x, point.y)
+                pastStarted = true
+            } else {
+                past.lineTo(point.x, point.y)
+            }
+        } else {
+            if (!futureStarted) {
+                val prev = points.getOrNull(index - 1)
+                val boundary = if (prev != null && prev.x < point.x) {
+                    val t = (nowX - prev.x) / (point.x - prev.x)
+                    Offset(nowX, prev.y + (point.y - prev.y) * t)
+                } else {
+                    // No earlier point to interpolate from (the whole curve is in the future):
+                    // still start the dashed segment exactly at nowX, using this point's value.
+                    Offset(nowX, point.y)
+                }
+                if (pastStarted) past.lineTo(boundary.x, boundary.y) else past.moveTo(boundary.x, boundary.y)
+                future.moveTo(boundary.x, boundary.y)
+                futureStarted = true
+            }
+            future.lineTo(point.x, point.y)
+        }
+    }
+    return past to future
+}
+
+/** Builds the filled area under a curve, from the first offset down to [baseline] and back. */
+private fun buildFillPath(offsets: List<Offset>, baseline: Float): Path = Path().apply {
+    moveTo(offsets.first().x, baseline)
+    offsets.forEach { lineTo(it.x, it.y) }
+    lineTo(offsets.last().x, baseline)
+    close()
+}
+
+/**
  * Pannable, pinch-zoomable glucose chart with fling and double-tap zoom (12h/6h/3h). Bands from top
  * to bottom: basal, glucose, IOB/COB. Adapted from TrioFollower's GlucoseChart to draw from the
  * existing AndroidAPS [GraphViewModel] data (user units, millisecond timestamps).
@@ -677,25 +727,14 @@ fun GlucoseChart(
             val maxCobGrams = cobPoints.maxOfOrNull { it.value } ?: 0.0
             if (cobPoints.size >= 2 && maxCobGrams > 0.0) {
                 val cobScale = maxCobGrams.coerceAtLeast(10.0)
-                val fillPath = Path()
-                val linePath = Path()
-                cobPoints.forEachIndexed { index, point ->
-                    val x = xFor(point.timestamp)
+                val cobOffsets = cobPoints.map { point ->
                     val fraction = (point.value / cobScale).coerceIn(0.0, 1.0)
-                    val y = iobBottom - (fraction * (iobBottom - iobTop)).toFloat()
-                    if (index == 0) {
-                        fillPath.moveTo(x, iobBottom)
-                        fillPath.lineTo(x, y)
-                        linePath.moveTo(x, y)
-                    } else {
-                        fillPath.lineTo(x, y)
-                        linePath.lineTo(x, y)
-                    }
+                    Offset(xFor(point.timestamp), iobBottom - (fraction * (iobBottom - iobTop)).toFloat())
                 }
-                fillPath.lineTo(xFor(cobPoints.last().timestamp), iobBottom)
-                fillPath.close()
-                drawPath(fillPath, color = cobColor.copy(alpha = 0.2f))
-                drawPath(linePath, color = cobColor, style = Stroke(width = 1.5.dp.toPx()))
+                drawPath(buildFillPath(cobOffsets, iobBottom), color = cobColor.copy(alpha = 0.2f))
+                val (pastLine, futureLine) = splitPastFuture(cobOffsets, xFor(nowTimestamp))
+                drawPath(pastLine, color = cobColor, style = Stroke(width = 1.5.dp.toPx()))
+                drawPath(futureLine, color = cobColor, style = Stroke(width = 1.5.dp.toPx(), pathEffect = predictionDash))
             }
 
             // IOB curve.
@@ -706,24 +745,11 @@ fun GlucoseChart(
                     val fraction = (units / maxIob).coerceIn(0.0, 1.0)
                     return iobBottom - (fraction * (iobBottom - iobTop)).toFloat()
                 }
-                val fillPath = Path()
-                val linePath = Path()
-                iobPoints.forEachIndexed { index, point ->
-                    val x = xFor(point.timestamp)
-                    val y = iobYFor(point.value)
-                    if (index == 0) {
-                        fillPath.moveTo(x, iobBottom)
-                        fillPath.lineTo(x, y)
-                        linePath.moveTo(x, y)
-                    } else {
-                        fillPath.lineTo(x, y)
-                        linePath.lineTo(x, y)
-                    }
-                }
-                fillPath.lineTo(xFor(iobPoints.last().timestamp), iobBottom)
-                fillPath.close()
-                drawPath(fillPath, color = iobColor.copy(alpha = 0.35f))
-                drawPath(linePath, color = iobColor, style = Stroke(width = 1.5.dp.toPx()))
+                val iobOffsets = iobPoints.map { Offset(xFor(it.timestamp), iobYFor(it.value)) }
+                drawPath(buildFillPath(iobOffsets, iobBottom), color = iobColor.copy(alpha = 0.35f))
+                val (pastLine, futureLine) = splitPastFuture(iobOffsets, xFor(nowTimestamp))
+                drawPath(pastLine, color = iobColor, style = Stroke(width = 1.5.dp.toPx()))
+                drawPath(futureLine, color = iobColor, style = Stroke(width = 1.5.dp.toPx(), pathEffect = predictionDash))
             }
 
             // Inspected point: a line through all bands and a highlighted dot on the reading.
