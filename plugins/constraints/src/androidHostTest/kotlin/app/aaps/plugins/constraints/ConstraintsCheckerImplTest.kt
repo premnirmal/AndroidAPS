@@ -90,6 +90,26 @@ class ConstraintsCheckerImplTest : TestBaseWithProfile() {
         //SafetyPlugin
         constraintChecker = ConstraintsCheckerImpl(activePlugin, aapsLogger, ch, text)
 
+<<<<<<< HEAD
+=======
+        // The real formatter rather than a mock: it is pure arithmetic over a duration, and the
+        // objectives only read it for display.
+        val durationText = PlainDurationText()
+        val objectives = listOf(
+            Objective0(preferences, text, durationText, dateUtil, activePlugin, virtualPumpPlugin, persistenceLayer, loop, iobCobCalculator, passwordCheck),
+            Objective1(preferences, text, durationText, dateUtil),
+            Objective2(preferences, text, durationText, dateUtil),
+            Objective3(preferences, text, durationText, dateUtil),
+            Objective4(preferences, text, durationText, dateUtil, profileFunction),
+            Objective5(preferences, text, durationText, dateUtil),
+            Objective6(preferences, text, durationText, dateUtil, constraintsChecker, loop),
+            Objective7(preferences, text, durationText, dateUtil),
+            Objective8(preferences, text, durationText, dateUtil),
+            Objective9(preferences, text, durationText, dateUtil)
+        )
+        objectivesPlugin = ObjectivesPlugin(aapsLogger, text, preferences, config, notificationManager, objectives)
+        runBlocking { objectivesPlugin.onStart() }
+>>>>>>> origin/o5
         openAPSSMBPlugin =
             OpenAPSSMBPlugin(
                 aapsLogger, rxBus, constraintChecker, text, profileFunction, profileUtil, config, activePlugin, iobCobCalculator,
