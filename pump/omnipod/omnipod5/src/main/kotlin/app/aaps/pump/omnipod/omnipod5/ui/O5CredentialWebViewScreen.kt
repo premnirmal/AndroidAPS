@@ -12,28 +12,30 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import app.aaps.pump.omnipod.common.R
 
 /**
  * Name the web page uses to reach the app bridge: the page calls
- * `bridge.postMessage(jsonString)` to hand back the Omnipod 5 credential.
+ * `bridge.postMessage(jsonString)` to hand back the Omnipod 5 certificate.
  */
 private const val BRIDGE_NAME = "aapsKeymanagerBridge"
 
 /**
  * Origins the bridge accepts messages from. "*" allows every origin, which is fine for the
- * stubbed URL; tighten this once the real credential page URL is known.
+ * stubbed URL; tighten this once the real certificate page URL is known.
  */
 private val ALLOWED_ORIGIN_RULES = setOf("*")
 
 /**
- * Full-screen WebView shown instead of the manual credential import screen when no Omnipod 5
- * credential is installed yet. It loads [url] (a pairing/credential page) and listens for a
+ * Full-screen WebView shown instead of the manual certificate import screen when no Omnipod 5
+ * certificate is installed yet. It loads [url] (a pairing/certificate page) and listens for a
  * single message posted through `bridge.postMessage(...)` using
- * [WebViewCompat.addWebMessageListener]. The received message is expected to be the credential
+ * [WebViewCompat.addWebMessageListener]. The received message is expected to be the certificate
  * JSON string; it is handed back through [onCredentialReceived].
  */
 @SuppressLint("SetJavaScriptEnabled")
@@ -50,8 +52,7 @@ fun O5CredentialWebViewScreen(
     if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(
-                text = "This device's WebView does not support the credential bridge. " +
-                    "Please update Android System WebView and try again.",
+                text = stringResource(R.string.omnipod_5_certificate_bridge_unsupported),
                 style = MaterialTheme.typography.bodyMedium
             )
         }

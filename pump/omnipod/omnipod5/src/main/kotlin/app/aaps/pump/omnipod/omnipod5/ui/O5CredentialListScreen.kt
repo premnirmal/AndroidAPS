@@ -25,7 +25,7 @@ import app.aaps.pump.omnipod.common.R
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
 
 /**
- * Settings screen for viewing/removing Omnipod5 credentials.
+ * Settings screen for viewing/removing Omnipod 5 certificates.
  */
 @Composable
 fun O5CredentialListScreen(
@@ -34,9 +34,11 @@ fun O5CredentialListScreen(
 ) {
     val importResult by viewModel.importResult.collectAsState()
     val installedCredentials by viewModel.installedCredentials.collectAsState()
+    val canRemoveCertificate by viewModel.canRemoveCertificate.collectAsState()
 
     O5CredentialImportContent(
         removeCredential = viewModel::removeCredential,
+        canRemoveCertificate = canRemoveCertificate,
         importResult = importResult,
         installedCredentials = installedCredentials,
     )
@@ -45,9 +47,13 @@ fun O5CredentialListScreen(
 @Composable
 private fun O5CredentialImportContent(
     removeCredential: (Long) -> Unit,
+    canRemoveCertificate: Boolean,
     importResult: ImportResult,
     installedCredentials: List<InstalledCredentialRow>,
 ) {
+    val removeBlockedMessage = stringResource(TextRef.AndroidRes(R.string.omnipod_5_certificate_store_remove_blocked))
+    val showRemoveBlockedMessage = !canRemoveCertificate || importResult == ImportResult.RemoveBlocked
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -57,7 +63,7 @@ private fun O5CredentialImportContent(
     ) {
         when (importResult) {
             is ImportResult.Success -> Text(
-                text = stringResource(TextRef.AndroidRes(R.string.omnipod_5_certificate_store_imported),"0x%08X".format(importResult.controllerId)),
+                text = stringResource(TextRef.AndroidRes(R.string.omnipod_5_certificate_store_imported), formatControllerId(importResult.controllerId)),
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.labelLarge
             )
@@ -68,12 +74,19 @@ private fun O5CredentialImportContent(
                 style = MaterialTheme.typography.labelLarge
             )
 
-            ImportResult.None       -> Unit
+            ImportResult.None, ImportResult.RemoveBlocked -> Unit
         }
 
         if (installedCredentials.isNotEmpty()) {
+            if (showRemoveBlockedMessage) {
+                Text(
+                    text = removeBlockedMessage,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
             Text(
-                text = stringResource(TextRef.AndroidRes(R.string.omnipod_5_certificate_store_installed_credentials)),
+                text = stringResource(TextRef.AndroidRes(R.string.omnipod_5_certificate_store_installed_certificates)),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -88,7 +101,7 @@ private fun O5CredentialImportContent(
                         ) {
                             Column {
                                 Text(
-                                    text = stringResource(TextRef.AndroidRes(R.string.omnipod_5_certificate_store_controller_id), "0x%08X".format(row.controllerId)),
+                                    text = stringResource(TextRef.AndroidRes(R.string.omnipod_5_certificate_store_controller_id), formatControllerId(row.controllerId)),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Text(
@@ -96,7 +109,10 @@ private fun O5CredentialImportContent(
                                     style = MaterialTheme.typography.labelSmall
                                 )
                             }
-                            TextButton(onClick = { removeCredential(row.controllerId) }) {
+                            TextButton(
+                                onClick = { removeCredential(row.controllerId) },
+                                enabled = canRemoveCertificate
+                            ) {
                                 Text(stringResource(TextRef.AndroidRes(app.aaps.core.ui.R.string.remove)))
                             }
                         }
@@ -113,6 +129,7 @@ private fun PreviewCredentialImportContent() {
     MaterialTheme {
         O5CredentialImportContent(
             removeCredential = {},
+            canRemoveCertificate = true,
             importResult = ImportResult.None,
             installedCredentials = emptyList(),
         )
@@ -125,6 +142,7 @@ private fun PreviewCredentialImportedCredentialsContent() {
     MaterialTheme {
         O5CredentialImportContent(
             removeCredential = {},
+            canRemoveCertificate = true,
             importResult = ImportResult.None,
             installedCredentials = listOf(InstalledCredentialRow(123, O5RegistrationData.O5RegistrationSource.IMPORTED)),
         )
@@ -137,6 +155,7 @@ private fun PreviewCredentialImportFailureContent() {
     MaterialTheme {
         O5CredentialImportContent(
             removeCredential = {},
+            canRemoveCertificate = true,
             importResult = ImportResult.Failure("Failed to import cert"),
             installedCredentials = emptyList(),
         )
@@ -149,6 +168,7 @@ private fun PreviewCredentialImportSuccesssContent() {
     MaterialTheme {
         O5CredentialImportContent(
             removeCredential = {},
+            canRemoveCertificate = true,
             importResult = ImportResult.Success(123),
             installedCredentials = listOf(InstalledCredentialRow(123, O5RegistrationData.O5RegistrationSource.IMPORTED)),
         )

@@ -21,9 +21,9 @@ import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.pump.omnipod.common.R
 
 /**
- * Full-screen content that hosts the Omnipod 5 credential import WebView (see
+ * Full-screen content that hosts the Omnipod 5 certificate import WebView (see
  * [O5CredentialWebViewScreen]). The screen loads [url], waits for the page to post the
- * credential JSON back through the message bridge, and imports it via [onImportCredential].
+ * certificate JSON back through the message bridge, and imports it via [onImportCredential].
  *
  * - On a successful import [onImported] is called, which opens the Omnipod 5 setup wizard.
  * - On a failed import a "Try again" button is shown that re-launches the WebView (reloads
@@ -51,7 +51,7 @@ fun O5CredentialImportWebViewScreen(
                 verticalArrangement = Arrangement.spacedBy(AapsSpacing.large)
             ) {
                 Text(
-                    text = stringResource(R.string.omnipod_5_credential_import_failed),
+                    text = stringResource(R.string.omnipod_5_certificate_import_failed),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -62,7 +62,7 @@ fun O5CredentialImportWebViewScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(stringResource(R.string.omnipod_5_credential_import_try_again))
+                    Text(stringResource(R.string.omnipod_5_certificate_import_try_again))
                 }
             }
         } else {

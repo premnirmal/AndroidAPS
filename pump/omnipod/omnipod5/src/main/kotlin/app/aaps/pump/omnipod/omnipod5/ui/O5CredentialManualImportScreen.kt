@@ -15,15 +15,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.pump.omnipod.common.R
 
 /**
- * Manual credential import screen: lets the user paste a credential string and install it.
+ * Manual certificate import screen: lets the user paste a certificate string and install it.
  * Reached from the "import" action in the top app bar of
- * [O5CredentialListScreen]/[O5CertificateStoreScreen]. Purely credential management - no
+ * [O5CredentialListScreen]/[O5CertificateStoreScreen]. Purely certificate management - no
  * dosing/pairing actions.
  */
 @Composable
@@ -57,20 +59,19 @@ private fun O5CredentialManualImportContent(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(
-            text = "Import Omnipod 5 Credential",
+            text = stringResource(R.string.omnipod_5_certificate_manual_import_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "Paste a credential string obtained from a trusted source. This does not " +
-                "pair with a pod by itself - it only makes the credential available for pairing.",
+            text = stringResource(R.string.omnipod_5_certificate_manual_import_description),
             style = MaterialTheme.typography.bodySmall
         )
 
         OutlinedTextField(
             value = inputText,
             onValueChange = inputChanged,
-            label = { Text("Credential string") },
+            label = { Text(stringResource(R.string.omnipod_5_certificate_manual_import_label)) },
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 180.dp),
@@ -86,7 +87,7 @@ private fun O5CredentialManualImportContent(
 
         when (importResult) {
             is ImportResult.Success -> Text(
-                text = "Imported credential for controller 0x%08X".format(importResult.controllerId),
+                text = stringResource(R.string.omnipod_5_certificate_store_imported, formatControllerId(importResult.controllerId)),
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.labelLarge
             )
@@ -96,6 +97,8 @@ private fun O5CredentialManualImportContent(
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.labelLarge
             )
+
+            ImportResult.RemoveBlocked -> Unit
 
             ImportResult.None       -> Unit
         }
