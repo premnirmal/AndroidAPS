@@ -1,34 +1,49 @@
 package app.aaps.pump.omnipod.omnipod5.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import app.aaps.core.interfaces.resources.ResourceHelper
+import app.aaps.core.keys.interfaces.Preferences
+import app.aaps.pump.omnipod.common.R
+import app.aaps.pump.omnipod.common.bledriver.pod.definition.ActivationProgress
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.pair.O5RegistrationData
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.security.SecureO5RegistrationStorage
+import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.O5PodStateManager
+import app.aaps.pump.omnipod.omnipod5.keys.O5StringNonPreferenceKey
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import org.json.JSONException
 import org.json.JSONObject
+import java.util.Locale
 
-/** One row of the "currently installed credentials" list shown in the import screen. */
+internal fun formatControllerId(controllerId: Long): String = String.format(Locale.US, "0x%08X", controllerId)
+
+/** One row of the currently installed certificates list shown in the import screen. */
 data class InstalledCredentialRow(
     val controllerId: Long,
     val source: O5RegistrationData.O5RegistrationSource
 )
 
-/** Result of the last import attempt, so the screen can show a success/error message. */
+/** Result of the last certificate store action, so the screen can show a message. */
 sealed class ImportResult {
     object None : ImportResult()
+    object RemoveBlocked : ImportResult()
     data class Success(val controllerId: Long) : ImportResult()
     data class Failure(val reason: String) : ImportResult()
 }
 
 /**
- * Drives a settings screen for importing an Omnipod 5 credential and viewing/removing
- * already-installed credentials. Accepts either format, auto-detected from the pasted
+ * Drives a settings screen for importing an Omnipod 5 certificate and viewing/removing
+ * already-installed certificates. Accepts either format, auto-detected from the pasted
  * text:
  * - a `.o5keypair`-shaped JSON object (as produced by OmnipodKit's own `toJSON()` on
  *   iOS - `controllerId`/`privateKey`/`publicKey`/`intermediateCA`/`tlsCertificate`,
@@ -37,13 +52,16 @@ sealed class ImportResult {
  *   [O5RegistrationData.installPacked]
  *
  * Deliberately has no dosing-related functionality whatsoever - this only manages which
- * credentials [O5RegistrationData] knows about, nothing about pairing, connection, or
+ * certificates [O5RegistrationData] knows about, nothing about pairing, connection, or
  * pod control.
  */
 @ContributesIntoMap(AppScope::class, binding = binding<ViewModel>())
 @ViewModelKey
 class O5CredentialImportViewModel @Inject constructor(
-    private val secureO5RegistrationStorage: SecureO5RegistrationStorage
+    private val secureO5RegistrationStorage: SecureO5RegistrationStorage,
+    private val podStateManager: O5PodStateManager,
+    private val preferences: Preferences,
+    private val rh: ResourceHelper
 ) : ViewModel() {
 
     private val _inputText = MutableStateFlow("")
@@ -54,6 +72,17 @@ class O5CredentialImportViewModel @Inject constructor(
 
     private val _installedCredentials = MutableStateFlow<List<InstalledCredentialRow>>(emptyList())
     val installedCredentials: StateFlow<List<InstalledCredentialRow>> = _installedCredentials
+
+    // PodState preference updates signal that persisted pod state changed; re-read the
+    // active-pod state from podStateManager because it owns the parsed state.
+    val canRemoveCertificate: StateFlow<Boolean> = preferences.observe(O5StringNonPreferenceKey.PodState)
+        .map { !hasActivePod() }
+        .onEach { canRemove ->
+            if (canRemove && _importResult.value == ImportResult.RemoveBlocked) {
+                _importResult.value = ImportResult.None
+            }
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, !hasActivePod())
 
     init {
         refreshInstalledCredentials()
@@ -68,14 +97,14 @@ class O5CredentialImportViewModel @Inject constructor(
 
     /**
      * Attempts to parse and install [inputText]'s current value, auto-detecting whether
-     * it's a `.o5keypair`-shaped JSON object or a packed credential string (see class doc).
+     * it's a `.o5keypair`-shaped JSON object or a packed certificate string (see class doc).
      * On success, also persists it (encrypted) so it survives app restarts, and clears the
      * input field. On failure, leaves the input as-is so the user can correct it.
      */
     fun importCurrentInput() {
         val text = _inputText.value.trim()
         if (text.isEmpty()) {
-            _importResult.value = ImportResult.Failure("Paste a credential string first")
+            _importResult.value = ImportResult.Failure(rh.gs(R.string.omnipod_5_certificate_import_paste_first))
             return
         }
 
@@ -83,14 +112,14 @@ class O5CredentialImportViewModel @Inject constructor(
     }
 
     /**
-     * Imports a credential JSON/packed string received from the pairing web page (via the
+     * Imports a certificate JSON/packed string received from the pairing web page (via the
      * WebView message bridge). Runs the same parse/install path as a manual paste and
-     * returns whether a credential was successfully installed.
+     * returns whether a certificate was successfully installed.
      */
     fun importFromWebMessage(text: String): Boolean {
         val trimmed = text.trim()
         if (trimmed.isEmpty()) {
-            _importResult.value = ImportResult.Failure("Empty credential received")
+            _importResult.value = ImportResult.Failure(rh.gs(R.string.omnipod_5_certificate_import_empty))
             return false
         }
         importText(trimmed)
@@ -106,7 +135,7 @@ class O5CredentialImportViewModel @Inject constructor(
         val controllerId = if (text.startsWith("{")) importJsonCredential(text) else importPackedCredential(text)
         if (controllerId == null) {
             _importResult.value = ImportResult.Failure(
-                "Could not parse that credential - check it was copied completely"
+                rh.gs(R.string.omnipod_5_certificate_import_parse_error)
             )
             return
         }
@@ -134,7 +163,7 @@ class O5CredentialImportViewModel @Inject constructor(
         } catch (e: JSONException) {
             return null
         }
-        val map = REQUIRED_JSON_KEYS.associateWith { key -> json.optString(key, null) }
+        val map = REQUIRED_JSON_KEYS.associateWith { key -> if (json.has(key) && !json.isNull(key)) json.optString(key) else null }
         val data = O5RegistrationData.fromJsonMap(map) ?: return null
         O5RegistrationData.install(data, O5RegistrationData.O5RegistrationSource.IMPORTED)
         return data.controllerId
@@ -151,12 +180,19 @@ class O5CredentialImportViewModel @Inject constructor(
         return controllerId.takeIf { ok }
     }
 
-    /** Removes a credential from both the in-memory registry and persisted storage. */
+    /** Removes a certificate from both the in-memory registry and persisted storage. */
     fun removeCredential(controllerId: Long) {
+        if (hasActivePod()) {
+            _importResult.value = ImportResult.RemoveBlocked
+            return
+        }
         O5RegistrationData.remove(controllerId)
         secureO5RegistrationStorage.removeEntry(controllerId)
+        _importResult.value = ImportResult.None
         refreshInstalledCredentials()
     }
+
+    private fun hasActivePod(): Boolean = podStateManager.activationProgress == ActivationProgress.COMPLETED
 
     private fun refreshInstalledCredentials() {
         _installedCredentials.value = O5RegistrationData.allValues.mapNotNull { data ->
