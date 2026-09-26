@@ -70,7 +70,7 @@
     <string name="trio_stats_carbs">Carbs</string>
     <string name="trio_stats_carb_grams" comment="%1$.1f=carbohydrate amount in grams. Example: 45.0 g">%1$.1f g</string>
     <string name="trio_stats_carbs_axis">Carbohydrates (g)</string>
-    <string name="trio_stats_carb_chart">Carbohydrate bar chart</string>
+    <string name="trio_stats_carb_chart">Carbohydrate bar chart in grams</string>
     <string name="trio_stats_average_per_day">Average per day</string>
     <string name="trio_stats_entries">Entries</string>
     <string name="trio_stats_total">Total</string>
@@ -80,9 +80,9 @@
     <string name="trio_stats_smb">SMB</string>
     <string name="trio_stats_insulin_units" comment="%1$.1f=insulin amount in units. Example: 24.5 U">%1$.1f U</string>
     <string name="trio_stats_tdd_chart">Total daily dose bar chart</string>
-    <string name="trio_stats_bolus_chart">Bolus distribution bar chart</string>
-    <string name="trio_stats_date_label" comment="%1$d=month, %2$d=day of month. Example: 9/22">%1$d/%2$d</string>
-    <string name="trio_stats_time_label" comment="%1$d=month, %2$d=day of month, %3$d=hour in 24-hour time. Example: 9/22 13:00">%1$d/%2$d %3$02d:00</string>
+    <string name="trio_stats_bolus_chart">Bolus distribution bar chart in insulin units</string>
+    <string name="trio_stats_date_label" comment="%1$d=month, %2$d=day of month. Example: 22/09">%2$02d/%1$02d</string>
+    <string name="trio_stats_time_label" comment="%1$d=time. Example: 13:00">%1$02d:00</string>
     <string name="trio_stats_agp">Ambulatory Glucose Profile (AGP)</string>
     <string name="trio_stats_percentile_10_90">10–90%</string>
     <string name="trio_stats_percentile_25_75">25–75%</string>

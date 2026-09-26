@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -242,6 +243,7 @@ private fun TrioInsulinStatsContent(
             TrioInsulinCard(
                 modifier = Modifier.padding(horizontal = AapsSpacing.extraLarge),
                 data = data,
+                state = state,
                 chart = selectedChart
             )
         }
@@ -299,6 +301,7 @@ private fun TrioInsulinChart.label(): String = when (this) {
 private fun TrioInsulinCard(
     data: TrioInsulinStatsData,
     chart: TrioInsulinChart,
+    state: StatsUiState,
     modifier: Modifier = Modifier
 ) {
     val colors = AapsTheme.generalColors
@@ -316,6 +319,7 @@ private fun TrioInsulinCard(
         TrioInsulinBarChart(
             points = points,
             chart = chart,
+            range = state.trioInsulinRange,
             modifier = Modifier.fillMaxWidth()
         )
         val legendItems = when (chart) {
@@ -371,6 +375,7 @@ private fun TrioInsulinSummary(data: TrioInsulinStatsData, chart: TrioInsulinCha
 private fun TrioInsulinBarChart(
     points: List<TrioInsulinPoint>,
     chart: TrioInsulinChart,
+    range: TrioStatsRange,
     modifier: Modifier = Modifier
 ) {
     val colors = AapsTheme.generalColors
@@ -382,58 +387,96 @@ private fun TrioInsulinBarChart(
         TrioInsulinChart.TOTAL_DAILY_DOSE  -> stringResource(UiStrings.trio_stats_tdd_chart)
         TrioInsulinChart.BOLUS_DISTRIBUTION -> stringResource(UiStrings.trio_stats_bolus_chart)
     }
-    Canvas(
-        modifier = modifier.height(AapsSpacing.bgCircleSize + AapsSpacing.bgCircleSize / 2)
-            .semantics { contentDescription = description }
+    val showAxis = chart == TrioInsulinChart.BOLUS_DISTRIBUTION
+    val maximum = points.maxOfOrNull {
+        when (chart) {
+            TrioInsulinChart.TOTAL_DAILY_DOSE  -> it.total
+            TrioInsulinChart.BOLUS_DISTRIBUTION -> it.manualBolus + it.smbBolus
+        }
+    }?.coerceAtLeast(1.0) ?: 1.0
+    val chartHeight = AapsSpacing.bgCircleSize + AapsSpacing.bgCircleSize / 2
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
+    val density = LocalDensity.current
+    val gridWidth = with(density) { AapsSpacing.extraSmall.toPx() } / 2f
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
     ) {
-        val maximum = points.maxOfOrNull {
-            when (chart) {
-                TrioInsulinChart.TOTAL_DAILY_DOSE  -> it.total
-                TrioInsulinChart.BOLUS_DISTRIBUTION -> it.manualBolus + it.smbBolus
+        Column(modifier = Modifier.weight(1f)) {
+            Canvas(
+                modifier = Modifier.fillMaxWidth().height(chartHeight)
+                    .semantics { contentDescription = description }
+            ) {
+                if (showAxis) {
+                    repeat(5) { index ->
+                        val y = size.height * index / 4f
+                        drawLine(gridColor, Offset(0f, y), Offset(size.width, y), gridWidth)
+                    }
+                }
+                val barWidth = size.width / points.size.coerceAtLeast(1) * 0.7f
+                points.forEachIndexed { index, point ->
+                    val centerX = size.width * (index + 0.5f) / points.size
+                    if (chart == TrioInsulinChart.TOTAL_DAILY_DOSE) {
+                        val basalHeight = (point.basal / maximum * size.height).toFloat()
+                        val bolusHeight = (point.bolus / maximum * size.height).toFloat()
+                        drawRect(
+                            color = basalColor,
+                            topLeft = Offset(centerX - barWidth / 2, size.height - basalHeight),
+                            size = Size(barWidth, basalHeight)
+                        )
+                        drawRect(
+                            color = bolusColor,
+                            topLeft = Offset(centerX - barWidth / 2, size.height - basalHeight - bolusHeight),
+                            size = Size(barWidth, bolusHeight)
+                        )
+                    } else {
+                        val manualHeight = (point.manualBolus / maximum * size.height).toFloat()
+                        val smbHeight = (point.smbBolus / maximum * size.height).toFloat()
+                        drawRect(
+                            color = manualBolusColor,
+                            topLeft = Offset(centerX - barWidth / 2, size.height - manualHeight),
+                            size = Size(barWidth, manualHeight)
+                        )
+                        drawRect(
+                            color = smbColor,
+                            topLeft = Offset(centerX - barWidth / 2, size.height - manualHeight - smbHeight),
+                            size = Size(barWidth, smbHeight)
+                        )
+                    }
+                }
             }
-        }?.coerceAtLeast(1.0) ?: 1.0
-        val barWidth = size.width / points.size.coerceAtLeast(1) * 0.7f
-        points.forEachIndexed { index, point ->
-            val centerX = size.width * (index + 0.5f) / points.size
-            if (chart == TrioInsulinChart.TOTAL_DAILY_DOSE) {
-                val basalHeight = (point.basal / maximum * size.height).toFloat()
-                val bolusHeight = (point.bolus / maximum * size.height).toFloat()
-                drawRect(
-                    color = basalColor,
-                    topLeft = Offset(centerX - barWidth / 2, size.height - basalHeight),
-                    size = Size(barWidth, basalHeight)
-                )
-                drawRect(
-                    color = bolusColor,
-                    topLeft = Offset(centerX - barWidth / 2, size.height - basalHeight - bolusHeight),
-                    size = Size(barWidth, bolusHeight)
-                )
-            } else {
-                val manualHeight = (point.manualBolus / maximum * size.height).toFloat()
-                val smbHeight = (point.smbBolus / maximum * size.height).toFloat()
-                drawRect(
-                    color = manualBolusColor,
-                    topLeft = Offset(centerX - barWidth / 2, size.height - manualHeight),
-                    size = Size(barWidth, manualHeight)
-                )
-                drawRect(
-                    color = smbColor,
-                    topLeft = Offset(centerX - barWidth / 2, size.height - manualHeight - smbHeight),
-                    size = Size(barWidth, smbHeight)
-                )
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(trioInsulinPointLabel(points.first().timestamp, range), style = MaterialTheme.typography.labelSmall)
+                Text(trioInsulinPointLabel(points.last().timestamp, range), style = MaterialTheme.typography.labelSmall)
             }
         }
-    }
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(trioInsulinPointLabel(points.first().timestamp), style = MaterialTheme.typography.labelSmall)
-        Text(trioInsulinPointLabel(points.last().timestamp), style = MaterialTheme.typography.labelSmall)
+        if (showAxis) {
+            Column(
+                modifier = Modifier.height(chartHeight).clearAndSetSemantics { },
+                verticalArrangement = Arrangement.SpaceBetween,
+                horizontalAlignment = Alignment.End
+            ) {
+                repeat(5) { index ->
+                    Text(
+                        text = stringResource(UiStrings.trio_stats_insulin_units, maximum * (4 - index) / 4),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun trioInsulinPointLabel(timestamp: Long): String {
+private fun trioInsulinPointLabel(timestamp: Long, range: TrioStatsRange): String {
     val time = Instant.fromEpochMilliseconds(timestamp).toLocalDateTime(TimeZone.currentSystemDefault())
-    return stringResource(UiStrings.trio_stats_time_label, time.monthNumber, time.dayOfMonth, time.hour)
+    return if (range.usesHourlyBuckets) {
+        stringResource(UiStrings.trio_stats_time_label, time.hour)
+    } else {
+        stringResource(UiStrings.trio_stats_date_label, time.monthNumber, time.dayOfMonth)
+    }
 }
 
 @Composable
@@ -524,25 +567,54 @@ private fun TrioCarbBarChart(
     modifier: Modifier = Modifier
 ) {
     val description = stringResource(UiStrings.trio_stats_carb_chart)
-    Canvas(
-        modifier = modifier.height(AapsSpacing.bgCircleSize + AapsSpacing.bgCircleSize / 2)
-            .semantics { contentDescription = description }
+    val maximum = points.maxOfOrNull(TrioCarbPoint::carbs)?.coerceAtLeast(1.0) ?: 1.0
+    val chartHeight = AapsSpacing.bgCircleSize + AapsSpacing.bgCircleSize / 2
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
+    val density = LocalDensity.current
+    val gridWidth = with(density) { AapsSpacing.extraSmall.toPx() } / 2f
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
     ) {
-        val maximum = points.maxOfOrNull(TrioCarbPoint::carbs)?.coerceAtLeast(1.0) ?: 1.0
-        val barWidth = size.width / points.size.coerceAtLeast(1) * 0.7f
-        points.forEachIndexed { index, point ->
-            val centerX = size.width * (index + 0.5f) / points.size
-            val barHeight = (point.carbs / maximum * size.height).toFloat()
-            drawRect(
-                color = color,
-                topLeft = Offset(centerX - barWidth / 2, size.height - barHeight),
-                size = Size(barWidth, barHeight)
-            )
+        Column(modifier = Modifier.weight(1f)) {
+            Canvas(
+                modifier = Modifier.fillMaxWidth().height(chartHeight)
+                    .semantics { contentDescription = description }
+            ) {
+                repeat(5) { index ->
+                    val y = size.height * index / 4f
+                    drawLine(gridColor, Offset(0f, y), Offset(size.width, y), gridWidth)
+                }
+                val barWidth = size.width / points.size.coerceAtLeast(1) * 0.7f
+                points.forEachIndexed { index, point ->
+                    val centerX = size.width * (index + 0.5f) / points.size
+                    val barHeight = (point.carbs / maximum * size.height).toFloat()
+                    drawRect(
+                        color = color,
+                        topLeft = Offset(centerX - barWidth / 2, size.height - barHeight),
+                        size = Size(barWidth, barHeight)
+                    )
+                }
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(trioCarbPointLabel(points.first().timestamp, range), style = MaterialTheme.typography.labelSmall)
+                Text(trioCarbPointLabel(points.last().timestamp, range), style = MaterialTheme.typography.labelSmall)
+            }
         }
-    }
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(trioCarbPointLabel(points.first().timestamp, range), style = MaterialTheme.typography.labelSmall)
-        Text(trioCarbPointLabel(points.last().timestamp, range), style = MaterialTheme.typography.labelSmall)
+        Column(
+            modifier = Modifier.height(chartHeight).clearAndSetSemantics { },
+            verticalArrangement = Arrangement.SpaceBetween,
+            horizontalAlignment = Alignment.End
+        ) {
+            repeat(5) { index ->
+                Text(
+                    text = stringResource(UiStrings.trio_stats_carb_grams, maximum * (4 - index) / 4),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+        }
     }
 }
 
@@ -550,7 +622,7 @@ private fun TrioCarbBarChart(
 private fun trioCarbPointLabel(timestamp: Long, range: TrioStatsRange): String {
     val time = Instant.fromEpochMilliseconds(timestamp).toLocalDateTime(TimeZone.currentSystemDefault())
     return if (range.usesHourlyBuckets) {
-        stringResource(UiStrings.trio_stats_time_label, time.monthNumber, time.dayOfMonth, time.hour)
+        stringResource(UiStrings.trio_stats_time_label, time.hour)
     } else {
         stringResource(UiStrings.trio_stats_date_label, time.monthNumber, time.dayOfMonth)
     }
@@ -724,7 +796,7 @@ private fun TrioGlucoseProfileCard(
                 ) {
                     for (hour in 0..21 step 3) {
                         Text(
-                            text = hour.toString().padStart(2, '0'),
+                            text = hour.toString(),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
