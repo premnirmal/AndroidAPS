@@ -7,7 +7,8 @@ import app.aaps.core.interfaces.utils.MidnightTime
 
 enum class TrioStatsSection {
     GLUCOSE,
-    INSULIN
+    INSULIN,
+    MEALS
 }
 
 enum class TrioInsulinChart {

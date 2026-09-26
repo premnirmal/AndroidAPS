@@ -37,10 +37,12 @@ import app.aaps.ui.compose.stats.CycleSeries
 import app.aaps.ui.compose.stats.TddCyclePatternData
 import app.aaps.ui.compose.stats.TddStatsData
 import app.aaps.ui.compose.stats.TirStatsData
+import app.aaps.ui.compose.stats.TrioCarbStatsData
 import app.aaps.ui.compose.stats.TrioStatsData
 import app.aaps.ui.compose.stats.TrioInsulinStatsData
 import app.aaps.ui.compose.stats.TrioStatsSection
 import app.aaps.ui.compose.stats.TrioStatsRange
+import app.aaps.ui.compose.stats.calculateTrioCarbStatsData
 import app.aaps.ui.compose.stats.calculateTrioInsulinStatsData
 import app.aaps.ui.compose.stats.calculateTrioStatsData
 import dev.zacsweers.metro.AppScope
@@ -119,6 +121,7 @@ class StatsViewModel(
     private var cycleLoadJob: Job? = null
     private var trioStatsLoadJob: Job? = null
     private var trioInsulinStatsLoadJob: Job? = null
+    private var trioCarbStatsLoadJob: Job? = null
 
     /**
      * Held so a reload can replace the one before it instead of racing it.
@@ -267,6 +270,22 @@ class StatsViewModel(
                 calculateTrioInsulinStatsData(tdds, boluses, range)
             }
             _uiState.update { it.copy(trioInsulinStatsData = data, trioInsulinStatsLoading = false) }
+        }
+    }
+
+    fun loadTrioCarbStats(range: TrioStatsRange) {
+        if (uiState.value.trioCarbRange == range && uiState.value.trioCarbStatsData != null) return
+
+        trioCarbStatsLoadJob?.cancel()
+        trioCarbStatsLoadJob = viewModelScope.launch {
+            _uiState.update { it.copy(trioCarbRange = range, trioCarbStatsLoading = true) }
+            val data = withContext(aapsIoDispatcher) {
+                val endTime = dateUtil.now()
+                val startTime = range.startTime(endTime)
+                val carbs = persistenceLayer.getCarbsFromTimeToTimeExpanded(startTime, endTime, true)
+                calculateTrioCarbStatsData(carbs, range)
+            }
+            _uiState.update { it.copy(trioCarbStatsData = data, trioCarbStatsLoading = false) }
         }
     }
 
@@ -527,6 +546,8 @@ data class StatsUiState(
     val trioStatsSection: TrioStatsSection = TrioStatsSection.GLUCOSE,
     val trioInsulinStatsData: TrioInsulinStatsData? = null,
     val trioInsulinRange: TrioStatsRange = TrioStatsRange.TODAY,
+    val trioCarbStatsData: TrioCarbStatsData? = null,
+    val trioCarbRange: TrioStatsRange = TrioStatsRange.TODAY,
     val activityStatsData: List<ActivityStats>? = null,
     val tddCycleEntries: List<TDD> = emptyList(),
     val tddCyclePatternData: TddCyclePatternData? = null,
@@ -535,6 +556,7 @@ data class StatsUiState(
     val dexcomTirLoading: Boolean = true,
     val trioStatsLoading: Boolean = true,
     val trioInsulinStatsLoading: Boolean = true,
+    val trioCarbStatsLoading: Boolean = true,
     val activityLoading: Boolean = true,
     val tddCycleLoading: Boolean = true,
     val tddCycleProgress: Float = 0f,

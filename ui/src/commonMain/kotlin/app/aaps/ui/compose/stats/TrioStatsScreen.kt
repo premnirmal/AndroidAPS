@@ -123,6 +123,11 @@ fun TrioStatsScreen(
                     state = state,
                     viewModel = viewModel
                 )
+
+                TrioStatsSection.MEALS -> TrioCarbStatsContent(
+                    state = state,
+                    viewModel = viewModel
+                )
             }
             Spacer(modifier = Modifier.fillMaxWidth().height(8.dp))
         }
@@ -147,6 +152,7 @@ private fun TrioStatsSectionSelector(
                         when (section) {
                             TrioStatsSection.GLUCOSE -> stringResource(UiStrings.trio_stats_glucose)
                             TrioStatsSection.INSULIN -> stringResource(UiStrings.trio_stats_insulin)
+                            TrioStatsSection.MEALS -> stringResource(UiStrings.trio_stats_meals)
                         }
                     )
                 }
@@ -428,6 +434,126 @@ private fun TrioInsulinBarChart(
 private fun trioInsulinPointLabel(timestamp: Long): String {
     val time = Instant.fromEpochMilliseconds(timestamp).toLocalDateTime(TimeZone.currentSystemDefault())
     return stringResource(UiStrings.trio_stats_time_label, time.monthNumber, time.dayOfMonth, time.hour)
+}
+
+@Composable
+private fun TrioCarbStatsContent(
+    state: StatsUiState,
+    viewModel: StatsViewModel
+) {
+    LaunchedEffect(Unit) {
+        viewModel.loadTrioCarbStats(state.trioCarbRange)
+    }
+    TrioStatsRangeSelector(
+        modifier = Modifier.padding(bottom = AapsSpacing.medium),
+        selectedRange = state.trioCarbRange,
+        onSelect = viewModel::loadTrioCarbStats
+    )
+    when {
+        state.trioCarbStatsLoading ->
+            TrioStatsLoading()
+
+        state.trioCarbStatsData?.points.isNullOrEmpty() ->
+            TrioStatsEmptyState(stringResource(UiStrings.trio_stats_no_meal_data))
+
+        else -> TrioCarbCard(
+            modifier = Modifier.padding(horizontal = AapsSpacing.extraLarge),
+            data = state.trioCarbStatsData,
+            range = state.trioCarbRange
+        )
+    }
+}
+
+@Composable
+private fun TrioCarbCard(
+    data: TrioCarbStatsData,
+    range: TrioStatsRange,
+    modifier: Modifier = Modifier
+) {
+    val carbColor = AapsTheme.generalColors.trioCarbs
+    TrioStatsCard(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = stringResource(UiStrings.trio_stats_total_meals),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold
+        )
+        TrioCarbSummary(data)
+        Text(
+            text = stringResource(UiStrings.trio_stats_carbs_axis),
+            modifier = Modifier.align(Alignment.End),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        TrioCarbBarChart(
+            points = data.points,
+            color = carbColor,
+            range = range,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(modifier = Modifier.align(Alignment.CenterHorizontally)) {
+            TrioChartLegendItem(stringResource(UiStrings.trio_stats_carbs), carbColor)
+        }
+    }
+}
+
+@Composable
+private fun TrioCarbSummary(data: TrioCarbStatsData) {
+    val values = listOf(
+        stringResource(UiStrings.trio_stats_average_per_day) to stringResource(UiStrings.trio_stats_carb_grams, data.averagePerDay),
+        stringResource(UiStrings.trio_stats_total) to stringResource(UiStrings.trio_stats_carb_grams, data.total),
+        stringResource(UiStrings.trio_stats_entries) to data.entryCount.toString()
+    )
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        values.forEach { (label, value) ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrioCarbBarChart(
+    points: List<TrioCarbPoint>,
+    color: Color,
+    range: TrioStatsRange,
+    modifier: Modifier = Modifier
+) {
+    val description = stringResource(UiStrings.trio_stats_carb_chart)
+    Canvas(
+        modifier = modifier.height(AapsSpacing.bgCircleSize + AapsSpacing.bgCircleSize / 2)
+            .semantics { contentDescription = description }
+    ) {
+        val maximum = points.maxOfOrNull(TrioCarbPoint::carbs)?.coerceAtLeast(1.0) ?: 1.0
+        val barWidth = size.width / points.size.coerceAtLeast(1) * 0.7f
+        points.forEachIndexed { index, point ->
+            val centerX = size.width * (index + 0.5f) / points.size
+            val barHeight = (point.carbs / maximum * size.height).toFloat()
+            drawRect(
+                color = color,
+                topLeft = Offset(centerX - barWidth / 2, size.height - barHeight),
+                size = Size(barWidth, barHeight)
+            )
+        }
+    }
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(trioCarbPointLabel(points.first().timestamp, range), style = MaterialTheme.typography.labelSmall)
+        Text(trioCarbPointLabel(points.last().timestamp, range), style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
+private fun trioCarbPointLabel(timestamp: Long, range: TrioStatsRange): String {
+    val time = Instant.fromEpochMilliseconds(timestamp).toLocalDateTime(TimeZone.currentSystemDefault())
+    return if (range.usesHourlyBuckets) {
+        stringResource(UiStrings.trio_stats_time_label, time.monthNumber, time.dayOfMonth, time.hour)
+    } else {
+        stringResource(UiStrings.trio_stats_date_label, time.monthNumber, time.dayOfMonth)
+    }
 }
 
 @Composable

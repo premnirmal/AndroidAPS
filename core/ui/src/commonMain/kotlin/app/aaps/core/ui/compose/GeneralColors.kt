@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Color
  * @property trioBgAccent Color for the Trio BG trend arrow and the cyan ring stop
  * @property trioBgGlow Color and opacity for the Trio BG glow
  * @property trioBgCircle Color inside the Trio BG ring
+ * @property trioCarbs Color for carbohydrate bars in the Trio statistics screen (orange)
  * @property originalBgValue Color for regular CGM BG readings (white/outlined dots)
  * @property iobPrediction Color for IOB-based BG predictions (blue)
  * @property cobPrediction Color for COB-based BG predictions (orange)
@@ -87,6 +88,7 @@ data class GeneralColors(
     val trioBasal: Color,
     val trioSmb: Color,
     val trioManualBolus: Color,
+    val trioCarbs: Color,
     val originalBgValue: Color,
     val iobPrediction: Color,
     val cobPrediction: Color,
@@ -159,6 +161,7 @@ val LightGeneralColors = GeneralColors(
     trioBasal = Color(0x801E96FC),
     trioSmb = Color(0xFF007AFF),
     trioManualBolus = Color(0xFF00C7BE),
+    trioCarbs = Color(0xFFFF9500),
     originalBgValue = Color(0xFFFFFFFF),     // white for regular CGM readings (matches originalBgValueColor attr)
     iobPrediction = Color(0xFF1E88E5),       // blue for IOB predictions (matches iobColor attr)
     cobPrediction = Color(0xFFFB8C00),       // orange for COB predictions (matches cobColor attr)
@@ -227,6 +230,7 @@ val DarkGeneralColors = GeneralColors(
     trioBasal = Color(0x801E96FC),
     trioSmb = Color(0xFF007AFF),
     trioManualBolus = Color(0xFF00C7BE),
+    trioCarbs = Color(0xFFFF9500),
     originalBgValue = Color(0xFFFFFFFF),     // white for regular CGM readings (same in both modes)
     iobPrediction = Color(0xFF64B5F6),       // lighter blue for IOB predictions (dark mode)
     cobPrediction = Color(0xFFFFB74D),       // lighter orange for COB predictions (dark mode)
