@@ -10,20 +10,28 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -74,9 +82,13 @@ fun O5CredentialWebViewScreen(
         return
     }
 
-    var progress by rememberSaveable { mutableStateOf(0) }
-
-    Box(modifier = modifier.fillMaxSize()) {
+    var progress by remember { mutableIntStateOf(0) }
+    Column(modifier = modifier.fillMaxSize()) {
+        LinearProgressIndicator(
+            progress = { progress.coerceIn(0, 100) / 100f },
+            modifier = Modifier.fillMaxWidth(),
+            trackColor = MaterialTheme.colorScheme.surface,
+        )
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { context ->
@@ -88,9 +100,8 @@ fun O5CredentialWebViewScreen(
                             progress = newProgress
                         }
                     }
-                    // Keep navigation inside the WebView instead of opening an external browser.
                     webViewClient = WebViewClient()
-                    try {
+                    if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
                         WebViewCompat.addWebMessageListener(
                             this,
                             BRIDGE_NAME,
@@ -100,19 +111,15 @@ fun O5CredentialWebViewScreen(
                                 message.data?.let { currentOnCredentialReceived(it) }
                             }
                         }
-                        loadUrl(url)
-                    } catch (e: UnsupportedOperationException) {
-                        currentOnCredentialError(e)
+                    } else {
+                        currentOnCredentialError(UnsupportedOperationException("WebView WebMessageListener feature not supported"))
                     }
+                    loadUrl(url)
                 }
+            },
+            update = {
+                it.loadUrl(url)
             }
         )
-        if (progress < 100) {
-            CircularProgressIndicator(
-                modifier = Modifier
-                    .padding(AapsSpacing.medium)
-                    .align(Alignment.TopEnd),
-            )
-        }
     }
 }
