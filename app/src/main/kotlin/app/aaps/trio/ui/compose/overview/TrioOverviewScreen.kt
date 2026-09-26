@@ -106,6 +106,8 @@ import app.aaps.ui.compose.main.TempTargetUiState
 import app.aaps.ui.compose.notificationsSheet.NotificationBottomSheet
 import app.aaps.ui.compose.overview.BgInfoSection
 import app.aaps.ui.compose.overview.OverviewChipsColumn
+import app.aaps.ui.compose.overview.TimeInRangeDistributionBar
+import app.aaps.ui.compose.overview.TimeInRangeToday
 import app.aaps.ui.compose.overview.TrioOverviewModel
 import app.aaps.ui.compose.overview.chips.CobUiState
 import app.aaps.ui.compose.overview.chips.IobUiState
@@ -129,7 +131,7 @@ fun TrioOverviewScreen(
     val now by graphViewModel.nowTimestamp.collectAsStateWithLifecycle()
     val notifications by notificationsFlow.collectAsStateWithLifecycle()
     val bolusState by bolusStateFlow.collectAsStateWithLifecycle()
-    val timeInRangeTodayPercent by timeInRangeTodayPercentFlow.collectAsStateWithLifecycle()
+    val timeInRangeToday by timeInRangeTodayFlow.collectAsStateWithLifecycle()
     val calcProgress by calcProgressFlow.collectAsStateWithLifecycle()
     val profileCardTempTargetState by profileCardTempTargetStateFlow.collectAsStateWithLifecycle()
     var dismissedNotifications by remember { mutableStateOf(emptySet<Pair<Int, Long>>()) }
@@ -207,7 +209,7 @@ fun TrioOverviewScreen(
         onNotificationClick = { showNotificationSheet = true },
         bolusState = bolusState,
         onBolusClick = { showBolusDialog = true },
-        timeInRangeTodayPercent = timeInRangeTodayPercent,
+        timeInRangeToday = timeInRangeToday,
         formatDuration = formatDuration,
         modifier = modifier,
         graphContent = { chartHeight ->
@@ -287,7 +289,7 @@ private fun TrioOverviewContent(
     onNotificationClick: () -> Unit,
     bolusState: BolusProgressState?,
     onBolusClick: () -> Unit,
-    timeInRangeTodayPercent: Int?,
+    timeInRangeToday: TimeInRangeToday?,
     formatDuration: (Long) -> String,
     graphContent: @Composable (Dp) -> Unit,
     modifier: Modifier = Modifier
@@ -491,7 +493,7 @@ private fun TrioOverviewContent(
             )
 
             TimeInRangeTodayCard(
-                timeInRangeTodayPercent = timeInRangeTodayPercent,
+                timeInRange = timeInRangeToday,
                 onClick = { onNavigate(NavigationRequest.TrioStatistics) }
             )
 
@@ -668,7 +670,13 @@ private fun TrioOverviewScreenPreview() {
             onNotificationClick = {},
             bolusState = null,
             onBolusClick = {},
-            timeInRangeTodayPercent = 82,
+            timeInRangeToday = TimeInRangeToday(
+                veryLowPercent = 1.5,
+                lowPercent = 4.5,
+                inRangePercent = 82.0,
+                highPercent = 9.0,
+                veryHighPercent = 3.0
+            ),
             formatDuration = { "30 min" },
             graphContent = { chartHeight ->
                 Surface(
@@ -887,7 +895,7 @@ private fun TrioBolusingCard(
 
 @Composable
 private fun TimeInRangeTodayCard(
-    timeInRangeTodayPercent: Int?,
+    timeInRange: TimeInRangeToday?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -910,8 +918,8 @@ private fun TimeInRangeTodayCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = timeInRangeTodayPercent?.let {
-                        stringResource(R.string.trio_time_in_range_percent, it)
+                    text = timeInRange?.let {
+                        stringResource(R.string.trio_time_in_range_percent, it.inRangePercent.roundToInt())
                     } ?: stringResource(app.aaps.core.ui.R.string.value_unavailable_short),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -923,13 +931,7 @@ private fun TimeInRangeTodayCard(
                     modifier = Modifier.weight(1f)
                 )
             }
-            LinearProgressIndicator(
-                progress = { (timeInRangeTodayPercent ?: 0).coerceIn(0, 100) / 100f },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(AapsSpacing.small),
-                trackColor = MaterialTheme.colorScheme.surface,
-            )
+            TimeInRangeDistributionBar(timeInRange = timeInRange)
         }
     }
 }

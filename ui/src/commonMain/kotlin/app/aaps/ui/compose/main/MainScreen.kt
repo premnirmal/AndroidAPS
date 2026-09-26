@@ -183,7 +183,7 @@ fun MainScreen(
                         paddingValues = contentPadding,
                         bolusStateFlow = bolusStateFlow,
                         onStopBolus = onStopBolus,
-                        timeInRangeTodayPercentFlow = mainViewModel.timeInRangeTodayPercent,
+                        timeInRangeTodayFlow = mainViewModel.timeInRangeToday,
                         trioOverview = trioOverview,
                         pumpNeedsSetup = pumpSetupPlugin != null,
                         pumpEndTimeMillis = uiState.pumpEndTimeMillis,

@@ -58,7 +58,7 @@ fun OverviewScreen(
     pumpEndTimeMillis: Long? = null,
     reservoirUnits: Double? = null,
     onBgSourceClick: () -> Unit = {},
-    timeInRangeTodayPercentFlow: StateFlow<Int?>
+    timeInRangeTodayFlow: StateFlow<TimeInRangeToday?>
 ) {
     val runningModeSceneManaged = activeSceneState?.scopedRecords?.rmId
         ?.let { it == runningModeRecordId && it > 0 } == true
@@ -107,7 +107,7 @@ fun OverviewScreen(
                 onAutoShowConsumed = onAutoShowConsumed,
                 bolusStateFlow = bolusStateFlow,
                 onStopBolus = onStopBolus,
-                timeInRangeTodayPercentFlow = timeInRangeTodayPercentFlow,
+                timeInRangeTodayFlow = timeInRangeTodayFlow,
                 formatDuration = formatDuration
         )
     )

@@ -4,6 +4,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.aaps.core.data.configuration.Constants
 import app.aaps.core.data.iob.InMemoryGlucoseValue
 import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.RM
@@ -91,6 +92,7 @@ import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.extensions.toStringFull
 import app.aaps.ui.UiStrings
 import app.aaps.ui.compose.aboutDialog.AboutDialogData
+import app.aaps.ui.compose.overview.TimeInRangeToday
 import app.aaps.ui.compose.quickLaunch.QuickLaunchAction
 import app.aaps.ui.compose.quickLaunch.QuickLaunchResolver
 import app.aaps.ui.compose.quickLaunch.QuickLaunchSerializer
@@ -103,7 +105,6 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import kotlin.math.abs
-import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -216,8 +217,8 @@ class MainViewModel(
     val versionName: String get() = config.VERSION_NAME
     val appTitle: String get() = rh.gs(config.appName)
     val calcProgressFlow: StateFlow<Int> = overviewDataCache.calcProgressFlow
-    private val _timeInRangeTodayPercent = MutableStateFlow<Int?>(null)
-    val timeInRangeTodayPercent: StateFlow<Int?> = _timeInRangeTodayPercent.asStateFlow()
+    private val _timeInRangeToday = MutableStateFlow<TimeInRangeToday?>(null)
+    val timeInRangeToday: StateFlow<TimeInRangeToday?> = _timeInRangeToday.asStateFlow()
     private var timeInRangeTodayJob: Job? = null
     private var overviewRefreshJob: Job? = null
     private val runtimeRefresh = MutableStateFlow(0)
@@ -378,17 +379,47 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Splits today's readings over the five glucose ranges.
+     *
+     * The low mark and the high mark are the user preferences, so the middle range is the one
+     * the user sees everywhere else in the app. The very low and very high limits are the fixed
+     * statistics limits, the same ones the Dexcom time in range report uses.
+     */
     private suspend fun updateTimeInRangeToday() {
         val start = MidnightTime.calc(dateUtil.now())
         val end = dateUtil.now()
         val lowMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewLowMark))
         val highMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewHighMark))
+        val veryLowMgdl = minOf(Constants.STATS_RANGE_VERY_LOW_MMOL * Constants.MMOLL_TO_MGDL, lowMgdl)
+        val veryHighMgdl = maxOf(Constants.STATS_RANGE_VERY_HIGH_MMOL * Constants.MMOLL_TO_MGDL, highMgdl)
         val readings = persistenceLayer.getBgReadingsDataFromTimeToTime(start, end, true)
             .filter { it.value >= 39.0 }
-        _timeInRangeTodayPercent.value = if (readings.isEmpty()) null
+        _timeInRangeToday.value = if (readings.isEmpty()) null
         else {
-            val inRange = readings.count { it.value in lowMgdl..highMgdl }
-            (inRange * 100.0 / readings.size).roundToInt()
+            var veryLow = 0
+            var low = 0
+            var inRange = 0
+            var high = 0
+            var veryHigh = 0
+            readings.forEach {
+                when {
+                    it.value < veryLowMgdl  -> veryLow++
+                    it.value < lowMgdl      -> low++
+                    it.value <= highMgdl    -> inRange++
+                    it.value <= veryHighMgdl -> high++
+                    else                    -> veryHigh++
+                }
+            }
+            val total = readings.size.toDouble()
+            fun share(count: Int) = count * 100.0 / total
+            TimeInRangeToday(
+                veryLowPercent = share(veryLow),
+                lowPercent = share(low),
+                inRangePercent = share(inRange),
+                highPercent = share(high),
+                veryHighPercent = share(veryHigh)
+            )
         }
     }
 

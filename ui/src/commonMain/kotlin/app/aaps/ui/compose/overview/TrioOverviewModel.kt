@@ -53,6 +53,6 @@ data class TrioOverviewModel(
     val onAutoShowConsumed: () -> Unit,
     val bolusStateFlow: StateFlow<BolusProgressState?>,
     val onStopBolus: () -> Unit,
-    val timeInRangeTodayPercentFlow: StateFlow<Int?>,
+    val timeInRangeTodayFlow: StateFlow<TimeInRangeToday?>,
     val formatDuration: (Long) -> String
 )
