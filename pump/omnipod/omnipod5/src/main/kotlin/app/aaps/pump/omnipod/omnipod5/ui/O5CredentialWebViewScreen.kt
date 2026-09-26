@@ -1,23 +1,38 @@
 package app.aaps.pump.omnipod.omnipod5.ui
 
 import android.annotation.SuppressLint
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.pump.omnipod.common.R
+import com.google.android.material.progressindicator.CircularProgressIndicator
 
 /**
  * Name the web page uses to reach the app bridge: the page calls
@@ -59,29 +74,45 @@ fun O5CredentialWebViewScreen(
         return
     }
 
-    AndroidView(
-        modifier = modifier.fillMaxSize(),
-        factory = { context ->
-            WebView(context).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                // Keep navigation inside the WebView instead of opening an external browser.
-                webViewClient = WebViewClient()
-                try {
-                    WebViewCompat.addWebMessageListener(
-                        this,
-                        BRIDGE_NAME,
-                        ALLOWED_ORIGIN_RULES
-                    ) { _, message, _, _, _ ->
-                        if (message.type == WebMessageCompat.TYPE_STRING) {
-                            message.data?.let { currentOnCredentialReceived(it) }
+    var progress by rememberSaveable { mutableStateOf(0) }
+
+    Box(modifier = modifier.fillMaxSize()) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { context ->
+                WebView(context).apply {
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    webChromeClient = object : WebChromeClient() {
+                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                            progress = newProgress
                         }
                     }
-                    loadUrl(url)
-                } catch (e: UnsupportedOperationException) {
-                    currentOnCredentialError(e)
+                    // Keep navigation inside the WebView instead of opening an external browser.
+                    webViewClient = WebViewClient()
+                    try {
+                        WebViewCompat.addWebMessageListener(
+                            this,
+                            BRIDGE_NAME,
+                            ALLOWED_ORIGIN_RULES
+                        ) { _, message, _, _, _ ->
+                            if (message.type == WebMessageCompat.TYPE_STRING) {
+                                message.data?.let { currentOnCredentialReceived(it) }
+                            }
+                        }
+                        loadUrl(url)
+                    } catch (e: UnsupportedOperationException) {
+                        currentOnCredentialError(e)
+                    }
                 }
             }
+        )
+        if (progress < 100) {
+            CircularProgressIndicator(
+                modifier = Modifier
+                    .padding(AapsSpacing.medium)
+                    .align(Alignment.TopEnd),
+            )
         }
-    )
+    }
 }
