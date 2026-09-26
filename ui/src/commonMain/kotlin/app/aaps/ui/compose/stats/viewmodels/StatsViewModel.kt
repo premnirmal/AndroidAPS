@@ -75,7 +75,7 @@ import kotlinx.coroutines.withContext
 private const val TDD_RELOAD_DEBOUNCE_MS = 5_000L
 
 /**
- * ViewModel for StatsScreen managing statistics data loading and state.
+ * ViewModel for TrioStatsScreen managing statistics data loading and state.
  */
 // Registers itself: @ViewModelKey infers the key from the class. No graph entry, and deliberately
 // unscoped so each screen gets its own.
@@ -534,7 +534,7 @@ class StatsViewModel(
 }
 
 /**
- * UI state for StatsScreen
+ * UI state for TrioStatsScreen
  */
 @Immutable
 data class StatsUiState(

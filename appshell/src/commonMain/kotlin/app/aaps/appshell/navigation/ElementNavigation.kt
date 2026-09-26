@@ -116,9 +116,6 @@ class ElementNavigator(
         when (elementType) {
             // Navigation screens (drawer)
             ElementType.TREATMENTS              -> navController.navigate(AppRoute.Treatments.route)
-            ElementType.STATISTICS,
-            ElementType.TDD_CYCLE_PATTERN       -> navController.navigate(AppRoute.Stats.route)
-
             ElementType.PROFILE_HELPER          -> navController.navigate(AppRoute.ProfileHelper.route)
             ElementType.HISTORY_BROWSER         -> navController.navigate(AppRoute.HistoryBrowser.route)
             ElementType.MAINTENANCE             -> mainViewModel.setShowMaintenanceSheet(true)
@@ -179,6 +176,8 @@ class ElementNavigator(
             ElementType.QUICK_WIZARD,
             ElementType.SCENE,
             ElementType.AUTOMATION,
+            ElementType.STATISTICS,
+            ElementType.TDD_CYCLE_PATTERN,
             ElementType.COB,
             ElementType.SENSITIVITY,
             ElementType.USER_ENTRY,

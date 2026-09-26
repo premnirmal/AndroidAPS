@@ -108,7 +108,6 @@ import app.aaps.ui.compose.scenes.SceneListScreen
 import app.aaps.ui.compose.scenes.wizard.SceneWizardScreen
 import app.aaps.ui.compose.siteRotationDialog.SiteRotationManagementScreen
 import app.aaps.ui.compose.siteRotationDialog.viewModels.SiteRotationManagementViewModel
-import app.aaps.ui.compose.stats.StatsScreen
 import app.aaps.ui.compose.stats.TrioStatsScreen
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import app.aaps.ui.compose.tempBasalDialog.TempBasalDialogScreen
@@ -561,13 +560,6 @@ fun NavGraphBuilder.appNavGraph(
                 )
             }
         }
-
-    composable(AppRoute.Stats.route) {
-        StatsScreen(
-            viewModel = statsViewModel,
-            onNavigateBack = { navController.safePopBackStack() }
-        )
-    }
 
     composable(AppRoute.TrioStats.route) {
             TrioStatsScreen(

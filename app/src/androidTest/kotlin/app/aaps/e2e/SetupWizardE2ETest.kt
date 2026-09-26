@@ -142,7 +142,6 @@ class SetupWizardE2ETest {
             visitProfileManagement()      // Manage → Profile (profile management screen)
             openAndCancelBolusWizard()    // Treatments → Bolus wizard → add carbs → CANCEL (edge: no delivery)
             visitPreferences()            // toolbar Settings → preferences screen + expand a category
-            visitStatistics()             // drawer → Statistics (StatsScreen/ViewModel)
             visitHistoryBrowser()         // drawer → History browser (treatment history list)
             visitScenes()                 // Manage → Scenes: create via wizard, run, then end it
 
@@ -403,13 +402,6 @@ class SetupWizardE2ETest {
             runCatching { device.findObject(By.scrollable(true))?.scroll(Direction.DOWN, 0.6f) } // reveal the next
             device.waitForIdle(IDLE_MS)
         }
-        returnToOverview()
-    }
-
-    /** Nav drawer → Statistics (StatsScreen/ViewModel). */
-    private fun visitStatistics() {
-        click("Open navigation"); device.waitForIdle(IDLE_MS) // open the nav drawer
-        openVia("Statistics", expect = "Back")                // → statistics screen
         returnToOverview()
     }
 

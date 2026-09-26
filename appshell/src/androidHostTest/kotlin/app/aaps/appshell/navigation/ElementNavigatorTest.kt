@@ -226,6 +226,8 @@ class ElementNavigatorTest {
             ElementType.QUICK_WIZARD,
             ElementType.SCENE,
             ElementType.AUTOMATION,
+            ElementType.STATISTICS,
+            ElementType.TDD_CYCLE_PATTERN,
             ElementType.COB,
             ElementType.SENSITIVITY,
             ElementType.USER_ENTRY,

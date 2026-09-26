@@ -16,7 +16,6 @@ class AppRouteTest {
     fun staticRoutes_haveStableTemplates() {
         assertThat(AppRoute.Main.route).isEqualTo("main")
         assertThat(AppRoute.Treatments.route).isEqualTo("treatments")
-        assertThat(AppRoute.Stats.route).isEqualTo("stats")
         assertThat(AppRoute.ProfileHelper.route).isEqualTo("profile_helper")
         assertThat(AppRoute.HistoryBrowser.route).isEqualTo("history_browser")
         assertThat(AppRoute.Preferences.route).isEqualTo("preferences")

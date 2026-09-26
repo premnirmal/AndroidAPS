@@ -87,7 +87,6 @@ class AppNavGraphTest {
 
         assertThat(routes).containsAtLeast(
             AppRoute.Treatments.route,
-            AppRoute.Stats.route,
             AppRoute.ProfileHelper.route,
             AppRoute.HistoryBrowser.route,
             AppRoute.Preferences.route,

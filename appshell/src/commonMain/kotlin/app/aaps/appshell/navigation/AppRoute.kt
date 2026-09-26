@@ -42,7 +42,6 @@ sealed class AppRoute(val route: String) {
         fun createRoute(mode: ScreenMode = ScreenMode.EDIT) = "quick_wizard_management?mode=${mode.name}"
     }
 
-    data object Stats : AppRoute("stats")
     data object ProfileHelper : AppRoute("profile_helper")
     data object HistoryBrowser : AppRoute("history_browser")
     data object Preferences : AppRoute("preferences")
