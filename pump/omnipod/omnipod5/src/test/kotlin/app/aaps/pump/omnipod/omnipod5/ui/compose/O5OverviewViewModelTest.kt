@@ -28,6 +28,7 @@ import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import app.aaps.core.ui.R as CoreUiR
 import app.aaps.pump.omnipod.common.R as CommonR
@@ -129,6 +130,25 @@ internal class O5OverviewViewModelTest {
         assertThat(activate.visible).isFalse()
         val deactivate = state.managementActions.first { it.label == "Deactivate pod" }
         assertThat(deactivate.visible).isTrue()
+    }
+
+    @Test
+    fun deactivatedPodOffersActivateAndResetsStaleStateWhenClicked() {
+        whenever(podStateManager.activationProgress).thenReturn(ActivationProgress.COMPLETED)
+        whenever(podStateManager.podStatus).thenReturn(PodStatus.DEACTIVATED)
+        whenever(rh.gs(CommonR.string.omnipod_common_pod_management_button_activate_pod)).thenReturn("Activate pod")
+        whenever(rh.gs(CommonR.string.omnipod_common_pod_management_button_deactivate_pod)).thenReturn("Deactivate pod")
+
+        val viewModel = createViewModel()
+        val activate = viewModel.uiState.value.managementActions.first { it.label == "Activate pod" }
+        val deactivate = viewModel.uiState.value.managementActions.first { it.label == "Deactivate pod" }
+
+        assertThat(activate.visible).isTrue()
+        assertThat(deactivate.visible).isFalse()
+
+        activate.onClick()
+
+        verify(podStateManager).reset()
     }
 
     @Test

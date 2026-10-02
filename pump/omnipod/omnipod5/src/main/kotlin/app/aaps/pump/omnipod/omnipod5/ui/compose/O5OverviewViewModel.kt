@@ -34,6 +34,7 @@ import app.aaps.core.ui.compose.pump.tickerFlow
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.ActivationProgress
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.AlertType
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.PodConstants
+import app.aaps.pump.omnipod.common.bledriver.pod.definition.PodStatus
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.O5PodStateManager
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.expiry
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.time
@@ -299,7 +300,8 @@ class O5OverviewViewModel @Inject constructor(
 
     private fun buildManagementActions(): List<PumpAction> {
         isQueueEmpty()
-        val activated = podStateManager.activationProgress == ActivationProgress.COMPLETED
+        val activated = podStateManager.activationProgress == ActivationProgress.COMPLETED &&
+            podStateManager.podStatus != PodStatus.DEACTIVATED
 
         return listOf(
             PumpAction(
@@ -345,7 +347,13 @@ class O5OverviewViewModel @Inject constructor(
 
     private fun onActivatePodClicked() {
         viewModelScope.launch {
-            val type = if (podStateManager.activationProgress.isAtLeast(ActivationProgress.PRIME_COMPLETED)) {
+            val activationProgress = if (podStateManager.podStatus == PodStatus.DEACTIVATED) {
+                podStateManager.reset()
+                ActivationProgress.NOT_STARTED
+            } else {
+                podStateManager.activationProgress
+            }
+            val type = if (activationProgress.isAtLeast(ActivationProgress.PRIME_COMPLETED)) {
                 ActivationType.SHORT
             } else {
                 ActivationType.LONG
