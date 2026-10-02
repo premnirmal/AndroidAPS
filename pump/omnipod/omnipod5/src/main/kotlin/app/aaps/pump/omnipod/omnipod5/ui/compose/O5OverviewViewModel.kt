@@ -398,6 +398,7 @@ class O5OverviewViewModel @Inject constructor(
 
     private fun buildPodStatusLevel(): StatusLevel = when {
         podStateManager.activationProgress != ActivationProgress.COMPLETED ||
+            podStateManager.podStatus == PodStatus.DEACTIVATED ||
             podStateManager.alarmType != null || podStateManager.deliverySuspended -> StatusLevel.CRITICAL
         podStateManager.pendingDoseCommand != null                                 -> StatusLevel.WARNING
         else                                                                       -> StatusLevel.NORMAL

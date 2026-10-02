@@ -138,13 +138,16 @@ internal class O5OverviewViewModelTest {
         whenever(podStateManager.podStatus).thenReturn(PodStatus.DEACTIVATED)
         whenever(rh.gs(CommonR.string.omnipod_common_pod_management_button_activate_pod)).thenReturn("Activate pod")
         whenever(rh.gs(CommonR.string.omnipod_common_pod_management_button_deactivate_pod)).thenReturn("Deactivate pod")
+        whenever(rh.gs(CommonR.string.omnipod_common_overview_pod_status)).thenReturn("Pod status")
 
         val viewModel = createViewModel()
         val activate = viewModel.uiState.value.managementActions.first { it.label == "Activate pod" }
         val deactivate = viewModel.uiState.value.managementActions.first { it.label == "Deactivate pod" }
+        val podStatus = viewModel.uiState.value.infoRows.filterIsInstance<PumpInfoRow>().first { it.label == "Pod status" }
 
         assertThat(activate.visible).isTrue()
         assertThat(deactivate.visible).isFalse()
+        assertThat(podStatus.level).isEqualTo(StatusLevel.CRITICAL)
 
         activate.onClick()
 
