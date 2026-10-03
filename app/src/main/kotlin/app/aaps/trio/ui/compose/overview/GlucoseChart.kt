@@ -511,9 +511,8 @@ fun GlucoseChart(
             val glucoseBottom = iobTop - GLUCOSE_TO_IOB_GAP.toPx()
             val glucoseChartHeight = (glucoseBottom - glucoseTop).coerceAtLeast(1f)
 
-            // Y range in user units, from the visible readings/predictions plus the target marks.
-            val visibleValues = sorted.map { it.value } +
-                visiblePredictions.sliceByMillis(viewportStartMillis, viewportEndMillis) { it.timestamp }.map { it.value }
+            // Y range in user units, from the visible readings plus the target marks.
+            val visibleValues = sorted.map { it.value }
             val defaultYMin = 0.75f * lowMark
             val defaultYMax = 1.25f * highMark
             val yMin = (visibleValues.minOrNull() ?: lowMark).coerceAtMost(lowMark).coerceAtMost(defaultYMin)
