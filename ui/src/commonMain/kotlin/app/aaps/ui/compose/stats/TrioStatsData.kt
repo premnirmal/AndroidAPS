@@ -1,8 +1,12 @@
 package app.aaps.ui.compose.stats
 
+import app.aaps.core.data.configuration.Constants
+import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.model.GV
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.utils.MidnightTime
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.sqrt
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
@@ -43,6 +47,40 @@ data class TrioHourlyPercentile(
     val p75Mgdl: Double,
     val p90Mgdl: Double
 )
+
+internal data class TrioAgpYAxis(
+    val minimumMgdl: Double,
+    val maximumMgdl: Double,
+    val ticksMgdl: List<Double>
+)
+
+internal fun calculateTrioAgpYAxis(highestMgdl: Double, units: GlucoseUnit): TrioAgpYAxis {
+    val minimumMgdl = 40.0
+    return when (units) {
+        GlucoseUnit.MGDL -> {
+            val initialMaximumMgdl = ceil(highestMgdl / 50.0).coerceAtLeast(2.0) * 50.0
+            val tickStepMgdl = (ceil((initialMaximumMgdl - minimumMgdl) / 40.0) * 10.0).coerceAtLeast(10.0)
+            val maximumMgdl = minimumMgdl + tickStepMgdl * 4
+            TrioAgpYAxis(
+                minimumMgdl = minimumMgdl,
+                maximumMgdl = maximumMgdl,
+                ticksMgdl = (0..4).map { index -> maximumMgdl - tickStepMgdl * index }
+            )
+        }
+
+        GlucoseUnit.MMOL -> {
+            val minimumMmol = floor(minimumMgdl * Constants.MGDL_TO_MMOLL)
+            val highestMmol = ceil(highestMgdl * Constants.MGDL_TO_MMOLL)
+            val tickStepMmol = ceil((highestMmol - minimumMmol) / 4.0).coerceAtLeast(1.0)
+            val maximumMmol = minimumMmol + tickStepMmol * 4
+            TrioAgpYAxis(
+                minimumMgdl = minimumMmol * Constants.MMOLL_TO_MGDL,
+                maximumMgdl = maximumMmol * Constants.MMOLL_TO_MGDL,
+                ticksMgdl = (0..4).map { index -> (maximumMmol - tickStepMmol * index) * Constants.MMOLL_TO_MGDL }
+            )
+        }
+    }
+}
 
 data class TrioStatsData(
     val readingCount: Int = 0,

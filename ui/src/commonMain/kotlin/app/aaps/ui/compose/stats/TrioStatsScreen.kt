@@ -66,7 +66,6 @@ import app.aaps.ui.UiStrings
 import app.aaps.ui.compose.stats.trioStatsRanges
 import app.aaps.ui.compose.stats.viewmodels.StatsUiState
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
-import kotlin.math.ceil
 import kotlin.time.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -646,12 +645,13 @@ private fun TrioGlucoseProfileCard(
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val highThresholdColor = MaterialTheme.colorScheme.tertiary
     val tightHighMgdl = 140.0
-    val chartMinimumMgdl = 40.0
     val highestValue = maxOf(
         highMgdl,
         percentiles.maxOfOrNull { it.p90Mgdl } ?: highMgdl
     )
-    val chartMaximumMgdl = ceil(highestValue / 50.0).coerceAtLeast(2.0) * 50.0
+    val yAxis = calculateTrioAgpYAxis(highestValue, profileUtil.units)
+    val chartMinimumMgdl = yAxis.minimumMgdl
+    val chartMaximumMgdl = yAxis.maximumMgdl
     val chartDescription = stringResource(UiStrings.trio_stats_glucose_percentile_chart)
     val chartHeight = AapsSpacing.bgCircleSize + AapsSpacing.bgCircleSize / 2
     val axisWidth = AapsSpacing.xxLarge + AapsSpacing.extraLarge
@@ -779,8 +779,7 @@ private fun TrioGlucoseProfileCard(
                     verticalArrangement = Arrangement.SpaceBetween,
                     horizontalAlignment = Alignment.End
                 ) {
-                    repeat(5) { index ->
-                        val valueMgdl = chartMaximumMgdl - (chartMaximumMgdl - chartMinimumMgdl) * index / 4.0
+                    yAxis.ticksMgdl.forEach { valueMgdl ->
                         Text(
                             text = profileUtil.fromMgdlToStringInUnits(valueMgdl),
                             style = MaterialTheme.typography.labelSmall,

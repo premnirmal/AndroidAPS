@@ -1,7 +1,9 @@
 package app.aaps.ui.compose.stats
 
-import app.aaps.core.data.model.GV
+import app.aaps.core.data.configuration.Constants
 import app.aaps.core.data.model.BS
+import app.aaps.core.data.model.GlucoseUnit
+import app.aaps.core.data.model.GV
 import app.aaps.core.data.model.ICfg
 import app.aaps.core.data.model.SourceSensor
 import app.aaps.core.data.model.TDD
@@ -9,6 +11,7 @@ import app.aaps.core.data.model.TrendArrow
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.utils.MidnightTime
 import com.google.common.truth.Truth.assertThat
+import kotlin.math.round
 import org.junit.jupiter.api.Test
 
 internal class TrioStatsDataTest {
@@ -57,6 +60,28 @@ internal class TrioStatsDataTest {
             assertThat(p75Mgdl).isEqualTo(100.0)
             assertThat(p90Mgdl).isEqualTo(112.0)
         }
+    }
+
+    @Test
+    fun `AGP mmol axis uses whole number ticks`() {
+        val axis = calculateTrioAgpYAxis(highestMgdl = 180.0, units = GlucoseUnit.MMOL)
+
+        assertThat(axis.minimumMgdl).isLessThan(40.0)
+        assertThat(axis.maximumMgdl).isAtLeast(180.0)
+        assertThat(axis.ticksMgdl).hasSize(5)
+        axis.ticksMgdl.forEach { tickMgdl ->
+            val tickMmol = tickMgdl * Constants.MGDL_TO_MMOLL
+            assertThat(tickMmol).isWithin(0.0001).of(round(tickMmol))
+        }
+    }
+
+    @Test
+    fun `AGP mgdl axis uses ticks divisible by ten`() {
+        val axis = calculateTrioAgpYAxis(highestMgdl = 180.0, units = GlucoseUnit.MGDL)
+
+        assertThat(axis.minimumMgdl).isEqualTo(40.0)
+        assertThat(axis.maximumMgdl).isAtLeast(180.0)
+        assertThat(axis.ticksMgdl).containsExactly(200.0, 160.0, 120.0, 80.0, 40.0).inOrder()
     }
 
     @Test
