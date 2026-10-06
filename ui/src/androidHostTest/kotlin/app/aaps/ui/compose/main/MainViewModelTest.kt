@@ -3,6 +3,7 @@ package app.aaps.ui.compose.main
 import androidx.lifecycle.viewModelScope
 import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.GV
+import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.model.RM
 import app.aaps.core.data.model.TE
 import app.aaps.core.data.plugin.PluginType
@@ -25,14 +26,19 @@ import app.aaps.core.interfaces.overview.graph.ProfileDisplayData
 import app.aaps.core.interfaces.overview.graph.RunningModeDisplayData
 import app.aaps.core.interfaces.overview.graph.TbrDisplayData
 import app.aaps.core.interfaces.overview.graph.TempTargetDisplayData
+import app.aaps.core.interfaces.overview.graph.TempTargetState
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
+import app.aaps.core.interfaces.profile.EffectiveProfile
 import app.aaps.core.interfaces.profile.ProfileFunction
 import app.aaps.core.interfaces.profile.ProfileUtil
 import app.aaps.core.interfaces.protection.ProtectionCheck
+import app.aaps.core.interfaces.pump.PumpInsulin
+import app.aaps.core.interfaces.pump.PumpWithConcentration
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.Event
+import app.aaps.core.interfaces.rx.events.EventPumpStatusChanged
 import app.aaps.core.interfaces.scenes.ActiveSceneSync
 import app.aaps.core.interfaces.scenes.SceneActions
 import app.aaps.core.interfaces.scenes.SceneChainResolver
@@ -65,6 +71,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -85,6 +92,7 @@ import org.mockito.kotlin.whenever
 internal class MainViewModelTest {
 
     @Mock private lateinit var activePlugin: ActivePlugin
+    @Mock private lateinit var pump: PumpWithConcentration
     @Mock private lateinit var bgSourcePlugin: PluginBase
     @Mock private lateinit var config: Config
     @Mock private lateinit var urlOpener: UrlOpener
@@ -138,6 +146,7 @@ internal class MainViewModelTest {
         whenever(overviewDataCache.tbrFlow).thenReturn(MutableStateFlow<TbrDisplayData?>(null))
         whenever(quickWizard.changes).thenReturn(MutableStateFlow(0))
         whenever(loop.isRunning).thenReturn(loopRunning)
+        whenever(activePlugin.activePump).thenReturn(pump)
 
         // Active scene state read as fields (activeSceneState + sceneExpired.map).
         whenever(activeSceneManager.activeSceneState).thenReturn(MutableStateFlow<ActiveSceneState?>(null))
@@ -267,6 +276,73 @@ internal class MainViewModelTest {
         assertThat(state.lastLoopAgeMillis).isEqualTo(3_000L)
         assertThat(state.pumpEndTimeMillis).isEqualTo(20_000L)
         assertThat(state.reservoirUnits).isEqualTo(42.0)
+    }
+
+    @Test
+    fun `pump suspension follows pump events and keeps reservoir data`() {
+        sut.viewModelScope.cancel()
+        val main = StandardTestDispatcher()
+        val pumpEvents = MutableSharedFlow<EventPumpStatusChanged>(extraBufferCapacity = 1)
+        whenever(config.initProgressFlow).thenReturn(MutableStateFlow(InitProgress()))
+        whenever(rxBus.toFlow(any<KClass<Event>>())).thenReturn(emptyFlow())
+        whenever(rxBus.toFlow(EventPumpStatusChanged::class)).thenReturn(pumpEvents)
+        whenever(quickWizard.list()).thenReturn(arrayListOf())
+        whenever(dateUtil.now()).thenReturn(10_000L)
+        whenever(preferences.get(DoubleNonKey.LastPumpReservoirUnits)).thenReturn(42.0)
+
+        val viewModel = createViewModel()
+        main.scheduler.runCurrent()
+        assertThat(viewModel.uiState.value.pumpSuspended).isFalse()
+
+        whenever(pump.isSuspended()).thenReturn(true)
+        pumpEvents.tryEmit(EventPumpStatusChanged(EventPumpStatusChanged.Status.DISCONNECTED))
+        main.scheduler.runCurrent()
+        assertThat(viewModel.uiState.value.pumpSuspended).isTrue()
+        assertThat(viewModel.uiState.value.reservoirUnits).isEqualTo(42.0)
+
+        whenever(pump.isSuspended()).thenReturn(false)
+        pumpEvents.tryEmit(EventPumpStatusChanged(EventPumpStatusChanged.Status.DISCONNECTED))
+        main.scheduler.runCurrent()
+        assertThat(viewModel.uiState.value.pumpSuspended).isFalse()
+        assertThat(viewModel.uiState.value.reservoirUnits).isEqualTo(42.0)
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `active temp target does not replace the profile target range`() = runBlocking {
+        sut.viewModelScope.cancel()
+        val main = StandardTestDispatcher()
+        val profile = mock<EffectiveProfile>()
+        whenever(config.initProgressFlow).thenReturn(MutableStateFlow(InitProgress()))
+        whenever(rxBus.toFlow(any<KClass<Event>>())).thenReturn(emptyFlow())
+        whenever(quickWizard.list()).thenReturn(arrayListOf())
+        whenever(dateUtil.now()).thenReturn(10_000L)
+        whenever(profileFunction.getProfile()).thenReturn(profile)
+        whenever(profileFunction.getUnits()).thenReturn(GlucoseUnit.MGDL)
+        whenever(profile.getTargetLowMgdl()).thenReturn(90.0)
+        whenever(profile.getTargetHighMgdl()).thenReturn(110.0)
+        whenever(profile.insulinConcentration()).thenReturn(1.0)
+        whenever(pump.reservoirLevel).thenReturn(MutableStateFlow(PumpInsulin(42.0)))
+        whenever(profileUtil.toTargetRangeString(90.0, 110.0, GlucoseUnit.MGDL, GlucoseUnit.MGDL))
+            .thenReturn("90-110")
+        whenever(dateUtil.untilString(65_000L, rh)).thenReturn("(1 min)")
+        val targets = MutableStateFlow<TempTargetDisplayData?>(
+            TempTargetDisplayData("140", TempTargetState.ACTIVE, 5_000L, 60_000L)
+        )
+        whenever(overviewDataCache.tempTargetFlow).thenReturn(targets)
+
+        val viewModel = createViewModel()
+        viewModel.profileCardTempTargetStateFlow.launchIn(viewModel.viewModelScope)
+        main.scheduler.runCurrent()
+        assertThat(viewModel.uiState.value.profileTargetRangeText).isEqualTo("90-110")
+        assertThat(viewModel.profileCardTempTargetStateFlow.value.rangeText).isEqualTo("140")
+        assertThat(viewModel.profileCardTempTargetStateFlow.value.state).isEqualTo(TempTargetChipState.Active)
+
+        targets.value = TempTargetDisplayData("90-110", TempTargetState.NONE, 0L, 0L)
+        main.scheduler.runCurrent()
+        assertThat(viewModel.uiState.value.profileTargetRangeText).isEqualTo("90-110")
+        assertThat(viewModel.profileCardTempTargetStateFlow.value.state).isEqualTo(TempTargetChipState.None)
+        viewModel.viewModelScope.cancel()
     }
 
     @Test

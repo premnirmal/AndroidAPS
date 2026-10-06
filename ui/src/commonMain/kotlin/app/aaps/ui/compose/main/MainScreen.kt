@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.aaps.core.data.model.RM
 import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.interfaces.notifications.AapsNotification
 import app.aaps.core.interfaces.plugin.PluginBase
@@ -154,7 +153,7 @@ fun MainScreen(
                         profileProgress = uiState.profileProgress,
                         profilePercentage = uiState.profilePercentage,
                         profileTargetRangeText = uiState.profileTargetRangeText,
-                        runningMode = uiState.runningMode ?: RM.DEFAULT_MODE,
+                        runningMode = uiState.runningMode,
                         runningModeText = uiState.runningModeText,
                         runningModeRemaining = uiState.runningModeRemaining,
                         runningModeProgress = uiState.runningModeProgress,
@@ -189,7 +188,8 @@ fun MainScreen(
                         onStopBolus = onStopBolus,
                         timeInRangeTodayFlow = mainViewModel.timeInRangeToday,
                         trioOverview = trioOverview,
-                        pumpNeedsSetup = pumpSetupPlugin != null,
+                        pumpNeedsSetup = pumpSetupPlugin != null && !uiState.pumpSuspended,
+                        pumpSuspended = uiState.pumpSuspended,
                         pumpEndTimeMillis = uiState.pumpEndTimeMillis,
                         reservoirUnits = uiState.reservoirUnits,
                         sensorInfo = sensorInfo,

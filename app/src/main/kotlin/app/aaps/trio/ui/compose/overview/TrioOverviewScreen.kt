@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -96,6 +97,7 @@ import app.aaps.core.ui.compose.icons.IcLoopPausedDst
 import app.aaps.core.ui.compose.icons.IcLoopPausedPump
 import app.aaps.core.ui.compose.icons.IcLoopSuperbolus
 import app.aaps.core.ui.compose.icons.IcPumpCartridge
+import app.aaps.core.ui.compose.icons.IcQuestion
 import app.aaps.core.ui.compose.loopColor
 import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.compose.navigation.icon
@@ -216,6 +218,7 @@ fun TrioOverviewScreen(
         endSceneEnabled = endSceneEnabled,
         commandsAllowed = commandsAllowed,
         pumpNeedsSetup = pumpNeedsSetup,
+        pumpSuspended = pumpSuspended,
         pumpTimeRemainingText = pumpTimeRemainingText,
         reservoirUnits = reservoirUnits,
         notificationCount = visibleNotifications.size,
@@ -280,7 +283,7 @@ private fun TrioOverviewContent(
     profilePercentage: Int,
     profileTargetRangeText: String,
     profileCardTempTargetState: TempTargetUiState,
-    runningMode: RM.Mode,
+    runningMode: RM.Mode?,
     runningModeText: String,
     runningModeRemaining: String,
     runningModeProgress: Float,
@@ -310,6 +313,7 @@ private fun TrioOverviewContent(
     endSceneEnabled: Boolean,
     commandsAllowed: Boolean,
     pumpNeedsSetup: Boolean,
+    pumpSuspended: Boolean,
     pumpTimeRemainingText: String?,
     reservoirUnits: Double?,
     notificationCount: Int,
@@ -377,24 +381,42 @@ private fun TrioOverviewContent(
                     Column(
                         verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
                     ) {
-                        Row(
+                        val circleSize = AapsSpacing.bgCircleSize * LocalAapsScale.current + AapsSpacing.medium
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .heightIn(min = circleSize)
                                 .padding(horizontal = AapsSpacing.small),
-                            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small),
-                            verticalAlignment = Alignment.CenterVertically,
+                            contentAlignment = Alignment.Center
                         ) {
-                            PumpEntryPoint(
-                                needsSetup = pumpNeedsSetup,
-                                timeRemainingText = pumpTimeRemainingText,
-                                reservoirUnits = reservoirUnits,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable {
-                                        onNavigate(NavigationRequest.Element(ElementType.PUMP))
-                                    }
-                            )
-                            val circleSize = AapsSpacing.bgCircleSize * LocalAapsScale.current + AapsSpacing.medium
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small),
+                                verticalAlignment = Alignment.Top
+                            ) {
+                                PumpEntryPoint(
+                                    needsSetup = pumpNeedsSetup,
+                                    suspended = pumpSuspended,
+                                    timeRemainingText = pumpTimeRemainingText,
+                                    reservoirUnits = reservoirUnits,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable {
+                                            onNavigate(NavigationRequest.Element(ElementType.PUMP))
+                                        }
+                                )
+                                Spacer(modifier = Modifier.width(circleSize))
+                                LoopStatusAndPrediction(
+                                    runningMode = runningMode,
+                                    runningModeText = runningModeText,
+                                    lastLoopAgeMillis = lastLoopAgeMillis,
+                                    isLooping = isLooping,
+                                    loopStoppedReason = loopStoppedReason,
+                                    predictedText = predictedText,
+                                    onClick = { showPredictionInfo = true },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
                             Box(
                                 contentAlignment = Alignment.Center,
                                 modifier = Modifier
@@ -428,16 +450,6 @@ private fun TrioOverviewContent(
                                 )
                             }
 
-                            LoopStatusAndPrediction(
-                                runningMode = runningMode,
-                                runningModeText = runningModeText,
-                                lastLoopAgeMillis = lastLoopAgeMillis,
-                                isLooping = isLooping,
-                                loopStoppedReason = loopStoppedReason,
-                                predictedText = predictedText,
-                                onClick = { showPredictionInfo = true },
-                                modifier = Modifier.weight(1f),
-                            )
                         }
 
                     }
@@ -505,23 +517,20 @@ private fun TrioOverviewContent(
                 )
             }
 
-            val profileCardTarget = if (profileCardTempTargetState.state == TempTargetChipState.Active) {
-                ElementType.TEMP_TARGET_MANAGEMENT
-            } else {
-                ElementType.PROFILE_MANAGEMENT
+            if (profileCardTempTargetState.state == TempTargetChipState.Active) {
+                TrioAdjustmentCard(
+                    tempTarget = profileCardTempTargetState,
+                    sceneManaged = tempTargetSceneManaged,
+                    onClick = { onNavigate(NavigationRequest.Element(ElementType.TEMP_TARGET_MANAGEMENT)) }
+                )
             }
             TrioProfileCard(
                 profileName = profileName,
                 profilePercentage = profilePercentage,
                 profileTargetRangeText = profileTargetRangeText,
-                tempTargetRangeText = profileCardTempTargetState.rangeText,
-                tempTargetRemainingText = profileCardTempTargetState.remainingText,
-                tempTargetState = profileCardTempTargetState.state,
-                tempTargetReason = profileCardTempTargetState.reason,
-                tempTargetProgress = profileCardTempTargetState.progress,
                 progress = profileProgress,
                 sceneManaged = profileSceneManaged,
-                onClick = { onNavigate(NavigationRequest.Element(profileCardTarget)) }
+                onClick = { onNavigate(NavigationRequest.Element(ElementType.PROFILE_MANAGEMENT)) }
             )
 
             TimeInRangeTodayCard(
@@ -697,6 +706,7 @@ private fun TrioOverviewScreenPreview() {
             endSceneEnabled = true,
             commandsAllowed = true,
             pumpNeedsSetup = false,
+            pumpSuspended = false,
             pumpTimeRemainingText = "2d 6h",
             reservoirUnits = 50.0,
             notificationCount = 2,
@@ -738,11 +748,6 @@ private fun TrioProfileCard(
     profileName: String,
     profilePercentage: Int,
     profileTargetRangeText: String,
-    tempTargetRangeText: String,
-    tempTargetRemainingText: String,
-    tempTargetState: TempTargetChipState,
-    tempTargetReason: TT.Reason?,
-    tempTargetProgress: Float,
     progress: Float,
     sceneManaged: Boolean,
     onClick: () -> Unit,
@@ -753,11 +758,8 @@ private fun TrioProfileCard(
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
     }
-    val hasActiveAdjustment = tempTargetState == TempTargetChipState.Active
     val subtitle = if (profileName.isEmpty()) {
         stringResource(app.aaps.core.ui.R.string.no_profile_set)
-    } else if (hasActiveAdjustment && tempTargetRemainingText.isNotEmpty()) {
-        tempTargetRemainingText
     } else {
         stringResource(
             R.string.trio_profile_summary,
@@ -765,16 +767,53 @@ private fun TrioProfileCard(
             profileTargetRangeText
         )
     }
-    val title = if (hasActiveAdjustment) {
-        stringResource(
-            R.string.trio_active_adjustment,
-            tempTargetReason?.text ?: stringResource(app.aaps.core.ui.R.string.temporary_target),
-            tempTargetRangeText
-        )
-    } else {
-        profileName
-    }
+    TrioStatusCard(
+        title = profileName,
+        subtitle = subtitle,
+        elementType = ElementType.PROFILE_MANAGEMENT,
+        progress = progress,
+        sceneManaged = sceneManaged,
+        contentColor = contentColor,
+        onClick = onClick,
+        modifier = modifier
+    )
+}
 
+@Composable
+private fun TrioAdjustmentCard(
+    tempTarget: TempTargetUiState,
+    sceneManaged: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TrioStatusCard(
+        title = stringResource(
+            R.string.trio_active_adjustment,
+            tempTarget.reason?.text ?: stringResource(app.aaps.core.ui.R.string.temporary_target),
+            tempTarget.rangeText
+        ),
+        subtitle = tempTarget.remainingText,
+        elementType = ElementType.TEMP_TARGET_MANAGEMENT,
+        // Temp target progress is elapsed time; the card shows the time still remaining.
+        progress = (1f - tempTarget.progress).coerceIn(0f, 1f),
+        sceneManaged = sceneManaged,
+        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        onClick = onClick,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun TrioStatusCard(
+    title: String,
+    subtitle: String,
+    elementType: ElementType,
+    progress: Float,
+    sceneManaged: Boolean,
+    contentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     OutlinedCard(
         onClick = onClick,
         colors = CardDefaults.elevatedCardColors().copy(containerColor = MaterialTheme.colorScheme.surfaceVariant),
@@ -798,7 +837,7 @@ private fun TrioProfileCard(
                     modifier = Modifier.size(AapsSpacing.chipHeight)
                 ) {
                     Icon(
-                        imageVector = ElementType.PROFILE_MANAGEMENT.icon(),
+                        imageVector = elementType.icon(),
                         contentDescription = null,
                         tint = contentColor,
                         modifier = Modifier.padding(AapsSpacing.medium)
@@ -822,15 +861,9 @@ private fun TrioProfileCard(
                     SceneBadge()
                 }
             }
-            // tempTargetProgress is elapsed time; the card shows the time still remaining.
-            val displayProgress = if (hasActiveAdjustment) {
-                (1f - tempTargetProgress).coerceIn(0f, 1f)
-            } else {
-                progress
-            }
-            if (displayProgress > 0f) {
+            if (progress > 0f) {
                 LinearProgressIndicator(
-                    progress = { displayProgress },
+                    progress = { progress },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(AapsSpacing.small),
@@ -972,7 +1005,7 @@ private fun TimeInRangeTodayCard(
 
 @Composable
 private fun LoopStatusAndPrediction(
-    runningMode: RM.Mode,
+    runningMode: RM.Mode?,
     runningModeText: String,
     lastLoopAgeMillis: Long?,
     isLooping: Boolean,
@@ -1003,7 +1036,7 @@ private fun LoopStatusAndPrediction(
 
 @Composable
 private fun TrioLoopStatusPill(
-    mode: RM.Mode,
+    mode: RM.Mode?,
     modeDescription: String,
     lastLoopAgeMillis: Long?,
     isLooping: Boolean,
@@ -1018,6 +1051,7 @@ private fun TrioLoopStatusPill(
     // clear it.
     val stoppedReason = loopStoppedReason?.takeIf { it.isNotBlank() && !isLooping }
     val color = when {
+        mode == null                                         -> MaterialTheme.colorScheme.onSurfaceVariant
         !mode.isClosedLoopOrLgs() && mode != RM.Mode.RESUME -> mode.loopColor(colors)
         isLooping                                            -> colors.statusNormal
         stoppedReason != null                                -> colors.statusWarning
@@ -1060,7 +1094,7 @@ private fun TrioLoopStatusPill(
                     )
                 } else {
                     Icon(
-                        imageVector = mode.toLoopStatusIcon(),
+                        imageVector = mode?.toLoopStatusIcon() ?: IcQuestion,
                         contentDescription = modeDescription,
                         tint = color,
                         modifier = Modifier.size(AapsSpacing.chipIconSize)
@@ -1109,6 +1143,7 @@ private fun RM.Mode.toLoopStatusIcon() = when (this) {
 @Composable
 private fun PumpEntryPoint(
     needsSetup: Boolean,
+    suspended: Boolean,
     timeRemainingText: String?,
     reservoirUnits: Double?,
     modifier: Modifier = Modifier
@@ -1162,17 +1197,27 @@ private fun PumpEntryPoint(
         Row(
             modifier = Modifier
                 .height(AapsSpacing.chipHeight)
-                .padding(horizontal = AapsSpacing.large),
+                .padding(horizontal = AapsSpacing.medium),
+            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (suspended) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = AapsTheme.generalColors.statusCritical,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
             Text(
                 text = when {
+                    suspended                 -> stringResource(R.string.widget_rm_suspended)
                     needsSetup                -> stringResource(R.string.trio_no_pump)
                     timeRemainingText != null -> timeRemainingText
                     else                      -> "--"
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
+                color = if (suspended) AapsTheme.generalColors.statusCritical else MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -1186,8 +1231,8 @@ private fun PredictionText(
     Row(
         modifier = modifier
             .height(AapsSpacing.chipHeight)
-            .padding(horizontal = AapsSpacing.large),
-        horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
+            .padding(horizontal = AapsSpacing.medium),
+        horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
@@ -1216,7 +1261,7 @@ private fun PredictionInfoBottomSheet(
     tempTargetProgress: Float,
     tempTargetReason: TT.Reason?,
     tempTargetSceneManaged: Boolean,
-    runningMode: RM.Mode,
+    runningMode: RM.Mode?,
     runningModeText: String,
     runningModeRemaining: String,
     runningModeProgress: Float,

@@ -8,6 +8,7 @@ import app.aaps.core.data.configuration.Constants
 import app.aaps.core.data.iob.InMemoryGlucoseValue
 import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.GV
+import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.model.RM
 import app.aaps.core.data.model.SceneLifecycle
 import app.aaps.core.data.model.TE
@@ -437,6 +438,7 @@ class MainViewModel(
             smbEnabled = ev.smbEnabled,
             pumpEndTimeMillis = chip.pumpEndTimeMillis,
             reservoirUnits = chip.reservoirUnits,
+            pumpSuspended = chip.pumpSuspended,
             quickWizardItems = chip.quickWizardItems
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, initialUiState)
@@ -719,8 +721,17 @@ class MainViewModel(
         } else rh.gs(CoreUiStrings.unknown)
 
         chipBuildStep = "pump status"
-        val liveReservoirUnits = profileFunction.getProfile()?.let { profile ->
+        val liveProfile = profileFunction.getProfile()
+        val liveReservoirUnits = liveProfile?.let { profile ->
             activePlugin.activePump.reservoirLevel.value.iU(profile.insulinConcentration())
+        }
+        val profileTargetRange = liveProfile?.let { profile ->
+            profileUtil.toTargetRangeString(
+                profile.getTargetLowMgdl(),
+                profile.getTargetHighMgdl(),
+                GlucoseUnit.MGDL,
+                profileFunction.getUnits()
+            )
         }
         val livePumpEndTimeMillis = (activePlugin.activePumpInternal as? PumpTimeRemaining)?.expectedEndTimeMillis()
 
@@ -741,7 +752,7 @@ class MainViewModel(
             isProfileModified = profileData?.isModified ?: cachedOverviewStatus.isProfileModified,
             profileProgress = profileProgress,
             profilePercentage = profileData?.percentage ?: cachedOverviewStatus.profilePercentage,
-            profileTargetRangeText = ttData?.targetRangeText ?: cachedOverviewStatus.profileTargetRangeText,
+            profileTargetRangeText = profileTargetRange ?: cachedOverviewStatus.profileTargetRangeText,
             tempTargetText = ttText,
             tempTargetRangeText = if (ttExpired) "" else ttData?.targetRangeText.orEmpty(),
             tempTargetRemainingText = ttRemainingText,
@@ -761,6 +772,7 @@ class MainViewModel(
             tbrState = if (tbrExpired) TbrState.NONE else tbrData?.state ?: TbrState.NONE,
             pumpEndTimeMillis = if (isOverviewHydrated) livePumpEndTimeMillis else cachedOverviewStatus.pumpEndTimeMillis,
             reservoirUnits = if (isOverviewHydrated) liveReservoirUnits else cachedOverviewStatus.reservoirUnits,
+            pumpSuspended = activePlugin.activePump.isSuspended(),
             quickWizardItems = computeQuickWizardItems(rmData?.mode)
         )
         chipBuildStep = "cache status"
@@ -1371,6 +1383,7 @@ private data class ChipState(
     val tbrState: TbrState = TbrState.NONE,
     val pumpEndTimeMillis: Long? = null,
     val reservoirUnits: Double? = null,
+    val pumpSuspended: Boolean = false,
     val quickWizardItems: List<QuickWizardItem> = emptyList()
 )
 
@@ -1386,7 +1399,8 @@ private fun MainUiState.toInitialChipState() = ChipState(
     algorithmReasoning = algorithmReasoning,
     loopStoppedReason = loopStoppedReason,
     pumpEndTimeMillis = pumpEndTimeMillis,
-    reservoirUnits = reservoirUnits
+    reservoirUnits = reservoirUnits,
+    pumpSuspended = pumpSuspended
 )
 
 private data class ChipInputs(
