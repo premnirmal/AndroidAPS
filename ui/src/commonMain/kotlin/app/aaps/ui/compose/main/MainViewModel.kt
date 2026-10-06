@@ -716,7 +716,7 @@ class MainViewModel(
             } else {
                 modeName
             }
-        } else ""
+        } else rh.gs(CoreUiStrings.unknown)
 
         chipBuildStep = "pump status"
         val liveReservoirUnits = profileFunction.getProfile()?.let { profile ->
@@ -779,7 +779,7 @@ class MainViewModel(
             isProfileModified = state.isProfileModified,
             profilePercentage = state.profilePercentage,
             profileTargetRangeText = state.profileTargetRangeText,
-            runningMode = state.runningMode,
+            runningMode = state.runningMode ?: RM.DEFAULT_MODE,
             pumpEndTimeMillis = state.pumpEndTimeMillis,
             reservoirUnits = state.reservoirUnits
         )
@@ -1360,7 +1360,7 @@ private data class ChipState(
     val tempTargetProgress: Float = 0f,
     val tempTargetReason: TT.Reason? = null,
     val tempTargetRecordId: Long = 0,
-    val runningMode: RM.Mode = RM.Mode.DISABLED_LOOP,
+    val runningMode: RM.Mode? = null,
     val runningModeText: String = "",
     val runningModeRemaining: String = "",
     val runningModeProgress: Float = 0f,

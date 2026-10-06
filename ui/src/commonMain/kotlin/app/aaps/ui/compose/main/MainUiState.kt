@@ -35,7 +35,7 @@ data class MainUiState(
     val profilePercentage: Int = 100,
     val profileTargetRangeText: String = "",
     // Running mode state for chip
-    val runningMode: RM.Mode = RM.Mode.DISABLED_LOOP,
+    val runningMode: RM.Mode? = null,
     val runningModeText: String = "",
     val runningModeRemaining: String = "", // short remaining time, e.g. "30'" (temporary modes only)
     val runningModeProgress: Float = 0f, // 0-1 progress for temporary modes
