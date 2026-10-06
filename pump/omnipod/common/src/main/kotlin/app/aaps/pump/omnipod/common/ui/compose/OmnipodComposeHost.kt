@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import app.aaps.core.ui.R as CoreUiR
 
+/** Shared overview and wizard host for BLE pods only. */
 @Composable
 fun OmnipodComposeHost(
     pluginName: String,
@@ -46,7 +47,8 @@ fun OmnipodComposeHost(
     activationNeedsExtraContent: () -> Boolean = { false },
     showExtraContentForHistory: Boolean = false,
     extraContent: (@Composable (onBack: () -> Unit) -> Unit)? = null,
-    credentialImportContent: (@Composable (onImported: () -> Unit, onBack: () -> Unit) -> Unit)? = null
+    credentialImportContent: (@Composable (onImported: () -> Unit, onBack: () -> Unit) -> Unit)? = null,
+    historyContent: (@Composable (onBack: () -> Unit) -> Unit)? = null
 ) {
     val context = LocalContext.current
     var showWizard by remember { mutableStateOf(false) }
@@ -102,17 +104,25 @@ fun OmnipodComposeHost(
                 }
 
                 is OmnipodOverviewEvent.ShowHistory             -> {
-                    if (showExtraContentForHistory) showExtraContent = true
+                    if (showExtraContentForHistory || extraContent != null || historyContent != null) {
+                        showExtraContent = true
+                    }
                 }
 
                 is OmnipodOverviewEvent.ShowDialog              -> {
+                    dialogTitle = event.title
+                    dialogMessage = event.message
                     if (event.title == context.getString(R.string.omnipod_common_pod_management_button_discard_pod)) {
                         showDiscardConfirm = true
                     } else {
                         showDialog = true
                     }
+                }
+
+                is OmnipodOverviewEvent.ConfirmDiscardPod        -> {
                     dialogTitle = event.title
                     dialogMessage = event.message
+                    showDiscardConfirm = true
                 }
 
                 is OmnipodOverviewEvent.ShowErrorDialog         -> {
@@ -179,7 +189,7 @@ fun OmnipodComposeHost(
             )
         }
 
-        showExtraContent -> extraContent?.invoke { showExtraContent = false }
+        showExtraContent -> (historyContent ?: extraContent)?.invoke { showExtraContent = false }
         else             -> {
             val uiState by overviewState.collectAsStateWithLifecycle()
             PumpOverviewScreen(state = uiState, customContent = { PodImage() })

@@ -45,8 +45,33 @@ abstract class SharedBleManager(
     protected abstract fun updateEapAkaSequenceNumber(sequenceNumber: Long)
     protected abstract fun commitEapAkaSequenceNumber()
     protected abstract fun recordSuccessfulConnection()
+    /**
+     * Called on the subscription thread after a command write succeeds or its confirmation fails.
+     * It is not called if sending the command fails.
+     *
+     * Exceptions are handled by the enclosing operation: the connection is disconnected and the
+     * observable emits the error.
+     */
+    protected open fun onCommandWriteCompleted() {
+        onCommandSent()
+    }
+
     protected open fun onCommandSent() = Unit
+
+    /**
+     * Called on the subscription thread before [PodEvent.ResponseReceived] is emitted.
+     *
+     * Exceptions are handled by the enclosing operation: the connection is disconnected and the
+     * observable emits the error.
+     */
     protected open fun onResponse(response: Response) = Unit
+
+    /**
+     * Called on the subscription thread after [PodEvent.ResponseReceived] is emitted.
+     *
+     * Exceptions are handled by the enclosing operation: the connection is disconnected and the
+     * observable emits the error.
+     */
     protected open fun onResponseRead() = Unit
     protected open val releaseBusyBeforeCompletion = false
     protected open val connectionName = "pod"
@@ -54,6 +79,7 @@ abstract class SharedBleManager(
     final override fun sendCommand(cmd: Command, responseType: KClass<out Response>): Observable<PodEvent> =
         Observable.create { emitter ->
             acquireBusy()
+            var busyReleasedBeforeCompletion = false
             try {
                 val session = assertSessionEstablished()
                 emitter.onNext(PodEvent.CommandSending(cmd))
@@ -65,12 +91,12 @@ abstract class SharedBleManager(
 
                     is CommandSendSuccess         -> {
                         emitter.onNext(PodEvent.CommandSent(cmd))
-                        onCommandSent()
+                        onCommandWriteCompleted()
                     }
 
                     is CommandSendErrorConfirming -> {
                         emitter.onNext(PodEvent.CommandSendNotConfirmed(cmd))
-                        onCommandSent()
+                        onCommandWriteCompleted()
                     }
                 }
                 when (val readResult = session.readAndAckResponse()) {
@@ -92,12 +118,12 @@ abstract class SharedBleManager(
                         return@create
                     }
                 }
-                complete(emitter::onComplete)
+                complete(emitter::onComplete) { busyReleasedBeforeCompletion = true }
             } catch (ex: Exception) {
                 disconnect(false)
                 emitter.tryOnError(ex)
             } finally {
-                busy.set(false)
+                if (!busyReleasedBeforeCompletion) busy.set(false)
             }
         }
 
@@ -112,6 +138,7 @@ abstract class SharedBleManager(
     private fun connect(connectionWaitCond: ConnectionWaitCondition): Observable<PodEvent> =
         Observable.create { emitter ->
             acquireBusy()
+            var busyReleasedBeforeCompletion = false
             try {
                 emitter.onNext(PodEvent.BluetoothConnecting)
                 val address = bluetoothAddress
@@ -123,7 +150,7 @@ abstract class SharedBleManager(
                 val conn = connection ?: createConnection(address).also { connection = it }
                 if (conn.connectionState() is Connected && conn.session != null) {
                     emitter.onNext(PodEvent.AlreadyConnected(address))
-                    complete(emitter::onComplete)
+                    complete(emitter::onComplete) { busyReleasedBeforeCompletion = true }
                     return@create
                 }
                 conn.connect(connectionWaitCond)
@@ -131,13 +158,13 @@ abstract class SharedBleManager(
                 emitter.onNext(PodEvent.EstablishingSession)
                 establishSession(1.toByte())
                 emitter.onNext(PodEvent.Connected)
-                complete(emitter::onComplete)
+                complete(emitter::onComplete) { busyReleasedBeforeCompletion = true }
             } catch (ex: Exception) {
                 aapsLogger.error(LTag.PUMPBTCOMM, "$connectionName connection failed", ex)
                 disconnect(false)
                 emitter.tryOnError(ex)
             } finally {
-                busy.set(false)
+                if (!busyReleasedBeforeCompletion) busy.set(false)
             }
         }
 
@@ -165,8 +192,11 @@ abstract class SharedBleManager(
         busy.set(false)
     }
 
-    private fun complete(onComplete: () -> Unit) {
-        if (releaseBusyBeforeCompletion) busy.set(false)
+    private fun complete(onComplete: () -> Unit, onBusyReleased: () -> Unit) {
+        if (releaseBusyBeforeCompletion) {
+            busy.set(false)
+            onBusyReleased()
+        }
         onComplete()
     }
 

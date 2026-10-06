@@ -2,6 +2,7 @@ package app.aaps.pump.omnipod.common.bledriver.comm.legacy.session
 
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
@@ -44,7 +45,7 @@ abstract class SharedBleConnection(
 
     protected abstract val podType: PodType
     protected val incomingPackets = IncomingPackets()
-    protected val bleCommCallbacks = BleCommCallbacks(aapsLogger, incomingPackets, this)
+    protected val bleCommCallbacks by lazy { BleCommCallbacks(aapsLogger, incomingPackets, this) }
     protected var gattConnection: BluetoothGatt? = null
     private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager?
     private var connectionWaitCondition: ConnectionWaitCondition? = null
@@ -61,6 +62,35 @@ abstract class SharedBleConnection(
     protected open fun prepareGatt(gatt: BluetoothGatt) = Unit
     protected abstract fun hello(cmdBleIO: CmdBleIO)
     protected abstract fun createSession(messageIO: MessageIO, ids: Ids, keys: SessionKeys, enDecrypt: EnDecrypt): Session
+
+    protected open fun discoverServices(
+        gatt: BluetoothGatt,
+        connectionWaitCond: ConnectionWaitCondition
+    ): Map<CharacteristicType, BluetoothGattCharacteristic> =
+        ServiceDiscoverer(aapsLogger, gatt, bleCommCallbacks, this).discoverServices(connectionWaitCond, podType)
+
+    protected open fun createMessageIO(
+        gatt: BluetoothGatt,
+        discovered: Map<CharacteristicType, BluetoothGattCharacteristic>
+    ): Pair<CmdBleIO, DataBleIO> {
+        val cmdBleIO = CmdBleIO(
+            aapsLogger,
+            discovered.getValue(CharacteristicType.CMD),
+            incomingPackets.cmdQueue,
+            gatt,
+            bleCommCallbacks
+        )
+        val dataType = if (podType == PodType.OMNIPOD_5) CharacteristicType.DATA_O5 else CharacteristicType.DATA
+        val dataBleIO = DataBleIO(
+            aapsLogger,
+            discovered.getValue(CharacteristicType.DATA),
+            incomingPackets.dataQueue,
+            gatt,
+            bleCommCallbacks,
+            dataType
+        )
+        return cmdBleIO to dataBleIO
+    }
 
     @Synchronized
     final override fun connect(connectionWaitCond: ConnectionWaitCondition) {
@@ -92,25 +122,9 @@ abstract class SharedBleConnection(
         }
         updateConnectionState(LifecycleState.CONNECTED)
 
-        val discovered = ServiceDiscoverer(aapsLogger, gatt, bleCommCallbacks, this)
-            .discoverServices(connectionWaitCond, podType)
+        val discovered = discoverServices(gatt, connectionWaitCond)
         prepareGatt(gatt)
-        val cmdBleIO = CmdBleIO(
-            aapsLogger,
-            discovered.getValue(CharacteristicType.CMD),
-            incomingPackets.cmdQueue,
-            gatt,
-            bleCommCallbacks
-        )
-        val dataType = if (podType == PodType.OMNIPOD_5) CharacteristicType.DATA_O5 else CharacteristicType.DATA
-        val dataBleIO = DataBleIO(
-            aapsLogger,
-            discovered.getValue(CharacteristicType.DATA),
-            incomingPackets.dataQueue,
-            gatt,
-            bleCommCallbacks,
-            dataType
-        )
+        val (cmdBleIO, dataBleIO) = createMessageIO(gatt, discovered)
         msgIO = MessageIO(aapsLogger, cmdBleIO, dataBleIO, podType)
         hello(cmdBleIO)
         cmdBleIO.readyToRead()
@@ -135,6 +149,7 @@ abstract class SharedBleConnection(
     }
 
     private fun waitForConnection(connectionWaitCond: ConnectionWaitCondition): ConnectionState {
+        aapsLogger.debug(LTag.PUMPBTCOMM, "waitForConnection connectionWaitCond=$connectionWaitCond")
         try {
             connectionWaitCond.timeoutMs?.let(bleCommCallbacks::waitForConnection)
             val startWaiting = System.currentTimeMillis()
@@ -152,12 +167,15 @@ abstract class SharedBleConnection(
         return connectionState()
     }
 
-    final override fun connectionState(): ConnectionState =
-        if (bluetoothManager?.getConnectionState(podDevice, BluetoothProfile.GATT) == BluetoothProfile.STATE_CONNECTED) {
+    final override fun connectionState(): ConnectionState {
+        val connectionState = bluetoothManager?.getConnectionState(podDevice, BluetoothProfile.GATT)
+        aapsLogger.debug(LTag.PUMPBTCOMM, "GATT connection state: $connectionState")
+        return if (connectionState == BluetoothProfile.STATE_CONNECTED) {
             Connected
         } else {
             NotConnected
         }
+    }
 
     final override fun establishSession(ltk: ByteArray, msgSeq: Byte, ids: Ids, eapSqn: ByteArray): EapSqn? {
         val messageIO = msgIO ?: throw ConnectException("Connection lost")
