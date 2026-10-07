@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
@@ -183,7 +184,7 @@ private fun TrioGlucoseStatsContent(
             data = state.trioStatsData,
             lowMgdl = viewModel.trioLowMgdl,
             highMgdl = viewModel.trioHighMgdl,
-            glycemicMetricUnits = viewModel.trioGlycemicMetricUnits
+            glucoseUnit = viewModel.trioGlucoseUnit
         )
     }
 }
@@ -632,7 +633,7 @@ private fun TrioGlucoseProfileCard(
     data: TrioStatsData,
     lowMgdl: Double,
     highMgdl: Double,
-    glycemicMetricUnits: String,
+    glucoseUnit: GlucoseUnit,
     modifier: Modifier = Modifier
 ) {
     val percentiles = data.hourlyPercentiles
@@ -833,7 +834,7 @@ private fun TrioGlucoseProfileCard(
                 profileUtil.fromMgdlToStringInUnits(value)
             }
             HorizontalDivider()
-            TrioMetrics(data, glycemicMetricUnits)
+            TrioMetrics(data, glucoseUnit)
         }
     }
 }
@@ -1021,15 +1022,15 @@ private fun TrioTirRing(bands: List<TrioTirBand>) {
 }
 
 @Composable
-private fun TrioMetrics(data: TrioStatsData, glycemicMetricUnits: String) {
+private fun TrioMetrics(data: TrioStatsData, glucoseUnit: GlucoseUnit) {
     val metrics = listOf(
         TrioMetric(
             stringResource(UiStrings.trio_stats_ea1c),
-            formatGlycemicMetric(data.eA1cPercent, glycemicMetricUnits)
+            formatGlycemicMetric(data.eA1cPercent, glucoseUnit)
         ),
         TrioMetric(
             stringResource(UiStrings.trio_stats_gmi),
-            formatGlycemicMetric(data.gmiPercent, glycemicMetricUnits)
+            formatGlycemicMetric(data.gmiPercent, glucoseUnit)
         ),
         TrioMetric(stringResource(UiStrings.trio_stats_standard_deviation), data.standardDeviationMgdl.round(1).toString()),
         TrioMetric(stringResource(UiStrings.trio_stats_cv), stringResource(UiStrings.trio_stats_percent, data.coefficientOfVariation)),
@@ -1063,8 +1064,8 @@ private fun TrioMetrics(data: TrioStatsData, glycemicMetricUnits: String) {
 }
 
 @Composable
-private fun formatGlycemicMetric(valuePercent: Double, units: String): String =
-    if (units == "mmol/mol") {
+private fun formatGlycemicMetric(valuePercent: Double, glucoseUnit: GlucoseUnit): String =
+    if (glucoseUnit == GlucoseUnit.MMOL) {
         (valuePercent * 10.929 - 23.5).round(1).toString()
     } else {
         stringResource(UiStrings.trio_stats_percent, valuePercent)

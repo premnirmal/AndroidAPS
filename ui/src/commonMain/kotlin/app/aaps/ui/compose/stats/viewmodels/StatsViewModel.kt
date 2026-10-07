@@ -10,6 +10,7 @@ import app.aaps.core.data.model.BS
 import app.aaps.core.data.model.CA
 import app.aaps.core.data.model.EB
 import app.aaps.core.data.model.EPS
+import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.model.TB
 import app.aaps.core.data.model.TDD
 import app.aaps.core.data.ue.Action
@@ -112,8 +113,8 @@ class StatsViewModel(
         get() = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewLowMark))
     val trioHighMgdl: Double
         get() = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewHighMark))
-    val trioGlycemicMetricUnits: String
-        get() = preferences.get(StringKey.TrioGlycemicMetricUnits)
+    val trioGlucoseUnit: GlucoseUnit
+        get() = GlucoseUnit.fromText(preferences.get(StringKey.GeneralUnits))
 
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()

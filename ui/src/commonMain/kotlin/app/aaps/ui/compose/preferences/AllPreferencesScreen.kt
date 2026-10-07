@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
@@ -33,6 +34,7 @@ import app.aaps.core.interfaces.configuration.ConfigBuilder
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.resources.TextResolver
+import app.aaps.core.keys.BooleanKey
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.AapsTopAppBar
 import app.aaps.core.ui.compose.ComposeScreenContent
@@ -83,6 +85,7 @@ fun AllPreferencesScreen(
     onAboutClick: (() -> Unit)? = null
 ) {
     val preferences = LocalPreferences.current
+    val trioMode by preferences.observe(BooleanKey.GeneralTrioMode).collectAsStateWithLifecycle()
     val config = LocalConfig.current
     // Look up plugins by interface
     val autotunePlugin = activePlugin.getSpecificPluginsListByInterface(Autotune::class).firstOrNull()
@@ -208,17 +211,19 @@ fun AllPreferencesScreen(
                     addPreferenceContent(alertsPreferences, onShowMessage, sectionState)
                     addPreferenceContent(maintenancePreferences, onShowMessage, sectionState)
 
-                    // Built-in: Maintenance settings (always last)
-                    onMaintenanceClick?.let { onClick ->
-                        item {
-                            Preference(
-                                title = { Text(stringResource(CoreUiStrings.maintenance)) },
-                                summary = { Text(stringResource(CoreUiStrings.description_maintenance)) },
-                                onClick = onClick
-                            )
-                        }
-                        item {
-                            HorizontalDivider()
+                    // The extra maintenance entrypoint is only part of Trio settings.
+                    if (trioMode) {
+                        onMaintenanceClick?.let { onClick ->
+                            item {
+                                Preference(
+                                    title = { Text(stringResource(CoreUiStrings.maintenance)) },
+                                    summary = { Text(stringResource(CoreUiStrings.description_maintenance)) },
+                                    onClick = onClick
+                                )
+                            }
+                            item {
+                                HorizontalDivider()
+                            }
                         }
                     }
 

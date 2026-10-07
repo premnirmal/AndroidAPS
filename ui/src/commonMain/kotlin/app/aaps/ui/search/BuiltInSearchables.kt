@@ -72,7 +72,6 @@ class BuiltInSearchables(
             title = CoreUiStrings.configbuilder_general,
             items = listOf(
                 StringKey.GeneralUnits,
-                StringKey.TrioGlycemicMetricUnits,
                 StringKey.GeneralLanguage,
                 BooleanKey.GeneralSimpleMode.withChangeGuard { newValue ->
                     if (newValue && hasNonU100Insulin())
