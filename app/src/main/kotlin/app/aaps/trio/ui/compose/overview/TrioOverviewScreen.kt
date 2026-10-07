@@ -98,6 +98,7 @@ import app.aaps.core.ui.compose.icons.IcLoopPausedPump
 import app.aaps.core.ui.compose.icons.IcLoopSuperbolus
 import app.aaps.core.ui.compose.icons.IcPumpCartridge
 import app.aaps.core.ui.compose.icons.IcQuestion
+import app.aaps.core.ui.compose.icons.IcTimerSand
 import app.aaps.core.ui.compose.loopColor
 import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.compose.navigation.icon
@@ -1077,8 +1078,8 @@ private fun TrioLoopStatusPill(
             )
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = AapsSpacing.large),
-                horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
+                modifier = Modifier.padding(horizontal = AapsSpacing.medium),
+                horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (isLooping) {
@@ -1177,8 +1178,8 @@ private fun PumpEntryPoint(
             )
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = AapsSpacing.large),
-                horizontalArrangement = Arrangement.spacedBy(AapsSpacing.medium),
+                modifier = Modifier.padding(horizontal = AapsSpacing.medium),
+                horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -1206,7 +1207,14 @@ private fun PumpEntryPoint(
                     imageVector = Icons.Default.Warning,
                     contentDescription = null,
                     tint = AapsTheme.generalColors.statusCritical,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(AapsSpacing.pumpStatusIconSize)
+                )
+            } else if (timeRemainingText != null) {
+                Icon(
+                    imageVector = IcTimerSand,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(AapsSpacing.pumpStatusIconSize)
                 )
             }
             Text(

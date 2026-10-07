@@ -49,5 +49,6 @@ object AapsSpacing {
     val chipCornerRadius = 8.dp
     val chipHeight = 35.dp
     val chipIconSize = 24.dp
+    val pumpStatusIconSize = 16.dp
     val chipProgressHeight = 3.dp
 }
