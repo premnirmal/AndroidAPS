@@ -10,12 +10,6 @@ import app.aaps.ui.compose.overview.TrioOverviewModel
 interface TrioUi {
 
     @Composable
-    fun topBar(
-        title: String,
-        modifier: Modifier
-    )
-
-    @Composable
     fun bottomBar(
         selectedTab: TrioNavTab,
         carbsRequired: Int,

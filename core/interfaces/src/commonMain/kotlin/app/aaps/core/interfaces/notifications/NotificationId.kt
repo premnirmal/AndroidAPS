@@ -236,7 +236,11 @@ enum class NotificationId(
     // NORMAL, not the alarm tier: the loop stopping is not by itself an insulin-delivery failure,
     // and several of the reasons are states the user chose. [app.aaps.core.interfaces.aps.Loop]
     // dismisses the card as soon as a run finishes.
-    LOOP_NOT_RUNNING(NORMAL, LOOP);
+    LOOP_NOT_RUNNING(NORMAL, LOOP),
+
+    // One command has been running in the queue for too long, so nothing else reaches the pump (#5209).
+    // Appended at the END for the same reason as above.
+    PUMP_DRIVER_NOT_RESPONDING(URGENT, PUMP);
 
     companion object {
 

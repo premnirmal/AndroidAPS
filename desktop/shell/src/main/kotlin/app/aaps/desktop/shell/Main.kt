@@ -307,7 +307,9 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter) {
                 dexcomBoyda = graph.dexcomBoyda,
                 onOpenCgmApp = { pkg -> logger.error(LTag.CORE, "No CGM app to open on desktop: $pkg") },
                 onExit = { logger.debug(LTag.CORE, "Exit requested from the menu") },
-                onRequestDirectoryAccess = { logger.debug(LTag.CORE, "Desktop reads its own folder; nothing to grant") }
+                onRequestDirectoryAccess = { logger.debug(LTag.CORE, "Desktop reads its own folder; nothing to grant") },
+                onRequestPermission = { group -> logger.notWiredYet("permission request $group") },
+                isTrio = false
             )
             val insulinManagement = metroViewModel<InsulinManagementViewModel>()
             val profileManagement = metroViewModel<ProfileManagementViewModel>()
@@ -351,8 +353,10 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter) {
                     siteRotationManagementViewModel = siteRotationManagement,
                     graphViewModel = graphs,
                     chipsViewModel = chips,
+                    swDefinition = graph.swDefinition,
                     rxBus = graph.rxBus,
                     activePlugin = graph.activePlugin,
+                    pluginPermissions = graph.pluginPermissions,
                     // Passed so the rules can be read and edited here. The runtime is deliberately
                     // NOT started on a client: `MainApp` calls `automationRuntime.start()`, this shell
                     // does not, and that is the design - a follower edits definitions and the master

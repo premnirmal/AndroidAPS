@@ -19,10 +19,17 @@ enum class LongNonKey(
      * records stamped before it. Another phone's value would silently drop a stretch of this pump's
      * history, or accept a stretch that belongs to a different one.
      */
-    ActivePumpChangeTimestamp("active_pump_change_timestamp", 0L, exportable = false),
+    ActivePumpChangeTimestamp("active_pump_change_timestamp", 0L, exportable = false    ),
     LastCleanupRun("last_cleanup_run", 0L),
     LastLoopRunTimestamp("last_loop_run_timestamp", 0L, exportable = false),
     LastPumpExpectedEndTimeMillis("last_pump_expected_end_time_millis", 0L, exportable = false),
+
+    /**
+     * The time before which the last automatic cleanup deleted records. `PeriodicMaintenance` lets
+     * it move forward only a little per pass, so a forward clock jump cannot delete the whole
+     * history at once (#5210).
+     */
+    LastCleanupCutoff("last_cleanup_cutoff", 0L),
 
     // NSCv3 client-control pairing (excluded from export — replay protection regresses if restored)
     NsClientControlCounterSent("nsclient_control_counter_sent", 0L, exportable = false),

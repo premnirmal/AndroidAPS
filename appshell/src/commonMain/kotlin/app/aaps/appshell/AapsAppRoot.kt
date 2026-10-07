@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -117,7 +118,12 @@ fun AapsAppRoot(
     onClose: () -> Unit,
     content: @Composable (NavHostController) -> Unit
 ) {
-    val navController = rememberNavController().also(onNavControllerReady)
+    // Trio and standard mode expose different destination sets. A mode switch recreates the
+    // activity, so use a different saved-state key instead of restoring a route absent from the
+    // newly selected graph.
+    val navController = key(config.TRIO) {
+        rememberNavController()
+    }.also(onNavControllerReady)
     val masterReachable by nsClient.masterReachable.collectAsStateWithLifecycle()
     val masterControlAllowed by nsClient.masterControlAllowed.collectAsStateWithLifecycle()
 
@@ -151,7 +157,7 @@ fun AapsAppRoot(
         LocalClearExportPasswordStore provides { exportPasswordDataStore.clearPasswordDataStore() },
         LocalVisibilityContext provides visibilityContext
     ) {
-        AapsTheme {
+        AapsTheme(trioMode = config.TRIO) {
             val rootSnackbarHostState = remember { SnackbarHostState() }
             CompositionLocalProvider(LocalSnackbarHostState provides rootSnackbarHostState) {
                 val initProgress by config.initProgressFlow.collectAsStateWithLifecycle()
@@ -185,7 +191,7 @@ fun AapsAppRoot(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(
-                                bottom = if (initProgress.done) {
+                                bottom = if (config.TRIO && initProgress.done) {
                                     AapsSpacing.xxLarge * 3 + AapsSpacing.medium
                                 } else {
                                     0.dp

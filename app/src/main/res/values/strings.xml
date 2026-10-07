@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name_androidaps">AndroidAPS</string>
     <string name="authorizationfailed">Authorization failed</string>
     <string name="identification_not_set">Identification not set in dev mode</string>
     <string name="select">Select</string>

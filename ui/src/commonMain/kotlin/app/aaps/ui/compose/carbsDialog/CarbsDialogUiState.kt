@@ -26,6 +26,7 @@ data class CarbsDialogUiState(
     val carbsButtonIncrement2: Int = 10,
     val carbsButtonIncrement3: Int = 20,
     val units: GlucoseUnit = GlucoseUnit.MGDL,
+    val showNotesFromPreferences: Boolean = false,
     val showBolusReminder: Boolean = false,
     val hypoTtTarget: Double = 0.0,
     val hypoTtDuration: Int = 0,

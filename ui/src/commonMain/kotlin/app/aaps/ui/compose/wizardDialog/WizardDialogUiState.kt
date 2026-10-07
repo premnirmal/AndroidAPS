@@ -45,7 +45,6 @@ data class WizardDialogUiState(
     val profileNames: List<String> = emptyList(),
     val hasTempTarget: Boolean = false,
     val useBolusAdvisor: Boolean = false,
-    val defaultPercentage: Int = 100,
     val simpleMode: Boolean = false,
     val carbsButtonIncrement1: Int = 0,
     val carbsButtonIncrement2: Int = 0,

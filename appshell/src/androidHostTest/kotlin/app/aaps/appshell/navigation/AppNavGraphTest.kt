@@ -33,7 +33,7 @@ class AppNavGraphTest {
         whenever(getPluginsList()).thenReturn(ArrayList())
     }
 
-    private fun buildGraph(withOverview: Boolean): Set<String> {
+    private fun buildGraph(withOverview: Boolean, isTrio: Boolean = false): Set<String> {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val navController = NavHostController(context).apply {
             navigatorProvider.addNavigator(ComposeNavigator())
@@ -56,8 +56,10 @@ class AppNavGraphTest {
                 siteRotationManagementViewModel = mock(),
                 graphViewModel = mock(),
                 chipsViewModel = mock(),
+                swDefinition = mock(),
                 rxBus = mock(),
                 activePlugin = activePlugin,
+                pluginPermissions = mock(),
                 automationRuntime = mock(),
                 preferences = mock(),
                 rh = mock(),
@@ -72,6 +74,9 @@ class AppNavGraphTest {
                 requestEditModeAuthorization = { onGranted -> onGranted() },
                 onRefreshPermissions = {},
                 onExecuteQuickWizard = {},
+                onRequestDirectoryAccess = {},
+                onRequestPermission = {},
+                isTrio = isTrio,
                 onNavigateToTrioTab = {},
                 trioTabScaffold = { _, _, _, _, _ -> },
 
@@ -92,6 +97,20 @@ class AppNavGraphTest {
             AppRoute.Preferences.route,
             AppRoute.RunningMode.route,
             AppRoute.Configuration.route,
+            AppRoute.SetupWizard.route,
+            AppRoute.Statistics.route
+        )
+        assertThat(routes).doesNotContain(AppRoute.TrioSettings.route)
+        assertThat(routes).doesNotContain(AppRoute.TrioStats.route)
+    }
+
+    @Test
+    fun statisticsDestinationsAreRegisteredInTrioMode() {
+        val routes = buildGraph(withOverview = true, isTrio = true)
+
+        assertThat(routes).containsAtLeast(
+            AppRoute.Statistics.route,
+            AppRoute.TrioStats.route,
             AppRoute.TrioSettings.route
         )
     }

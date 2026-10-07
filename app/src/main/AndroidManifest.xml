@@ -72,11 +72,34 @@
             android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity-alias
+            android:name="app.aaps.TrioLauncher"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="${launcherIcon}"
+            android:label="@string/app_name"
+            android:targetActivity="app.aaps.ComposeMainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name="app.aaps.AndroidApsLauncher"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/app_name_androidaps"
+            android:targetActivity="app.aaps.ComposeMainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- Powers the screen on for a background alarm without USE_FULL_SCREEN_INTENT.
              Fired by AlarmManager.setAlarmClock() from AlarmNotificationManager. -->

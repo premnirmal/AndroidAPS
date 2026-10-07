@@ -139,8 +139,9 @@ android {
             dimension = "standard"
             resValue("string", "app_name", "Trio")
             versionName = Versions.appVersion
-            manifestPlaceholders["appIcon"] = "@drawable/ic_launcher"
-            manifestPlaceholders["appIconRound"] = "@drawable/ic_launcher"
+            manifestPlaceholders["appIcon"] = "@mipmap/ic_launcher"
+            manifestPlaceholders["appIconRound"] = "@mipmap/ic_launcher_round"
+            manifestPlaceholders["launcherIcon"] = "@drawable/ic_trio_launcher"
         }
         create("pumpcontrol") {
             applicationId = "info.nightscout.aapspumpcontrol"
@@ -148,6 +149,7 @@ android {
             resValue("string", "app_name", "Pumpcontrol")
             versionName = Versions.appVersion + "-pumpcontrol"
             manifestPlaceholders["appIcon"] = "@mipmap/ic_pumpcontrol"
+            manifestPlaceholders["launcherIcon"] = "@mipmap/ic_pumpcontrol"
             manifestPlaceholders["appIconRound"] = "@null"
         }
         create("aapsclient") {
@@ -156,6 +158,7 @@ android {
             resValue("string", "app_name", "AAPSClient")
             versionName = Versions.appVersion + "-aapsclient"
             manifestPlaceholders["appIcon"] = "@mipmap/ic_yellowowl"
+            manifestPlaceholders["launcherIcon"] = "@mipmap/ic_yellowowl"
             manifestPlaceholders["appIconRound"] = "@mipmap/ic_yellowowl"
         }
         create("aapsclient2") {
@@ -164,6 +167,7 @@ android {
             resValue("string", "app_name", "AAPSClient2")
             versionName = Versions.appVersion + "-aapsclient"
             manifestPlaceholders["appIcon"] = "@mipmap/ic_blueowl"
+            manifestPlaceholders["launcherIcon"] = "@mipmap/ic_blueowl"
             manifestPlaceholders["appIconRound"] = "@mipmap/ic_blueowl"
         }
         create("aapsclient3") {
@@ -172,6 +176,7 @@ android {
             resValue("string", "app_name", "AAPSClient3")
             versionName = Versions.appVersion + "-aapsclient3"
             manifestPlaceholders["appIcon"] = "@mipmap/ic_greenowl"
+            manifestPlaceholders["launcherIcon"] = "@mipmap/ic_greenowl"
             manifestPlaceholders["appIconRound"] = "@mipmap/ic_greenowl"
         }
     }

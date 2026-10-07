@@ -94,6 +94,7 @@ class BuiltInSearchables(
         key = "appearance",
         title = CoreUiStrings.appearance,
         items = listOf(
+            BooleanKey.GeneralTrioMode,
 
             // Range settings subscreen
             PreferenceSubScreenDef(

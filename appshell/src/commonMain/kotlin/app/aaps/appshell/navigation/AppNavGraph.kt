@@ -45,6 +45,8 @@ import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.maintenance.PrefsFileInfo
 import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.plugin.PermissionGroup
+import app.aaps.core.interfaces.plugin.PluginPermissions
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.resources.TextResolver
@@ -52,6 +54,7 @@ import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventShowSnackbar
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
+import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.VisibilityContext
 import app.aaps.core.ui.compose.AapsTopAppBar
@@ -109,6 +112,7 @@ import app.aaps.ui.compose.scenes.wizard.SceneWizardScreen
 import app.aaps.ui.compose.siteRotationDialog.SiteRotationManagementScreen
 import app.aaps.ui.compose.siteRotationDialog.viewModels.SiteRotationManagementViewModel
 import app.aaps.ui.compose.stats.TrioStatsScreen
+import app.aaps.ui.compose.stats.StatsScreen
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import app.aaps.ui.compose.tempBasalDialog.TempBasalDialogScreen
 import app.aaps.ui.compose.tempTarget.TempTargetManagementScreen
@@ -119,7 +123,18 @@ import app.aaps.ui.compose.treatments.viewmodels.TreatmentsViewModel
 import app.aaps.ui.compose.wizardDialog.WizardDialogScreen
 import app.aaps.ui.UiStrings
 import app.aaps.ui.search.BuiltInSearchables
+import app.aaps.plugins.configuration.setupwizard.SWDefinition
+import app.aaps.plugins.configuration.setupwizard.SetupWizardScreen
 import kotlinx.coroutines.launch
+
+private fun NavBackStackEntry.stringArg(key: String): String? =
+    arguments?.read { if (contains(key)) getStringOrNull(key) else null }
+
+private fun NavBackStackEntry.intArg(key: String, default: Int): Int =
+    arguments?.read { if (contains(key)) getInt(key) else default } ?: default
+
+private fun NavBackStackEntry.intArgOrNull(key: String): Int? =
+    arguments?.read { if (contains(key)) getInt(key) else null }
 
 /**
  * Safe popBackStack that prevents double-navigation during transitions.
@@ -154,8 +169,10 @@ fun NavGraphBuilder.appNavGraph(
     graphViewModel: app.aaps.ui.compose.overview.graphs.GraphViewModel,
     chipsViewModel: ChipsViewModel,
     // Dependencies
+    swDefinition: SWDefinition,
     rxBus: RxBus,
     activePlugin: ActivePlugin,
+    pluginPermissions: PluginPermissions,
     automationRuntime: AutomationRuntime,
     preferences: Preferences,
     rh: TextResolver,
@@ -171,6 +188,9 @@ fun NavGraphBuilder.appNavGraph(
     requestEditModeAuthorization: (onGranted: () -> Unit) -> Unit,
     onRefreshPermissions: () -> Unit,
     onExecuteQuickWizard: (guid: String) -> Unit,
+    onRequestDirectoryAccess: () -> Unit,
+    onRequestPermission: (PermissionGroup) -> Unit,
+    isTrio: Boolean,
     onNavigateToTrioTab: (TrioNavTab) -> Unit,
     trioTabScaffold: @Composable (
         selectedTab: TrioNavTab,
@@ -524,7 +544,8 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
-    composable(AppRoute.TrioTreatmentList.route) {
+    if (isTrio) {
+        composable(AppRoute.TrioTreatmentList.route) {
             trioTabScaffold(
                 TrioNavTab.Treatments,
                 stringResource(CoreUiStrings.treatments),
@@ -561,12 +582,29 @@ fun NavGraphBuilder.appNavGraph(
                 )
             }
         }
+    }
 
-    composable(AppRoute.TrioStats.route) {
+    composable(AppRoute.Statistics.route) {
+        if (isTrio) {
             TrioStatsScreen(
                 viewModel = statsViewModel,
                 onNavigateBack = { navController.safePopBackStack() }
             )
+        } else {
+            StatsScreen(
+                viewModel = statsViewModel,
+                onNavigateBack = { navController.safePopBackStack() }
+            )
+        }
+    }
+
+    if (isTrio) {
+        composable(AppRoute.TrioStats.route) {
+            TrioStatsScreen(
+                viewModel = statsViewModel,
+                onNavigateBack = { navController.safePopBackStack() }
+            )
+        }
     }
 
     composable(AppRoute.ProfileHelper.route) {
@@ -583,7 +621,8 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
-    composable(AppRoute.TrioHistory.route) {
+    if (isTrio) {
+        composable(AppRoute.TrioHistory.route) {
             trioTabScaffold(
                 TrioNavTab.Adjustments,
                 stringResource(MainStrings.nav_history_browser),
@@ -598,6 +637,7 @@ fun NavGraphBuilder.appNavGraph(
                         .consumeWindowInsets(paddingValues),
                     showTopBar = false
                 )
+            }
         }
     }
 
@@ -720,7 +760,8 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
-    composable(AppRoute.TrioSettings.route) {
+    if (isTrio) {
+        composable(AppRoute.TrioSettings.route) {
         var showAboutDialog by rememberSaveable { mutableStateOf(false) }
         trioTabScaffold(
             TrioNavTab.Settings,
@@ -751,6 +792,7 @@ fun NavGraphBuilder.appNavGraph(
         if (showAboutDialog) {
             aboutDialog?.invoke { showAboutDialog = false }
         }
+    }
     }
 
     composable(
@@ -871,6 +913,38 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
+    if (!isTrio) {
+        composable(AppRoute.SetupWizard.route) {
+            SetupWizardScreen(
+                swDefinition = swDefinition,
+                onFinish = {
+                    preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
+                    navController.safePopBackStack()
+                },
+                onBack = { navController.safePopBackStack() },
+                onImportSettings = { navController.navigate(AppRoute.ImportSettings.createRoute("LOCAL")) },
+                onPluginPreferences = { pluginId -> navController.navigate(AppRoute.PluginPreferences.createRoute(pluginId)) },
+                onPluginOpen = { pluginId -> onNavigationRequest(NavigationRequest.Plugin(pluginId), navController) },
+                onSetMasterPassword = { navController.navigate(AppRoute.PreferenceScreen.createRoute("protection", StringKey.ProtectionMasterPassword.key)) },
+                onManageInsulin = { navController.navigate(AppRoute.InsulinManagement.createRoute()) },
+                onManageProfile = { navController.navigate(AppRoute.Profile.createRoute()) },
+                onProfileSwitch = { navController.navigate(AppRoute.ProfileActivation.createRoute(0)) },
+                onOpenAuthorizedClients = { navController.navigate(AppRoute.AuthorizedClients.route) },
+                onPairWithMaster = { navController.navigate(AppRoute.PairWithMaster.route) },
+                onOpenNsReceiveSettings = { navController.navigate(AppRoute.PreferenceScreen.createRoute("ns_client_synchronization")) },
+                onRequestDirectoryAccess = onRequestDirectoryAccess,
+                onRequestPermission = onRequestPermission,
+                permissionItems = {
+                    val allGroups = pluginPermissions.collectAllPermissions()
+                    val missingGroups = pluginPermissions.collectMissingPermissions()
+                    val missingSets = missingGroups.map { it.permissions.toSet() }.toSet()
+                    allGroups.map { group -> group to (group.permissions.toSet() !in missingSets) }
+                },
+                isDirectoryAccessGranted = { prefFileList.isDirectoryAccessGranted() },
+                rxBus = rxBus
+            )
+        }
+    }
 }
 
 @Composable
@@ -1030,19 +1104,6 @@ private fun AutomationContentRoute(
         }
     }
 }
-
-// `NavBackStackEntry.arguments` is a `Bundle` on Android but a `SavedState` in multiplatform
-// navigation, and only the SavedState API exists in shared code. These two keep the call sites
-// reading the way they did.
-private fun NavBackStackEntry.stringArg(key: String): String? =
-    arguments?.read { if (contains(key)) getStringOrNull(key) else null }
-
-private fun NavBackStackEntry.intArg(key: String, default: Int): Int =
-    arguments?.read { if (contains(key)) getInt(key) else default } ?: default
-
-/** Null when the argument is absent, for routes that cannot render without it. */
-private fun NavBackStackEntry.intArgOrNull(key: String): Int? =
-    arguments?.read { if (contains(key)) getInt(key) else null }
 
 /**
  * The preference screen registered under [key], or null when nothing claims it.

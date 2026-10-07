@@ -15,8 +15,10 @@ import app.aaps.core.keys.StringKey
 import app.aaps.ui.compose.quickLaunch.QuickLaunchAction
 import app.aaps.core.ui.compose.ScreenMode
 import app.aaps.core.ui.compose.navigation.NavigationRequest
+import app.aaps.core.ui.search.SearchableItem
 import app.aaps.ui.compose.main.MainViewModel
 import app.aaps.ui.compose.fillDialog.FillPreselect
+import app.aaps.ui.search.SearchIndexEntry
 
 /**
  * Where a tap in the drawer, the toolbar or a search result actually goes.
@@ -70,6 +72,10 @@ class ElementNavigator(
                 navController.navigate(AppRoute.PluginPreferences.createRoute(request.pluginKey))
             }
 
+            NavigationRequest.SetupWizard -> guarded(ElementType.CONFIGURATION.protection) {
+                navController.navigate(AppRoute.SetupWizard.route)
+            }
+
             NavigationRequest.TrioStatistics       -> navController.navigate(AppRoute.TrioStats.route)
         }
     }
@@ -118,7 +124,8 @@ class ElementNavigator(
             ElementType.TREATMENTS              -> navController.navigate(AppRoute.Treatments.route)
             ElementType.PROFILE_HELPER          -> navController.navigate(AppRoute.ProfileHelper.route)
             ElementType.HISTORY_BROWSER         -> navController.navigate(AppRoute.HistoryBrowser.route)
-            ElementType.MAINTENANCE             -> mainViewModel.setShowMaintenanceSheet(true)
+            ElementType.SETUP_WIZARD            -> navController.navigate(AppRoute.SetupWizard.route)
+            ElementType.MAINTENANCE              -> mainViewModel.setShowMaintenanceSheet(true)
             ElementType.CONFIGURATION           -> navController.navigate(AppRoute.Configuration.route)
             ElementType.ABOUT                   -> mainViewModel.setShowAboutDialog(true)
 
@@ -163,6 +170,7 @@ class ElementNavigator(
 
             // Settings
             ElementType.SETTINGS                -> navController.navigate(AppRoute.Preferences.route)
+            ElementType.STATISTICS              -> navController.navigate(AppRoute.Statistics.route)
 
             // App lifecycle
             ElementType.EXIT                    -> {
@@ -176,7 +184,6 @@ class ElementNavigator(
             ElementType.QUICK_WIZARD,
             ElementType.SCENE,
             ElementType.AUTOMATION,
-            ElementType.STATISTICS,
             ElementType.TDD_CYCLE_PATTERN,
             ElementType.COB,
             ElementType.SENSITIVITY,
@@ -252,5 +259,23 @@ fun ElementNavigator.handleNotificationAction(notificationId: NotificationId) {
         NotificationId.AAPS_DIR_ACCESS_LOST    -> onRequestDirectoryAccess()
 
         else                                   -> Unit
+    }
+}
+
+fun ElementNavigator.handleSearchResultClick(entry: SearchIndexEntry, onOpenUrl: (String) -> Unit) {
+    when (val item = entry.item) {
+        is SearchableItem.Category -> guarded(ProtectionCheck.Protection.PREFERENCES) {
+            navController.navigate(AppRoute.PreferenceScreen.createRoute(item.screenDef.key))
+        }
+
+        is SearchableItem.Preference -> guarded(ProtectionCheck.Protection.PREFERENCES) {
+            val screenKey = item.parentScreenKey
+            if (screenKey != null) navController.navigate(AppRoute.PreferenceScreen.createRoute(screenKey, item.preferenceKey.key))
+            else navController.navigate(AppRoute.Preferences.route)
+        }
+
+        is SearchableItem.Dialog -> handleNavigationRequest(NavigationRequest.Element(item.elementType))
+        is SearchableItem.Plugin -> openPlugin(item.pluginRef, navController, activePlugin)
+        is SearchableItem.Wiki -> onOpenUrl(item.url)
     }
 }

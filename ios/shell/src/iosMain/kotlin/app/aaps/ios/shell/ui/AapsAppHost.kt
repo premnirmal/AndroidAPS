@@ -295,7 +295,9 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                     // iOS gives an app no way to quit itself, and Apple treats that as a crash.
                     onExit = { reportNotAvailable("exit from the menu") },
                     // Needs a UIDocumentPicker, which nothing on iOS has yet.
-                    onRequestDirectoryAccess = { reportNotReady("directory access") }
+                    onRequestDirectoryAccess = { reportNotReady("directory access") },
+                    onRequestPermission = { group -> reportNotAvailable("permission request $group") },
+                    isTrio = false
                 )
                 val chips: ChipsViewModel = viewModel(
                     factory = viewModelFactory {
@@ -320,8 +322,10 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                         siteRotationManagementViewModel = siteRotationManagement,
                         graphViewModel = graphs,
                         chipsViewModel = chips,
+                        swDefinition = graph.swDefinition,
                         rxBus = graph.rxBus,
                         activePlugin = graph.activePlugin,
+                        pluginPermissions = graph.pluginPermissions,
                         // Passed so the rules can be read and edited here. The runtime is deliberately
                         // NOT started on a client: `MainApp` calls `automationRuntime.start()`, this shell
                         // does not, and that is the design - a follower edits definitions and the master

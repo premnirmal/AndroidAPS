@@ -92,6 +92,7 @@ interface Config {
     val AAPSCLIENT2: Boolean // aapsclient2
     val AAPSCLIENT3: Boolean // aapsclient3
     val PUMPCONTROL: Boolean
+    val TRIO: Boolean get() = false
     val PUMPDRIVERS: Boolean
     val FLAVOR: String
     val VERSION_NAME: String

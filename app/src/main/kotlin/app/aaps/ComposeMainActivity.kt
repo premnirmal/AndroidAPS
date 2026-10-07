@@ -3,8 +3,10 @@ package app.aaps
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -17,6 +19,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.Image
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingFlat
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
@@ -27,6 +32,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.core.app.ActivityCompat
 import androidx.core.net.toUri
 import androidx.fragment.app.FragmentActivity
@@ -47,7 +54,10 @@ import app.aaps.appshell.navigation.AppRoute
 import app.aaps.appshell.navigation.ElementNavigator
 import app.aaps.appshell.navigation.appNavGraph
 import app.aaps.appshell.navigation.handleNotificationAction
+import app.aaps.appshell.navigation.handleQuickLaunchAction
+import app.aaps.appshell.navigation.handleSearchResultClick
 import app.aaps.core.interfaces.clientcontrol.ClientControlActionDispatcher
+import app.aaps.core.interfaces.bgQualityCheck.BgQualityCheck
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.configuration.ConfigBuilder
 import app.aaps.core.interfaces.db.PersistenceLayer
@@ -60,6 +70,7 @@ import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.notifications.NotificationHandle
 import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.plugin.ActivePlugin
+import app.aaps.core.interfaces.plugin.PluginPermissions
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.profile.ProfileUtil
 import app.aaps.core.interfaces.protection.ExportPasswordDataStore
@@ -71,6 +82,7 @@ import app.aaps.core.interfaces.queue.CommandQueue
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventShowDialog
+import app.aaps.core.interfaces.rx.events.EventRefreshOverview
 import app.aaps.core.interfaces.source.DexcomBoyda
 import app.aaps.core.interfaces.sync.NsClient
 import app.aaps.core.interfaces.ui.IconsProvider
@@ -82,11 +94,14 @@ import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.interfaces.ui.UiRestart
 import app.aaps.core.keys.StringKey
+import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.VisibilityContext
+import app.aaps.core.utils.isRunningRealPumpTest
 import app.aaps.core.objects.crypto.CryptoUtil
 import app.aaps.core.ui.compose.MetroAppCompatActivity
 import app.aaps.core.ui.compose.FallbackViewModelFactory
+import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.MetroViewModelFactoryOwner
 import app.aaps.core.ui.compose.LocalSnackbarHostState
 import app.aaps.core.ui.compose.dialogs.OkDialog
@@ -95,6 +110,7 @@ import app.aaps.core.ui.locale.LocaleHelper
 import app.aaps.implementation.plugin.PluginPermissionsImpl
 import app.aaps.implementation.protection.BiometricCheck
 import app.aaps.plugins.automation.AutomationRuntime
+import app.aaps.plugins.configuration.setupwizard.SWDefinition
 import app.aaps.plugins.source.DexcomPlugin
 import app.aaps.plugins.source.activities.RequestDexcomPermissionActivity
 import app.aaps.trio.TrioUi
@@ -106,10 +122,14 @@ import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
 import app.aaps.ui.compose.main.MainScreen
 import app.aaps.ui.compose.main.MainViewModel
 import app.aaps.ui.compose.main.TrioNavTab
+import app.aaps.ui.compose.manageSheet.ManageSheetHost
+import app.aaps.ui.compose.manageSheet.ManageViewModel
+import app.aaps.ui.compose.loopSheet.LoopActionViewModel
 import app.aaps.ui.compose.maintenance.ImportViewModel
 import app.aaps.ui.compose.maintenance.MaintenanceViewModel
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
+import app.aaps.ui.compose.overview.statusLights.StatusViewModel
 import app.aaps.ui.compose.permissionsSheet.PermissionsSheet
 import app.aaps.ui.compose.permissionsSheet.PermissionsSideEffect
 import app.aaps.ui.compose.permissionsSheet.PermissionsViewModel
@@ -118,11 +138,15 @@ import app.aaps.ui.compose.profileManagement.viewmodels.ProfileHelperViewModel
 import app.aaps.ui.compose.profileManagement.viewmodels.ProfileManagementViewModel
 import app.aaps.ui.compose.quickWizard.viewmodels.QuickWizardManagementViewModel
 import app.aaps.ui.compose.runningMode.RunningModeManagementViewModel
+import app.aaps.ui.compose.scenesSheet.ScenesViewModel
 import app.aaps.ui.compose.siteRotationDialog.viewModels.SiteRotationManagementViewModel
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import app.aaps.ui.compose.tempTarget.TempTargetManagementViewModel
+import app.aaps.ui.compose.treatmentsSheet.TreatmentViewModel
 import app.aaps.ui.compose.treatments.viewmodels.TreatmentsViewModel
 import app.aaps.ui.search.BuiltInSearchables
+import app.aaps.ui.search.SearchIndexEntry
+import app.aaps.ui.search.SearchViewModel
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dev.zacsweers.metro.Inject
 import io.reactivex.rxjava3.disposables.CompositeDisposable
@@ -148,6 +172,9 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     @Inject lateinit var cryptoUtil: CryptoUtil
     @Inject lateinit var exportPasswordDataStore: ExportPasswordDataStore
     @Inject lateinit var activePlugin: ActivePlugin
+    @Inject lateinit var bgQualityCheck: BgQualityCheck
+    @Inject lateinit var pluginPermissions: PluginPermissions
+    @Inject lateinit var swDefinition: SWDefinition
     @Inject lateinit var nsClient: NsClient
     @Inject lateinit var clientControlActionDispatcher: ClientControlActionDispatcher
     @Inject lateinit var automationRuntime: AutomationRuntime
@@ -187,7 +214,12 @@ class ComposeMainActivity : MetroAppCompatActivity() {
 
     // View models, built by Metro - each carries @ContributesIntoMap and @ViewModelKey.
     private val mainViewModel: MainViewModel by viewModels()
+    private val manageViewModel: ManageViewModel by viewModels()
     private val maintenanceViewModel: MaintenanceViewModel by viewModels()
+    private val statusViewModel: StatusViewModel by viewModels()
+    private val treatmentViewModel: TreatmentViewModel by viewModels()
+    private val scenesViewModel: ScenesViewModel by viewModels()
+    private val loopActionViewModel: LoopActionViewModel by viewModels()
     private val graphViewModel: GraphViewModel by viewModels {
         viewModelFactory { initializer { graphViewModelFactory.create(overviewDataCache, fullWindow = false) } }
     }
@@ -207,13 +239,14 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     private val permissionsViewModel: PermissionsViewModel by viewModels()
     private val configurationViewModel: ConfigurationViewModel by viewModels()
     private val siteRotationManagementViewModel: SiteRotationManagementViewModel by viewModels()
+    private val searchViewModel: SearchViewModel by viewModels()
 
     private var navController: NavHostController? = null
     private val _autoShowNotifications = mutableStateOf(false)
     private val disposable = CompositeDisposable()
 
     override fun onMembersInjected() {
-        setTheme(CoreUiR.style.AppTheme_Trio_NoActionBar)
+        setTheme(if (config.TRIO) CoreUiR.style.AppTheme_Trio_NoActionBar else CoreUiR.style.AppTheme_NoActionBar)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -222,6 +255,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         // so a plain enableEdgeToEdge() here is enough.
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        updateLauncherComponents(config.TRIO)
 
         // Activity result launchers (from base class)
         accessTree = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -301,7 +335,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             clientControlActionDispatcher = clientControlActionDispatcher,
             // The two per-build bitmaps the shared root cannot paint itself.
             appIcon = { modifier -> Image(painterResource(iconsProvider.getIcon()), null, modifier) },
-            splashLogo = { modifier -> Image(painterResource(CoreUiR.mipmap.ic_launcher_round), null, modifier) },
+            splashLogo = { modifier -> Image(painterResource(iconsProvider.getIcon()), null, modifier) },
             // The Activity keeps a reference so an incoming intent can route without the composition.
             onNavControllerReady = { navController = it },
             onClose = { finish() },
@@ -324,6 +358,17 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             }
             navController.addOnDestinationChangedListener(listener)
             onDispose { navController.removeOnDestinationChangedListener(listener) }
+        }
+
+        // Auto-launch setup wizard on first run
+        LaunchedEffect(Unit) {
+            if (!config.TRIO && !preferences.get(BooleanNonKey.GeneralSetupWizardProcessed) && !isRunningRealPumpTest()) {
+                protectionCheck.requestProtection(ProtectionCheck.Protection.PREFERENCES) { result ->
+                    if (result == ProtectionResult.GRANTED) {
+                        navController.navigate(AppRoute.SetupWizard.route)
+                    }
+                }
+            }
         }
 
         // Permissions bottom sheet
@@ -431,6 +476,9 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         ) {
             composable(AppRoute.Main.route) {
                 val state by mainViewModel.uiState.collectAsStateWithLifecycle()
+                val quickLaunchItems by mainViewModel.quickLaunchItems.collectAsStateWithLifecycle()
+                val calcProgress by mainViewModel.calcProgressFlow.collectAsStateWithLifecycle()
+                val searchState by searchViewModel.uiState.collectAsStateWithLifecycle()
                 val currentBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = currentBackStackEntry?.destination?.route
 
@@ -439,6 +487,34 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 val showPumpSetup = (!activePlugin.activePump.isInitialized() || activePlugin.activePump.isSuspended()) &&
                     pumpPlugin.hasComposeContent()
                 val pumpSetupPlugin = if (showPumpSetup) pumpPlugin else null
+
+                // BG source shortcut: shown when BG quality check reports FLAT or DOUBLED
+                val bgQualityState by bgQualityCheck.stateFlow.collectAsStateWithLifecycle()
+                val bgSourcePlugin = activePlugin.activeBgSource as PluginBase
+                val showBgSetup = (bgQualityState == BgQualityCheck.State.FLAT || bgQualityState == BgQualityCheck.State.DOUBLED) &&
+                    bgSourcePlugin.hasComposeContent()
+                val bgSetupPlugin = if (showBgSetup) bgSourcePlugin else null
+                val bgQualityBadgeIcon: ImageVector? = if (showBgSetup) when (bgQualityState) {
+                    //BgQualityCheck.State.RECALCULATED -> Icons.Filled.Warning
+                    BgQualityCheck.State.DOUBLED      -> Icons.Filled.Warning
+                    BgQualityCheck.State.FLAT         -> Icons.AutoMirrored.Filled.TrendingFlat
+                    else                              -> null
+                } else null
+                val bgQualityBadgeTint: Color = when (bgQualityState) {
+                    BgQualityCheck.State.RECALCULATED                       -> AapsTheme.generalColors.statusWarning
+                    BgQualityCheck.State.DOUBLED, BgQualityCheck.State.FLAT -> AapsTheme.generalColors.statusCritical
+                    else                                                    -> Color.Unspecified
+                }
+                val bgQualityBadgeDescription = if (showBgSetup) bgQualityCheck.stateDescription() else null
+
+                val manageSheetState = ManageSheetHost(
+                    manageViewModel = manageViewModel,
+                    isSimpleMode = state.isSimpleMode,
+                    onNavigate = { request -> handleNavigationRequest(request, navController) },
+                    onActionsError = { comment, title ->
+                        uiInteraction.runAlarm(comment, title)
+                    },
+                )
 
                 // Authorization failed dialog
                 if (state.showAuthFailedDialog) {
@@ -459,7 +535,30 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     aboutDialogData = if (state.showAboutDialog) {
                         mainViewModel.buildAboutDialogData(getString(R.string.app_name))
                     } else null,
+                    manageSheetState = manageSheetState,
+                    manageViewModel = manageViewModel,
                     maintenanceViewModel = maintenanceViewModel,
+                    statusViewModel = statusViewModel,
+                    treatmentViewModel = treatmentViewModel,
+                    scenesViewModel = scenesViewModel,
+                    loopActionViewModel = loopActionViewModel,
+                    // Search
+                    searchUiState = searchState,
+                    onSearchQueryChange = { searchViewModel.onQueryChanged(it) },
+                    onSearchClear = { searchViewModel.clearQuery() },
+                    onSearchActiveChange = { active ->
+                        if (active) searchViewModel.onSearchModeActivated()
+                        else searchViewModel.onSearchModeDeactivated()
+                    },
+                    onSearchResultClick = { entry ->
+                        handleSearchResultClick(entry, navController)
+                    },
+                    onSearchPluginToggle = { plugin -> searchViewModel.togglePlugin(plugin) },
+                    onConfirmSearchPluginSwitch = { searchViewModel.confirmPluginSwitch() },
+                    onDismissSearchPluginSwitch = { searchViewModel.dismissPluginSwitch() },
+                    onConfirmSearchHardwarePump = { searchViewModel.confirmHardwarePump() },
+                    onDismissSearchHardwarePump = { searchViewModel.dismissHardwarePump() },
+                    onMenuClick = { mainViewModel.openDrawer() },
                     onNavigate = { request -> handleNavigationRequest(request, navController) },
                     onTrioTabSelected = { tab -> navigateToTrioTab(tab, navController) },
                     trioSelectedTab = trioTabForRoute(currentRoute),
@@ -484,6 +583,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     // passed as a function reference when its argument changes, so the loop status,
                     // profile and running mode stayed frozen until the app was reopened.
                     trioOverview = { model -> trioUi.overview(model) },
+                    onDrawerClosed = { mainViewModel.closeDrawer() },
                     onAboutDialogDismiss = { mainViewModel.setShowAboutDialog(false) },
                     onOpenBatteryHelp = if (mainViewModel.showBatteryHelp) {
                         { mainViewModel.openBatteryHelp() }
@@ -499,14 +599,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                         }
                     },
                     onLaunchBrowser = { url ->
-                        try {
-                            val customTabsIntent = CustomTabsIntent.Builder()
-                                .setShowTitle(true)
-                                .build()
-                            customTabsIntent.launchUrl(this@ComposeMainActivity, url.toUri())
-                        } catch (_: Exception) {
-                            maintenanceViewModel.emitError("Unable to open browser")
-                        }
+                        openBrowser(url)
                     },
                     onBringToForeground = {
                         val intent = Intent(this@ComposeMainActivity, ComposeMainActivity::class.java)
@@ -533,8 +626,23 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     autoShowNotificationSheet = _autoShowNotifications.value,
                     onAutoShowConsumed = { _autoShowNotifications.value = false },
                     pumpSetupPlugin = pumpSetupPlugin,
+                    bgSetupPlugin = bgSetupPlugin,
+                    bgQualityBadgeIcon = bgQualityBadgeIcon,
+                    bgQualityBadgeTint = bgQualityBadgeTint,
+                    bgQualityBadgeDescription = bgQualityBadgeDescription,
+                    permissionsMissing = permState.hasAnyMissing,
+                    onPermissionsClick = {
+                        permissionsViewModel.showSheet()
+                    },
+                    // Toolbar
+                    quickLaunchItems = quickLaunchItems,
+                    onQuickLaunchActionClick = { action -> navigator(navController).handleQuickLaunchAction(action) },
+                    calcProgress = calcProgress,
                     graphViewModel = graphViewModel,
                     chipsViewModel = chipsViewModel,
+                    statusLightsDef = builtInSearchables.statusLights,
+                    treatmentButtonsDef = builtInSearchables.treatmentButtons,
+                    // Pump activity
                     bolusStateFlow = bolusProgressData.state,
                     onStopBolus = {
                         if (config.AAPSCLIENT) {
@@ -565,6 +673,8 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 chipsViewModel = chipsViewModel,
                 rxBus = rxBus,
                 activePlugin = activePlugin,
+                swDefinition = swDefinition,
+                pluginPermissions = pluginPermissions,
                 automationRuntime = automationRuntime,
                 preferences = preferences,
                 rh = rh,
@@ -585,6 +695,14 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 },
                 onRefreshPermissions = { permissionsViewModel.refresh() },
                 onExecuteQuickWizard = { guid -> mainViewModel.executeQuickWizard(guid) },
+                onRequestDirectoryAccess = {
+                    try {
+                        accessTree?.launch(null)
+                    } catch (_: Exception) {
+                    }
+                },
+                onRequestPermission = { group -> permissionsViewModel.requestPermission(group) },
+                isTrio = config.TRIO,
                 onNavigateToTrioTab = { tab -> navigateToTrioTab(tab, navController) },
                 aboutDialog = { onDismiss ->
                     AboutBottomSheet(
@@ -688,6 +806,13 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         lifecycleScope.launch {
             preferences.observe(StringKey.GeneralLanguage).drop(1).collect { recreate() }
         }
+        lifecycleScope.launch {
+            preferences.observe(BooleanKey.GeneralTrioMode).drop(1).collect { isTrio ->
+                updateLauncherComponents(isTrio)
+                rxBus.send(EventRefreshOverview("Trio UI changed"))
+                recreate()
+            }
+        }
         // The same rebuild, asked for by code that cannot reach this activity - an import applying
         // its settings, for one. Android answers it by recreating, because that is the only thing
         // that re-runs `attachBaseContext` and so the only thing that can change the locale
@@ -704,6 +829,26 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
+    }
+
+    private fun updateLauncherComponents(isTrio: Boolean) {
+        if (!config.APS) return
+
+        val trioLauncher = ComponentName(this, "app.aaps.TrioLauncher")
+        val androidApsLauncher = ComponentName(this, "app.aaps.AndroidApsLauncher")
+        val enabledLauncher = if (isTrio) trioLauncher else androidApsLauncher
+        val disabledLauncher = if (isTrio) androidApsLauncher else trioLauncher
+
+        packageManager.setComponentEnabledSetting(
+            enabledLauncher,
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            PackageManager.DONT_KILL_APP
+        )
+        packageManager.setComponentEnabledSetting(
+            disabledLauncher,
+            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            PackageManager.DONT_KILL_APP
+        )
     }
 
     /**
@@ -738,7 +883,23 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         navigator(navController).handleNotificationAction(notificationId)
     }
 
+    private fun handleSearchResultClick(entry: SearchIndexEntry, navController: NavController) {
+        navigator(navController).handleSearchResultClick(entry, ::openBrowser)
+    }
+
+    private fun openBrowser(url: String) {
+        try {
+            val customTabsIntent = CustomTabsIntent.Builder()
+                .setShowTitle(true)
+                .build()
+            customTabsIntent.launchUrl(this, url.toUri())
+        } catch (_: Exception) {
+            maintenanceViewModel.emitError("Unable to open browser")
+        }
+    }
+
     private fun navigateToTrioTab(tab: TrioNavTab, navController: NavController) {
+        if (!config.TRIO) return
         val route = when (tab) {
             TrioNavTab.Overview   -> AppRoute.Main.route
             TrioNavTab.Adjustments -> AppRoute.TrioTreatments.route

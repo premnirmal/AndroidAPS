@@ -354,6 +354,7 @@ class PersistentNotificationPlugin(
         builder.setOnlyAlertOnce(true)
         builder.setCategory(NotificationCompat.CATEGORY_STATUS)
         builder.setSmallIcon(iconsProvider.getNotificationIcon())
+        builder.setLargeIcon(BitmapFactory.decodeResource(context.resources, iconsProvider.getIcon()))
         builder.setContentTitle(line1)
         if (line2 != null) builder.setContentText(line2)
         if (line3 != null) builder.setSubText(line3)

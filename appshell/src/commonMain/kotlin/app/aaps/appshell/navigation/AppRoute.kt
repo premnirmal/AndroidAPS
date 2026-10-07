@@ -123,11 +123,13 @@ sealed class AppRoute(val route: String) {
 
     data object FoodManagement : AppRoute("food_management")
     data object SiteRotationManagement : AppRoute("siteRotationManagement")
+    data object SetupWizard : AppRoute("setup_wizard")
     data object AuthorizedClients : AppRoute("authorized_clients")
     data object PairWithMaster : AppRoute("pair_with_master")
     data object TrioTreatments : AppRoute("trio_treatments")
     data object TrioTreatmentList : AppRoute("trio_treatment_list")
     data object TrioHistory : AppRoute("trio_history")
     data object TrioStats : AppRoute("trio_stats")
+    data object Statistics : AppRoute("statistics")
     data object TrioSettings : AppRoute("trio_settings")
 }

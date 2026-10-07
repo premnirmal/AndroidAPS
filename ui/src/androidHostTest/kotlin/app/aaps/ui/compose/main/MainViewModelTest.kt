@@ -185,6 +185,7 @@ internal class MainViewModelTest {
         // The first value is the cached startup snapshot before asynchronous hydration runs.
         val state = sut.uiState.value
         assertThat(state.isSimpleMode).isTrue()
+        assertThat(state.isDrawerOpen).isFalse()
         assertThat(state.runningMode).isEqualTo(RM.Mode.DISABLED_LOOP)
         assertThat(sut.profileCardTempTargetStateFlow.value.state).isEqualTo(TempTargetChipState.None)
         assertThat(state.quickWizardItems).isEmpty()

@@ -10,6 +10,7 @@ sealed class NavigationRequest {
     data class Plugin(val className: String) : NavigationRequest()
     data class PluginCategory(val type: PluginType) : NavigationRequest()
     data class PluginPreferences(val pluginKey: String) : NavigationRequest()
+    data object SetupWizard : NavigationRequest()
     data object TrioStatistics : NavigationRequest()
 }
 

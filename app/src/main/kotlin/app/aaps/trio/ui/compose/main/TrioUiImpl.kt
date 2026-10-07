@@ -17,11 +17,6 @@ import dev.zacsweers.metro.binding
 class TrioUiImpl @Inject constructor() : TrioUi {
 
     @Composable
-    override fun topBar(title: String, modifier: Modifier) {
-        TrioTopBar(title = title, modifier = modifier)
-    }
-
-    @Composable
     override fun bottomBar(
         selectedTab: TrioNavTab,
         carbsRequired: Int,

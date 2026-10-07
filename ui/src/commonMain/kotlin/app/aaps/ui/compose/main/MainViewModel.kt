@@ -296,6 +296,8 @@ class MainViewModel(
 
     val versionName: String get() = config.VERSION_NAME
     val appTitle: String get() = rh.gs(config.appName)
+    val isTrio: Boolean get() = config.TRIO
+    val showAdvancedMenuItems: Boolean get() = !config.TRIO
     val calcProgressFlow: StateFlow<Int> = overviewDataCache.calcProgressFlow
     private val _timeInRangeToday = MutableStateFlow<TimeInRangeToday?>(null)
     val timeInRangeToday: StateFlow<TimeInRangeToday?> = _timeInRangeToday.asStateFlow()
@@ -414,6 +416,7 @@ class MainViewModel(
     /** Derived UI state. Starts immediately so the first overview frame has current values. */
     val uiState: StateFlow<MainUiState> = combine(_eventState, chipState, loop.isRunning) { ev, chip, isLooping ->
         MainUiState(
+            isDrawerOpen = ev.isDrawerOpen,
             isSimpleMode = ev.isSimpleMode,
             showAboutDialog = ev.showAboutDialog,
             showMaintenanceSheet = ev.showMaintenanceSheet,
@@ -862,6 +865,10 @@ class MainViewModel(
         val carbsAfterConstraints = constraintChecker.applyCarbsConstraints(ConstraintObject(entry.carbs(), aapsLogger)).value()
         if (carbsAfterConstraints != entry.carbs())
             return QuickWizardItem(guid = guid, buttonText = buttonText, mode = entry.mode().value, detail = detail, disabledReason = rh.gs(UiStrings.carbs_constraint_violation))
+        // The eCarbs amount is stored in the preset, so the limit may have been lowered since it was entered.
+        val eCarbs = entry.eCarbsGrams()
+        if (constraintChecker.applyCarbsConstraints(ConstraintObject(eCarbs, aapsLogger)).value() != eCarbs)
+            return QuickWizardItem(guid = guid, buttonText = buttonText, mode = entry.mode().value, detail = detail, disabledReason = rh.gs(UiStrings.carbs_constraint_violation))
 
         return QuickWizardItem(guid = guid, buttonText = buttonText, mode = entry.mode().value, detail = detail, isEnabled = true)
     }
@@ -901,6 +908,10 @@ class MainViewModel(
 
         val carbsAfterConstraints = constraintChecker.applyCarbsConstraints(ConstraintObject(entry.carbs(), aapsLogger)).value()
         if (carbsAfterConstraints != entry.carbs())
+            return QuickWizardItem(guid = guid, buttonText = buttonText, mode = entry.mode().value, detail = detail, disabledReason = rh.gs(UiStrings.carbs_constraint_violation))
+        // The eCarbs amount is stored in the preset, so the limit may have been lowered since it was entered.
+        val eCarbs = entry.eCarbsGrams()
+        if (constraintChecker.applyCarbsConstraints(ConstraintObject(eCarbs, aapsLogger)).value() != eCarbs)
             return QuickWizardItem(guid = guid, buttonText = buttonText, mode = entry.mode().value, detail = detail, disabledReason = rh.gs(UiStrings.carbs_constraint_violation))
         val minStep = pump.pumpDescription.pumpType.determineCorrectBolusStepSize(wizard.insulinAfterConstraints)
         if (abs(wizard.insulinAfterConstraints - wizard.calculatedTotalInsulin) >= minStep)
@@ -999,7 +1010,7 @@ class MainViewModel(
             listOf(BatchAction.Bolus(
                 insulin = 0.0, carbs = carbs, carbsTimeOffsetMinutes = 0, carbsDurationHours = 0,
                 recordOnly = false, notes = entry.buttonText(), timestamp = 0L, iCfg = null,
-                eCarbsGrams = if (hasEcarbs) entry.carbs2() else 0,
+                eCarbsGrams = entry.eCarbsGrams(),
                 eCarbsDelayMinutes = if (hasEcarbs) entry.time() else 0,
                 eCarbsDurationHours = if (hasEcarbs) entry.duration() else 0
             )),
@@ -1037,6 +1048,15 @@ class MainViewModel(
         TempTargetState.NONE     -> TempTargetChipState.None
         TempTargetState.ACTIVE   -> TempTargetChipState.Active
         TempTargetState.ADJUSTED -> TempTargetChipState.Adjusted
+    }
+
+    // Drawer state
+    fun openDrawer() {
+        _eventState.update { it.copy(isDrawerOpen = true) }
+    }
+
+    fun closeDrawer() {
+        _eventState.update { it.copy(isDrawerOpen = false) }
     }
 
     // About dialog state
@@ -1345,6 +1365,7 @@ class MainViewModel(
  * observers. Kept in a MutableStateFlow because these fields are not derived from other flows.
  */
 private data class EventState(
+    val isDrawerOpen: Boolean = false,
     val isSimpleMode: Boolean = true,
     val smbEnabled: Boolean = false,
     val showAboutDialog: Boolean = false,

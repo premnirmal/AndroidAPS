@@ -80,6 +80,7 @@ kotlin {
                 api(libs.jetbrains.lifecycle.runtime.compose)
                 api(libs.kotlinx.datetime)
                 implementation(libs.kotlinx.serialization.json)
+                implementation(libs.io.ktor.client.core)
                 implementation(libs.jetbrains.compose.ui.tooling.preview)
                 // A Compose Multiplatform library - it publishes iosArm64, jvm and wasm too, so the
                 // reorderable list works everywhere and does not pin a screen to Android.
@@ -135,4 +136,3 @@ kotlin {
         }
     }
 }
-
