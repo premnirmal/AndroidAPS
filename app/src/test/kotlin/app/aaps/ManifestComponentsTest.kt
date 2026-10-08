@@ -7,8 +7,8 @@ import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 
 /**
- * Every `<activity>`, `<service>`, `<receiver>` and `<provider>` in the app manifest must name a class
- * that exists.
+ * Every component in the app manifest must name a class that exists. An `<activity-alias>` is a
+ * manifest name, not a class, so its target activity is checked instead.
  *
  * This exists because it already went wrong. Moving `CarbSuggestionReceiver` out of :plugins:aps and
  * into :app left the manifest pointing at `app.aaps.plugins.aps.loop.CarbSuggestionReceiver`, a class
@@ -37,13 +37,19 @@ class ManifestComponentsTest {
             val nodes = document.getElementsByTagName(tag)
             for (i in 0 until nodes.length) {
                 val element = nodes.item(i) as? Element ?: continue
-                val name = element.getAttribute("android:name").takeIf { it.isNotBlank() } ?: continue
+                val componentName = element.getAttribute("android:name").takeIf { it.isNotBlank() } ?: continue
+                val className = if (tag == "activity-alias") {
+                    element.getAttribute("android:targetActivity")
+                } else {
+                    componentName
+                }
                 // A leading dot is relative to the manifest package; the merger resolves it. Nothing in
                 // this manifest uses that form, and resolving it here would just duplicate the merger.
-                if (name.startsWith(".")) continue
+                if (className.startsWith(".")) continue
                 checked++
-                val exists = runCatching { Class.forName(name, false, javaClass.classLoader) }.isSuccess
-                if (!exists) missing.add("<$tag> $name")
+                val exists = className.isNotBlank() &&
+                    runCatching { Class.forName(className, false, javaClass.classLoader) }.isSuccess
+                if (!exists) missing.add("<$tag> $componentName -> $className")
             }
         }
 

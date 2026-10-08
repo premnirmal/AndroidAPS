@@ -1,6 +1,5 @@
 package app.aaps.implementations
 
-import android.content.SharedPreferences
 import android.os.Build
 import app.aaps.BuildConfig
 import app.aaps.R
@@ -11,6 +10,7 @@ import app.aaps.core.interfaces.configuration.ExternalOptions
 import app.aaps.core.interfaces.configuration.InitProgress
 import app.aaps.core.interfaces.maintenance.FileListProvider
 import app.aaps.core.keys.BooleanKey
+import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.di.ExternalOptionsOverride
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
@@ -35,7 +35,7 @@ import kotlinx.coroutines.flow.update
 class ConfigImpl(
     private val fileListProvider: () -> FileListProvider,
     private val externalOptionsOverride: ExternalOptionsOverride,
-    private val sharedPreferences: SharedPreferences
+    private val preferences: () -> Preferences
 ) : Config {
 
     override val SUPPORTED_NS_VERSION = 150000 // 15.0.0
@@ -46,7 +46,7 @@ class ConfigImpl(
     override val AAPSCLIENT3 = BuildConfig.FLAVOR == "aapsclient3"
     override val PUMPCONTROL = BuildConfig.FLAVOR == "pumpcontrol"
     override val TRIO: Boolean
-        get() = BuildConfig.FLAVOR == "full" && sharedPreferences.getBoolean(BooleanKey.GeneralTrioMode.key, BooleanKey.GeneralTrioMode.defaultValue)
+        get() = BuildConfig.FLAVOR == "full" && preferences().get(BooleanKey.GeneralTrioMode)
     override val PUMPDRIVERS = BuildConfig.FLAVOR == "full" || BuildConfig.FLAVOR == "pumpcontrol"
     override val FLAVOR: String
         get() = if (TRIO) "trio" else BuildConfig.FLAVOR
