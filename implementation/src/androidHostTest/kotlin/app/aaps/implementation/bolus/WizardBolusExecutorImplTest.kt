@@ -38,6 +38,7 @@ import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.objects.wizard.BolusWizard
 import app.aaps.core.objects.wizard.QuickWizard
 import app.aaps.core.objects.wizard.QuickWizardEntry
+import app.aaps.core.ui.CoreUiStrings
 import app.aaps.shared.tests.TestBaseWithProfile
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.CoroutineScope

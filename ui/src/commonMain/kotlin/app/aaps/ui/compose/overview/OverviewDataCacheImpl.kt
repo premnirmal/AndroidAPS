@@ -16,9 +16,9 @@ import app.aaps.core.data.model.TE
 import app.aaps.core.data.model.TT
 import app.aaps.core.data.model.latestRunningAt
 import app.aaps.core.data.time.T
-import app.aaps.core.interfaces.concurrent.aapsIoDispatcher
 import app.aaps.core.interfaces.InterfacesStrings
 import app.aaps.core.interfaces.aps.Loop
+import app.aaps.core.interfaces.concurrent.aapsIoDispatcher
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.db.ProcessedTbrEbData
@@ -95,11 +95,8 @@ import app.aaps.core.objects.extensions.fromGv
 import app.aaps.core.objects.extensions.target
 import app.aaps.core.objects.profile.ProfileSealed
 import app.aaps.core.ui.CoreUiStrings
-import app.aaps.ui.UiStrings
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedInject
-import kotlin.math.abs
-import kotlin.math.max
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineStart
@@ -121,6 +118,8 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.math.abs
+import kotlin.math.max
 
 /**
  * Implementation of OverviewDataCache using MutableStateFlow.

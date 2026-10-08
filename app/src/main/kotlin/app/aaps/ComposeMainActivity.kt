@@ -88,24 +88,25 @@ import app.aaps.core.interfaces.sync.NsClient
 import app.aaps.core.interfaces.ui.IconsProvider
 import app.aaps.core.interfaces.ui.SnackbarHostPresence
 import app.aaps.core.interfaces.ui.UiInteraction
+import app.aaps.core.interfaces.ui.UiRestart
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
-import app.aaps.core.interfaces.ui.UiRestart
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.VisibilityContext
 import app.aaps.core.utils.isRunningRealPumpTest
 import app.aaps.core.objects.crypto.CryptoUtil
-import app.aaps.core.ui.compose.MetroAppCompatActivity
 import app.aaps.core.ui.compose.FallbackViewModelFactory
 import app.aaps.core.ui.compose.AapsTheme
+import app.aaps.core.ui.compose.MetroAppCompatActivity
 import app.aaps.core.ui.compose.MetroViewModelFactoryOwner
 import app.aaps.core.ui.compose.LocalSnackbarHostState
 import app.aaps.core.ui.compose.dialogs.OkDialog
 import app.aaps.core.ui.compose.navigation.NavigationRequest
+import app.aaps.core.ui.compose.pump.PumpCommunicationStatus
 import app.aaps.core.ui.locale.LocaleHelper
 import app.aaps.implementation.plugin.PluginPermissionsImpl
 import app.aaps.implementation.protection.BiometricCheck
@@ -226,6 +227,9 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     private val chipsViewModel: ChipsViewModel by viewModels {
         viewModelFactory { initializer { chipsViewModelFactory.create(overviewDataCache) } }
     }
+    private val pumpCommunicationStatus by lazy {
+        PumpCommunicationStatus(rxBus, commandQueue, rh, lifecycleScope)
+    }
     private val treatmentsViewModel: TreatmentsViewModel by viewModels()
     private val insulinManagementViewModel: InsulinManagementViewModel by viewModels()
     private val tempTargetManagementViewModel: TempTargetManagementViewModel by viewModels()
@@ -333,6 +337,9 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             rxBus = rxBus,
             snackbarHostPresence = snackbarHostPresence,
             clientControlActionDispatcher = clientControlActionDispatcher,
+            bolusProgressData = bolusProgressData,
+            commandQueue = commandQueue,
+            pumpCommunicationStatus = pumpCommunicationStatus,
             // The two per-build bitmaps the shared root cannot paint itself.
             appIcon = { modifier -> Image(painterResource(iconsProvider.getIcon()), null, modifier) },
             splashLogo = { modifier -> Image(painterResource(iconsProvider.getIcon()), null, modifier) },
@@ -757,7 +764,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 onMaintenanceSnackbar = { message -> appSnackbarHostState.showSnackbar(message) },
             )
         }
-
     }
 
     private var isProtectionCheckActive = false

@@ -3,14 +3,13 @@ package app.aaps.appshell.navigation
 import androidx.navigation.NavController
 import app.aaps.core.data.ue.Sources
 import app.aaps.core.interfaces.configuration.ConfigBuilder
+import app.aaps.core.interfaces.navigation.ElementType
+import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.protection.ProtectionResult
 import app.aaps.core.interfaces.source.DexcomBoyda
-import app.aaps.ui.compose.careDialog.CareportalEventType
-import app.aaps.core.interfaces.navigation.ElementType
-import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.keys.StringKey
 import app.aaps.ui.compose.quickLaunch.QuickLaunchAction
 import app.aaps.core.ui.compose.ScreenMode
@@ -18,6 +17,7 @@ import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.search.SearchableItem
 import app.aaps.ui.compose.main.MainViewModel
 import app.aaps.ui.compose.fillDialog.FillPreselect
+import app.aaps.ui.compose.careDialog.CareportalEventType
 import app.aaps.ui.search.SearchIndexEntry
 
 /**

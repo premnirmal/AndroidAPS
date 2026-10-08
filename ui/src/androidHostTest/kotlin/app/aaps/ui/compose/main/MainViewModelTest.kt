@@ -44,7 +44,7 @@ import app.aaps.core.interfaces.scenes.SceneActions
 import app.aaps.core.interfaces.scenes.SceneChainResolver
 import app.aaps.core.interfaces.source.BgSource
 import app.aaps.core.interfaces.sync.NsClient
-import app.aaps.core.interfaces.ui.IconsProvider
+import app.aaps.core.interfaces.ui.UrlOpener
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey

@@ -28,7 +28,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import app.aaps.core.ui.compose.stringResource
-import app.aaps.core.ui.compose.stringResource
 import app.aaps.ui.compose.maintenance.MaintenanceViewModel.ExportState
 
 /**

@@ -470,6 +470,7 @@ tidepool_service_configuration|TidepoolStringNonKey|true
 tidepool_subscription_id|TidepoolStringNonKey|true
 treatmentssafety_maxbolus|DoubleKey|true
 treatmentssafety_maxcarbs|IntKey|true
+trio_mode|BooleanKey|true
 uamsmbmaxminutes|IntKey|true
 ukf_last_processed_timestamp|UkfLongNonKey|false
 ukf_last_saved_timestamp|UkfLongNonKey|true

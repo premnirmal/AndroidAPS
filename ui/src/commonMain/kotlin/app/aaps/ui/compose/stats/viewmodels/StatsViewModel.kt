@@ -32,8 +32,8 @@ import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.interfaces.AppPlatform
 import app.aaps.core.keys.interfaces.Preferences
-import app.aaps.ui.activityMonitor.ActivityStatsProvider
 import app.aaps.ui.activityMonitor.ActivityStats
+import app.aaps.ui.activityMonitor.ActivityStatsProvider
 import app.aaps.ui.compose.stats.CycleSeries
 import app.aaps.ui.compose.stats.TddCyclePatternData
 import app.aaps.ui.compose.stats.TddStatsData

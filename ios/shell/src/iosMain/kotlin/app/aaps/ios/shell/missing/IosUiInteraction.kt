@@ -1,6 +1,7 @@
 package app.aaps.ios.shell.missing
 
 import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.ui.UiInteraction
 import dev.zacsweers.metro.AppScope
@@ -12,7 +13,7 @@ import kotlin.reflect.KClass
 /**
  * Half real, half placeholder.
  *
- * [stopAlarm] is the real thing: it is the same one line as Android, because `dismissAllAlarms` is on
+ * [stopAlarm] is the real thing: it uses the same `muteAllAlarms` action as Android, because it is on
  * the shared `NotificationManager`.
  *
  * [runAlarm] is not, and it is deliberately left undone rather than guessed at.
@@ -34,12 +35,12 @@ class IosUiInteraction(
     override val mainActivity: KClass<*> get() = IosUiInteraction::class
     override val errorHelperActivity: KClass<*> get() = IosUiInteraction::class
 
-    override fun runAlarm(status: String, title: String) {
+    override fun runAlarm(status: String, title: String, sound: AlarmSound?) {
         aapsLogger.notOnIosYet("UiInteraction.runAlarm ($title: $status)")
     }
 
-    /** Real. Clears the registry's alarms and cancels the notifications. */
+    /** Real. Silences and clears the registry's audible alarms. */
     override fun stopAlarm(reason: String) {
-        notificationManager().dismissAllAlarms()
+        notificationManager().muteAllAlarms()
     }
 }

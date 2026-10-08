@@ -1,5 +1,8 @@
 package app.aaps.core.interfaces.notifications
 
+import platform.UserNotifications.UNNotificationPresentationOptionBanner
+import platform.UserNotifications.UNNotificationPresentationOptionList
+import platform.UserNotifications.UNNotificationPresentationOptionSound
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test

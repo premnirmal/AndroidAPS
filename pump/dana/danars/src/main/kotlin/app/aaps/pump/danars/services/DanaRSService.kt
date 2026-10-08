@@ -82,6 +82,7 @@ import app.aaps.pump.danars.comm.DanaRSPacketOptionGetUserOption
 import app.aaps.pump.danars.comm.DanaRSPacketOptionSetPumpTime
 import app.aaps.pump.danars.comm.DanaRSPacketOptionSetPumpUTCAndTimeZone
 import app.aaps.pump.danars.comm.DanaRSPacketOptionSetUserOption
+import dev.zacsweers.metro.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -90,7 +91,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import org.joda.time.DateTime
 import org.joda.time.DateTimeZone
-import dev.zacsweers.metro.Inject
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.time.Duration.Companion.milliseconds

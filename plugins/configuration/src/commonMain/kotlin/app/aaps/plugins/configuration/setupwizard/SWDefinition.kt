@@ -1,8 +1,5 @@
 package app.aaps.plugins.configuration.setupwizard
 
-import app.aaps.core.keys.interfaces.TextRef
-import app.aaps.core.ui.CoreUiStrings
-import app.aaps.plugins.configuration.ConfigurationStrings
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.di.ApplicationScope
@@ -11,6 +8,7 @@ import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.plugin.PermissionGroup
 import app.aaps.core.interfaces.profile.ProfileFunction
 import app.aaps.core.interfaces.profile.ProfileRepository
+import app.aaps.core.interfaces.protection.PasswordHasher
 import app.aaps.core.interfaces.pump.Medtrum
 import app.aaps.core.interfaces.pump.OmnipodDash
 import app.aaps.core.interfaces.pump.OmnipodEros
@@ -31,7 +29,9 @@ import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.core.keys.interfaces.Preferences
-import app.aaps.core.interfaces.protection.PasswordHasher
+import app.aaps.core.keys.interfaces.TextRef
+import app.aaps.core.ui.CoreUiStrings
+import app.aaps.plugins.configuration.ConfigurationStrings
 import app.aaps.plugins.configuration.setupwizard.elements.SWBreak
 import app.aaps.plugins.configuration.setupwizard.elements.SWButton
 import app.aaps.plugins.configuration.setupwizard.elements.SWEditEncryptedPassword
