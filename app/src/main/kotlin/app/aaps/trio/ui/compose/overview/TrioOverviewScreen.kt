@@ -1082,7 +1082,23 @@ private fun TrioLoopStatusPill(
                 horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (isLooping) {
+                if (stoppedReason != null) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        // The pill has room for a short label only, so the full reason is read out
+                        // here and spelled out in the loop reasoning sheet behind the pill.
+                        contentDescription = stoppedReason,
+                        tint = color,
+                        modifier = Modifier.size(AapsSpacing.chipIconSize)
+                    )
+                    Text(
+                        text = stringResource(R.string.trio_loop_stopped),
+                        color = color,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else if (isLooping) {
                     CircularProgressIndicator(
                         color = color,
                         strokeWidth = AapsSpacing.extraSmall,
@@ -1104,23 +1120,6 @@ private fun TrioLoopStatusPill(
                         text = ageText,
                         color = color,
                         style = MaterialTheme.typography.labelLarge
-                    )
-                }
-                stoppedReason?.let { reason ->
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        // The pill has room for a short label only, so the full reason is read out
-                        // here and spelled out in the loop reasoning sheet behind the pill.
-                        contentDescription = reason,
-                        tint = color,
-                        modifier = Modifier.size(AapsSpacing.chipIconSize)
-                    )
-                    Text(
-                        text = stringResource(R.string.trio_loop_stopped),
-                        color = color,
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
