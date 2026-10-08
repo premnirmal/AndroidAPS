@@ -193,6 +193,7 @@ fun AapsAppRoot(
 
                     BolusProgressOverlay(
                         bolusState = bolusState,
+                        showDialog = !config.TRIO,
                         pumpStatus = pumpStatusBanner?.text ?: "",
                         queueStatus = pumpQueueStatus,
                         onStop = {

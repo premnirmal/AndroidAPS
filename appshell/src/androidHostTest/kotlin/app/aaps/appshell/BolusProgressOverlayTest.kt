@@ -40,10 +40,11 @@ class BolusProgressOverlayTest {
         stopDeliveryEnabled = true
     )
 
-    private fun show(bolusState: BolusProgressState?) {
+    private fun show(bolusState: BolusProgressState?, showDialog: Boolean = true) {
         compose.setContent {
             BolusProgressOverlay(
                 bolusState = bolusState,
+                showDialog = showDialog,
                 pumpStatus = "",
                 queueStatus = null,
                 onStop = {},
@@ -59,6 +60,13 @@ class BolusProgressOverlayTest {
         show(state(isSMB = false))
 
         assertThat(dialogCount()).isEqualTo(1)
+    }
+
+    @Test
+    fun `a bolus does not show the global dialog when disabled`() {
+        show(state(isSMB = false), showDialog = false)
+
+        assertThat(dialogCount()).isEqualTo(0)
     }
 
     /** An SMB is the loop's action, not the user's - it belongs in the overview FAB, not over the screen. */

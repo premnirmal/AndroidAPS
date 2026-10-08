@@ -13,18 +13,21 @@ import app.aaps.core.ui.compose.pump.PumpActivityDialog
  * `ComposeMainActivity` only Android drew it - on iOS and on the desktop a relayed bolus ran to
  * completion with no progress shown at all.
  *
- * Only a standard bolus gets the modal. An SMB is not the user's own action, so it must not take
- * over the screen; the overview shows it in the pump FAB instead. Nothing is drawn when no bolus
- * is running.
+ * Only a standard bolus gets the modal, and only outside Trio mode. Trio shows bolus progress in
+ * its overview card, which opens this dialog when selected. An SMB is not the user's own action, so
+ * it must not take over the screen; the overview shows it in the pump FAB instead. Nothing is drawn
+ * when no bolus is running.
  */
 @Composable
 internal fun BolusProgressOverlay(
     bolusState: BolusProgressState?,
+    showDialog: Boolean,
     pumpStatus: String,
     queueStatus: AnnotatedString?,
     onStop: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    if (!showDialog) return
     val state = bolusState ?: return
     if (state.isSMB) return
     PumpActivityDialog(
