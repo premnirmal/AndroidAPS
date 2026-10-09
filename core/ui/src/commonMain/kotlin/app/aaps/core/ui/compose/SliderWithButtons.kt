@@ -30,10 +30,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import app.aaps.core.data.format.NumberFormat
+import app.aaps.core.interfaces.InterfacesStrings
 import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.dialogs.ValueInputDialog
@@ -188,6 +198,18 @@ fun SliderWithButtons(
         valueFormat = valueFormat,
         asDuration = asDuration
     )
+    // What a screen reader says for the slider. The Slider itself runs on a 0..1 position (it has to,
+    // for the non-linear control points), so on its own TalkBack read "37 percent" - where the thumb
+    // is, not the value - and had no name for it. The real value is spoken instead.
+    val spokenValue = formatSliderDisplayValue(
+        value = shownValue,
+        unitLabel = unitLabel,
+        valueFormatRef = valueFormatRef,
+        formatAsInt = formatAsInt,
+        valueFormat = valueFormat,
+        asDuration = asDuration
+    )
+    val labelledValueText = dialogLabel?.let { stringResource(InterfacesStrings.confirmation_line, it, displayText) }
     val minusDescription = dialogLabel
         ?.let { stringResource(CoreUiStrings.a11y_min_button_description, it, stepText) }
         ?: stringResource(CoreUiStrings.decrement)
@@ -235,7 +257,28 @@ fun SliderWithButtons(
                     },
                     enabled = enabled,
                     valueRange = 0f..1f,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        // Replaces the Slider's own semantics with one node. Adding a name with
+                        // `semantics` did not work: on a device the name landed on a separate node
+                        // next to the SeekBar, merged or not, and TalkBack focused the bare SeekBar
+                        // ("37 percent"). A Robolectric test did not show that.
+                        // The progress action uses the same 0..1 position as a drag, mapped to a
+                        // value through the control points and rounded to the step.
+                        .clearAndSetSemantics {
+                            dialogLabel?.let { contentDescription = it }
+                            stateDescription = spokenValue
+                            progressBarRangeInfo = ProgressBarRangeInfo(
+                                current = dragValue?.let { valueToPosition(it) } ?: currentPosition,
+                                range = 0f..1f
+                            )
+                            if (enabled) {
+                                setProgress { targetPosition ->
+                                    onValueChange(roundToStep(positionToValue(targetPosition), step).coerceIn(minValue, maxValue))
+                                    true
+                                }
+                            } else disabled()
+                        }
                 )
             } else {
                 Spacer(modifier = Modifier.weight(1f))
@@ -269,7 +312,12 @@ fun SliderWithButtons(
                     textAlign = TextAlign.End,
                     modifier = Modifier
                         .widthIn(min = if (asDuration || valueFormat != null || resolvedUnitLabel.isNotEmpty()) 70.dp else 40.dp)
-                        .then(if (enabled) Modifier.clickable { showDialog = true } else Modifier)
+                        // Opens the input dialog. Said as "Max bolus: 3 U, button" rather than a bare "3 U".
+                        .then(if (enabled) Modifier.clickable(role = Role.Button) { showDialog = true } else Modifier)
+                        .then(
+                            if (labelledValueText != null) Modifier.semantics { contentDescription = labelledValueText }
+                            else Modifier
+                        )
                         .padding(start = 4.dp)
                 )
             }
