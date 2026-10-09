@@ -65,6 +65,7 @@ fun OverviewScreenStacked(
     paddingValues: PaddingValues,
     activeSceneState: ActiveSceneState? = null,
     sceneExpired: Boolean = false,
+    activeSceneChainTargetName: String? = null,
     onEndScene: () -> Unit = {},
     onDismissScene: () -> Unit = {},
     endSceneEnabled: Boolean = true,
@@ -91,6 +92,7 @@ fun OverviewScreenStacked(
         ActiveSceneBanner(
             activeState = activeSceneState,
             expired = sceneExpired,
+            chainTargetName = activeSceneChainTargetName,
             onEndClick = onEndScene,
             onDismiss = onDismissScene,
             endEnabled = endSceneEnabled,

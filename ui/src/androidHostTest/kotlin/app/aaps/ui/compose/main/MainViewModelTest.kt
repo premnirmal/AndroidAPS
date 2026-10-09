@@ -7,6 +7,8 @@ import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.model.RM
 import app.aaps.core.data.model.TE
 import app.aaps.core.data.plugin.PluginType
+import app.aaps.core.data.model.Scene
+import app.aaps.core.data.model.SceneEndAction
 import app.aaps.core.interfaces.aps.Loop
 import app.aaps.core.interfaces.aps.APSResult
 import app.aaps.core.interfaces.automation.Automation
@@ -41,6 +43,7 @@ import app.aaps.core.interfaces.rx.events.EventPumpStatusChanged
 import app.aaps.core.interfaces.scenes.ActiveSceneSync
 import app.aaps.core.interfaces.scenes.SceneActions
 import app.aaps.core.interfaces.scenes.SceneChainResolver
+import app.aaps.core.interfaces.scenes.SceneStore
 import app.aaps.core.interfaces.source.BgSource
 import app.aaps.core.interfaces.sync.NsClient
 import app.aaps.core.interfaces.ui.UrlOpener
@@ -73,6 +76,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -117,12 +121,14 @@ internal class MainViewModelTest {
     @Mock private lateinit var protectionCheck: ProtectionCheck
     @Mock private lateinit var sceneActions: SceneActions
     @Mock private lateinit var sceneChainTargetResolver: SceneChainResolver
+    @Mock private lateinit var sceneStore: SceneStore
     @Mock private lateinit var activeSceneManager: ActiveSceneSync
     @Mock private lateinit var rxBus: RxBus
     @Mock private lateinit var nsClient: NsClient
     @Mock private lateinit var visibilityContext: VisibilityContext
 
     private lateinit var sut: MainViewModel
+    private lateinit var mainDispatcher: TestDispatcher
     private val loopRunning = MutableStateFlow(false)
 
     @BeforeEach
@@ -131,7 +137,8 @@ internal class MainViewModelTest {
         // StandardTestDispatcher defers every init { ... launchIn(viewModelScope) } collector and the
         // WhileSubscribed/Eagerly stateIn launches, so construction only touches the flow GETTERS below —
         // all of which are StateFlow-typed and must be stubbed non-null or construction NPEs.
-        Dispatchers.setMain(StandardTestDispatcher())
+        mainDispatcher = StandardTestDispatcher()
+        Dispatchers.setMain(mainDispatcher)
 
         // Reachability / pairing signals read as fields at construction.
         whenever(nsClient.masterReachable).thenReturn(MutableStateFlow(true))
@@ -147,8 +154,10 @@ internal class MainViewModelTest {
         whenever(loop.isRunning).thenReturn(loopRunning)
         whenever(activePlugin.activePump).thenReturn(pump)
 
-        // Active scene state read as fields (activeSceneState + sceneExpired.map).
+        // Active scene state and the scene catalog, read as fields (activeSceneState, sceneExpired.map,
+        // activeSceneChainTargetName's combine).
         whenever(activeSceneManager.activeSceneState).thenReturn(MutableStateFlow<ActiveSceneState?>(null))
+        whenever(sceneStore.scenesFlow).thenReturn(MutableStateFlow(""))
 
         // Preference observers created (launchIn deferred) in init.
         whenever(preferences.observe(BooleanKey.GeneralSimpleMode)).thenReturn(MutableStateFlow(true))
@@ -175,12 +184,15 @@ internal class MainViewModelTest {
         overviewDataCache, iobCobCalculator, profileFunction, profileUtil, constraintChecker, quickWizard,
         automation, persistenceLayer, aapsLogger, quickLaunchResolver, wizardExecutor,
         batchExecutor, uel, loop, processedDeviceStatusData, protectionCheck, sceneActions, sceneChainTargetResolver,
-        activeSceneManager, rxBus, nsClient, visibilityContext,
+        sceneStore, activeSceneManager, rxBus, nsClient, visibilityContext,
         CoroutineScope(UnconfinedTestDispatcher())
     )
 
     @AfterEach
-    fun tearDown() = Dispatchers.resetMain()
+    fun tearDown() {
+        sut.viewModelScope.cancel()
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun `default uiState exposes initial values`() {
@@ -388,6 +400,32 @@ internal class MainViewModelTest {
         assertThat(sut.bgSourceNavigationRequest()).isEqualTo(
             NavigationRequest.PluginCategory(PluginType.BGSOURCE)
         )
+    }
+
+    /**
+     * The banner names the follow-up scene. The edit lock covers the running scene but not its
+     * follow-up, so that one can be renamed, disabled or deleted while the banner is on screen. The
+     * name must follow the catalog, or the banner promises a scene that will not start.
+     */
+    @Test
+    fun `the banner follow-up follows the scene catalog`() {
+        sut.viewModelScope.cancel()
+        val scene = Scene(id = "s1", name = "Night", endAction = SceneEndAction.ChainScene("s2"))
+        val catalog = MutableStateFlow("v1")
+        whenever(activeSceneManager.activeSceneState).thenReturn(
+            MutableStateFlow<ActiveSceneState?>(ActiveSceneState(scene = scene, activatedAt = 1000L, durationMs = 0L))
+        )
+        whenever(sceneStore.scenesFlow).thenReturn(catalog)
+        whenever(sceneChainTargetResolver.resolveCatalogChainTarget(scene)).thenReturn(Scene(id = "s2", name = "Cooldown"))
+        sut = createViewModel()
+        mainDispatcher.scheduler.runCurrent()
+        assertThat(sut.activeSceneChainTargetName.value).isEqualTo("Cooldown")
+
+        // The follow-up is disabled while the scene runs: the resolver no longer finds it.
+        whenever(sceneChainTargetResolver.resolveCatalogChainTarget(scene)).thenReturn(null)
+        catalog.value = "v2"
+        mainDispatcher.scheduler.runCurrent()
+        assertThat(sut.activeSceneChainTargetName.value).isNull()
     }
 
     /**
