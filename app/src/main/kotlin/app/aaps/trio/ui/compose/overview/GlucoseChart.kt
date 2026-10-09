@@ -208,8 +208,14 @@ fun GlucoseChart(
     val cobData by graphViewModel.cobGraphFlow.collectAsStateWithLifecycle()
     val targetLine by graphViewModel.targetLineFlow.collectAsStateWithLifecycle()
 
+    // bucketedReadings holds the smoothed values (see [app.aaps.core.data.iob.InMemoryGlucoseValue.recalculated]).
+    // Put them first so distinctBy keeps the smoothed value instead of the raw one whenever both
+    // share a timestamp, matching the regular AAPS glucose graph.
     val readingsAsc = remember(readings, bucketedReadings) {
-        (readings + bucketedReadings).sortedBy(BgDataPoint::timestamp).distinctBy(BgDataPoint::timestamp)
+        val toShow = bucketedReadings.ifEmpty {
+            readings
+        }
+        toShow.sortedBy(BgDataPoint::timestamp).distinctBy(BgDataPoint::timestamp)
     }
     // Always draw the forecast lines when prediction data is present. The persisted graph config
     // (or simple mode) can leave the PREDICTIONS overlay off, which would hide them here, so this
