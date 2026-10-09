@@ -226,9 +226,14 @@ class DataHandlerWear(
         onEvent<EventData.Preferences> {
             if (it.wearControl != preferences.get(BooleanKey.WearControl)) {
                 preferences.put(BooleanKey.WearControl, it.wearControl)
+                // Every TileBase tile renders the disabled state itself, but only when asked to render.
+                // A tile missing here keeps its cached buttons until its own data changes.
                 TileService.getUpdater(context).requestUpdate(ActionsTileService::class.java)
                 TileService.getUpdater(context).requestUpdate(TempTargetTileService::class.java)
                 TileService.getUpdater(context).requestUpdate(QuickWizardTileService::class.java)
+                TileService.getUpdater(context).requestUpdate(RunningModeTileService::class.java)
+                TileService.getUpdater(context).requestUpdate(SceneTileService::class.java)
+                TileService.getUpdater(context).requestUpdate(UserActionTileService::class.java)
             }
             sp.putBoolean(R.string.key_units_mgdl, it.unitsMgdl)
             sp.putInt(R.string.key_bolus_wizard_percentage, it.bolusPercentage)
@@ -367,7 +372,6 @@ class DataHandlerWear(
     private fun createNotificationChannel(vibratePattern: LongArray, channelID: String, name: CharSequence, description: String, importance: Int) {
         val channel = NotificationChannel(channelID, name, importance)
         channel.description = description
-        channel.setSound(null, null)
         channel.enableVibration(true)
         channel.vibrationPattern = vibratePattern
 
@@ -384,7 +388,6 @@ class DataHandlerWear(
         val description = "Open Loop request notification"
         val channel = NotificationChannel(DataLayerListenerServiceWear.AAPS_NOTIFY_CHANNEL_ID_OPEN_LOOP, name, NotificationManager.IMPORTANCE_HIGH)
         channel.description = description
-        channel.setSound(null, null)
         channel.enableVibration(true)
 
         // Register the channel with the system; you can't change the importance

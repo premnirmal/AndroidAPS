@@ -1,10 +1,7 @@
 package app.aaps.ios.shell.di
 
 import app.aaps.core.interfaces.logging.AAPSLogger
-import app.aaps.core.interfaces.logging.L
-import app.aaps.core.interfaces.resources.TextResolver
-import app.aaps.core.interfaces.configuration.Config
-import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.notifications.AlarmSoundPlayer
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
@@ -82,6 +79,7 @@ interface IosProbeGraph {
     val repository: AppRepository
     val notificationManager: NotificationManager
     val logger: AAPSLogger
+    val alarmSoundPlayer: AlarmSoundPlayer
     val preferences: Preferences
 
 

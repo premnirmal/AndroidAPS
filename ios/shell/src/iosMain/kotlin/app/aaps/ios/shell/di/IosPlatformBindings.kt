@@ -5,10 +5,10 @@ import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.L
 import app.aaps.core.interfaces.notifications.AlarmSoundPlayer
 import app.aaps.core.interfaces.notifications.SystemNotificationPlatform
-import app.aaps.core.keys.BooleanKey
-import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.interfaces.sharedPreferences.KeyValueStore
 import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.keys.BooleanKey
+import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.implementation.logging.AAPSLoggerIos
 import app.aaps.implementation.notifications.IosSystemNotificationPlatform
 import app.aaps.ios.shell.config.IosClientConfig
@@ -68,14 +68,8 @@ object IosPlatformBindings {
     /** Notifications through UNUserNotificationCenter, with the shared registry above it. */
     @Provides
     @SingleIn(AppScope::class)
-    fun systemNotificationPlatform(
-        logger: AAPSLogger,
-        alarmSoundPlayer: AlarmSoundPlayer,
-        preferences: Preferences
-    ): SystemNotificationPlatform =
-        IosSystemNotificationPlatform(logger, alarmSoundPlayer) {
-            preferences.get(BooleanKey.AlertOverrideDoNotDisturb)
-        }
+    fun systemNotificationPlatform(logger: AAPSLogger, alarmSoundPlayer: AlarmSoundPlayer, preferences: Preferences): SystemNotificationPlatform =
+        IosSystemNotificationPlatform(logger, alarmSoundPlayer) { preferences.get(BooleanKey.AlertOverrideDoNotDisturb) }
 
     /**
      * One history browsing window, app-scoped so every injection point sees the same one.
