@@ -19,6 +19,8 @@ import app.aaps.core.interfaces.db.ProcessedTbrEbData
 import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.nsclient.ProcessedDeviceStatusData
+import app.aaps.core.interfaces.overview.SensitivityOverview
+import app.aaps.core.interfaces.overview.SensitivityOverviewData
 import app.aaps.core.interfaces.overview.graph.BgInfoData
 import app.aaps.core.interfaces.overview.graph.BgRange
 import app.aaps.core.interfaces.overview.graph.GraphConfig
@@ -88,6 +90,7 @@ internal class OverviewViewModelFixture(private val screen: AapsScreenFixture) {
     val bolusProgressData: BolusProgressData = mock()
     val profileFunction: ProfileFunction = mock()
     val loop: Loop = mock()
+    val sensitivityOverview: SensitivityOverview = mock()
 
     /** Shared with the composables through `LocalDecimalFormatter`, so the two cannot format differently. */
     val decimalFormatter: DecimalFormatter = screen.decimalFormatter
@@ -144,6 +147,7 @@ internal class OverviewViewModelFixture(private val screen: AapsScreenFixture) {
             whenever(iobCobCalculator.calculateIobFromBolus()).thenReturn(IobTotal(NOW))
             whenever(iobCobCalculator.calculateIobFromTempBasalsIncludingConvertedExtended()).thenReturn(IobTotal(NOW))
             whenever(iobCobCalculator.getCobInfo(any())).thenReturn(CobInfo(NOW, null, 0.0))
+            whenever(sensitivityOverview.build()).thenReturn(SensitivityOverviewData())
         }
         whenever(iobCobCalculator.ads).thenReturn(mock<AutosensDataStore>())
         val autosensEnabled: Constraint<Boolean> = mock()
@@ -179,9 +183,8 @@ internal class OverviewViewModelFixture(private val screen: AapsScreenFixture) {
 
     val chipsViewModel: ChipsViewModel by lazy {
         ChipsViewModel(
-            cache, iobCobCalculator, loop, screen.config, persistenceLayer, constraintChecker, profileFunction,
-            processedDeviceStatusData, screen.profileUtil, activePlugin, bolusProgressData, rh, decimalFormatter, screen.dateUtil,
-            aapsLogger, screen.preferences, rxBus
+            cache, iobCobCalculator, loop, screen.config, persistenceLayer, sensitivityOverview,
+            bolusProgressData, rh, decimalFormatter, rxBus
         )
     }
 

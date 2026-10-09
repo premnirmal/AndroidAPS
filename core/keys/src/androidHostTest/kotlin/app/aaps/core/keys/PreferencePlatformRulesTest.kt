@@ -55,12 +55,14 @@ class PreferencePlatformRulesTest {
      * left out genuinely cannot honour it rather than merely not having got round to it.
      * - the notification policy switch: iOS gives an app no say in whether an OS notification appears
      * - allow roaming: iOS publishes no roaming state and desktop reports every link as wifi
+     * - Trio mode: it selects the Android app shell
      */
     @Test
     fun `restrictions are the exception`() {
         val restricted = allKeys().filter { it.platforms != AppPlatform.ALL }.associate { it.key to it.platforms }
 
         assertThat(restricted).containsExactly(
+            "trio_mode", AppPlatform.ANDROID_ONLY,
             "raise_urgent_alarms_as_android_notification", AppPlatform.ANDROID_ONLY,
             "keep_screen_on", setOf(AppPlatform.Android, AppPlatform.Ios),
             "ns_allow_roaming", AppPlatform.ANDROID_ONLY

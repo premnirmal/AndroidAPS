@@ -1,6 +1,7 @@
 package app.aaps.ios.shell.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -15,6 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -25,11 +27,10 @@ import app.aaps.appshell.navigation.AppRoute
 import app.aaps.appshell.navigation.ElementNavigator
 import app.aaps.appshell.navigation.appNavGraph
 import app.aaps.appshell.navigation.handleNotificationAction
-import app.aaps.appshell.navigation.handleQuickLaunchAction
-import app.aaps.appshell.navigation.handleSearchResultClick
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.IosNotificationDelegate
+import app.aaps.core.interfaces.notifications.NotificationHandle
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.protection.ProtectionResult
 import app.aaps.core.interfaces.resources.TextRefValueRegistry
@@ -53,28 +54,22 @@ import app.aaps.shared.clientbindings.ClientGraphBindings
 import app.aaps.shared.clientbindings.ClientViewModelFactory
 import app.aaps.ui.compose.configuration.ConfigurationViewModel
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
-import app.aaps.ui.compose.loopSheet.LoopActionViewModel
 import app.aaps.ui.compose.main.MainViewModel
-import app.aaps.ui.compose.main.OverviewScreen
 import app.aaps.ui.compose.maintenance.ImportViewModel
-import app.aaps.ui.compose.maintenance.MaintenanceViewModel
 import app.aaps.ui.compose.manageSheet.ManageViewModel
+import app.aaps.ui.compose.overview.OverviewScreen
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import app.aaps.ui.compose.overview.statusLights.StatusViewModel
-import app.aaps.ui.compose.permissionsSheet.PermissionsViewModel
 import app.aaps.ui.compose.profileManagement.viewmodels.ProfileEditorViewModel
 import app.aaps.ui.compose.profileManagement.viewmodels.ProfileHelperViewModel
 import app.aaps.ui.compose.profileManagement.viewmodels.ProfileManagementViewModel
 import app.aaps.ui.compose.quickWizard.viewmodels.QuickWizardManagementViewModel
 import app.aaps.ui.compose.runningMode.RunningModeManagementViewModel
-import app.aaps.ui.compose.scenesSheet.ScenesViewModel
 import app.aaps.ui.compose.siteRotationDialog.viewModels.SiteRotationManagementViewModel
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import app.aaps.ui.compose.tempTarget.TempTargetManagementViewModel
 import app.aaps.ui.compose.treatments.viewmodels.TreatmentsViewModel
-import app.aaps.ui.compose.treatmentsSheet.TreatmentViewModel
-import app.aaps.ui.search.SearchViewModel
 import dev.zacsweers.metro.createGraphFactory
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
@@ -88,20 +83,9 @@ import platform.UIKit.UIViewController
  *
  * [AapsAppRoot] is shared code and owns everything above a screen: the theme, the composition
  * locals, the splash gate and the four hosts (snackbar, dialog, password prompt, client-control
- * modal). This file supplies the two things it cannot: the platform's own graph, and the navigation
- * that fills the space it leaves for `content`.
- *
- * ## What this is not, yet
- *
- * The overview - the home screen with the graph and the treatment buttons - is still assembled
- * inline inside `ComposeMainActivity` rather than in the shared navigation graph, so there is
- * nothing here to call for it. The app therefore opens on the preference screen, which **is** in
- * `appNavGraph` and is a fair test of the layers underneath: it reads and writes real preferences
- * through `NSUserDefaults`.
- *
- * The callbacks below are placeholders and say so in the log when used. They are the wiring a
- * platform is supposed to supply - opening a document picker, asking for a permission - and each
- * needs an iOS answer of its own rather than a shared one.
+ * modal). This file supplies the iOS graph, the shared overview screen, and the platform callbacks
+ * that cannot be shared. Some callbacks still report features that iOS does not provide, such as a
+ * document picker or an Android app launch.
  */
 fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
     // Built once, outside the composition: a graph rebuilt on each recomposition would hand out new
@@ -142,7 +126,6 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
     // From the bundle, like the icon and for the same reason: one framework serves both AAPSClient
     // and AAPSClient2, so each target's own `CFBundleDisplayName` is the only thing that can tell
     // them apart. This was the literal "AAPS" before - the name of the *master*, on a follower.
-    val appName = graph.textResolver.gs(graph.config.appName)
     val appIcon = loadAppIcon()
     if (appIcon == null) logger.error(LTag.CORE, "The app bundle gave no icon; showing the plain AAPS mark")
     logger.debug(LTag.CORE, "Starting the AAPS Compose root on iOS")
@@ -309,8 +292,7 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                     // iOS gives an app no way to quit itself, and Apple treats that as a crash.
                     onExit = { reportNotAvailable("exit from the menu") },
                     // Needs a UIDocumentPicker, which nothing on iOS has yet.
-                    onRequestDirectoryAccess = { reportNotReady("directory access") },
-                    onOpenUrl = { url -> graph.urlOpener.open(url) }
+                    onRequestDirectoryAccess = { reportNotReady("directory access") }
                 )
                 val chips: ChipsViewModel = viewModel(
                     factory = viewModelFactory {
@@ -367,6 +349,9 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                         prefFileList = graph.prefsFileInfo,
                         persistenceLayer = graph.persistenceLayer,
                         visibilityContext = graph.visibilityContext,
+                        isTrio = false,
+                        onNavigateToTrioTab = {},
+                        trioTabScaffold = { _, _, _, _, content -> content(PaddingValues(0.dp)) },
                         onNavigationRequest = { request, _ -> navigator.handleNavigationRequest(request) },
                         onShowDeliveryError = { comment, title ->
                             logger.error(LTag.CORE, "Delivery error: ${graph.textResolver.gs(title)} - $comment")
@@ -388,65 +373,64 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                         onRequestDirectoryAccess = { reportNotReady("directory access - iOS needs a document picker") },
                         onRequestPermission = { group -> reportNotAvailable("permission request $group") },
                         overview = {
+                            val state by mainViewModel.uiState.collectAsState()
+                            val activeSceneState by mainViewModel.activeSceneState.collectAsState()
+                            val sceneExpired by mainViewModel.sceneExpired.collectAsState()
+                            val masterReachable by mainViewModel.masterReachable.collectAsState()
+                            val masterOrPairedClient by mainViewModel.masterOrPairedClient.collectAsState()
+                            val sensorInfo by mainViewModel.sensorInfo.collectAsState()
                             OverviewScreen(
-                                mainViewModel = mainViewModel,
-                                manageViewModel = metroViewModel<ManageViewModel>(),
-                                maintenanceViewModel = metroViewModel<MaintenanceViewModel>(),
-                                statusViewModel = metroViewModel<StatusViewModel>(),
-                                treatmentViewModel = metroViewModel<TreatmentViewModel>(),
-                                scenesViewModel = metroViewModel<ScenesViewModel>(),
-                                loopActionViewModel = metroViewModel<LoopActionViewModel>(),
-                                searchViewModel = metroViewModel<SearchViewModel>(),
-                                permissionsViewModel = metroViewModel<PermissionsViewModel>(),
+                                profileName = state.profileName,
+                                profilePsId = state.profilePsId,
+                                isProfileModified = state.isProfileModified,
+                                profileProgress = state.profileProgress,
+                                profilePercentage = state.profilePercentage,
+                                profileTargetRangeText = state.profileTargetRangeText,
+                                profileCardTempTargetStateFlow = mainViewModel.profileCardTempTargetStateFlow,
+                                runningMode = state.runningMode,
+                                runningModeText = state.runningModeText,
+                                runningModeRemaining = state.runningModeRemaining,
+                                runningModeProgress = state.runningModeProgress,
+                                runningModeRecordId = state.runningModeRecordId,
+                                lastLoopAgeMillis = state.lastLoopAgeMillis,
+                                isLooping = state.isLooping,
+                                algorithmReasoning = state.algorithmReasoning,
+                                loopStoppedReason = state.loopStoppedReason,
+                                tbrState = state.tbrState,
+                                smbEnabled = state.smbEnabled,
+                                isSimpleMode = state.isSimpleMode,
+                                calcProgress = mainViewModel.calcProgressFlow.value,
+                                calcProgressFlow = mainViewModel.calcProgressFlow,
                                 graphViewModel = graphs,
                                 chipsViewModel = chips,
-                                activePlugin = graph.activePlugin,
-                                config = graph.config,
-                                objectives = graph.objectives,
-                                bgQualityCheck = graph.bgQualityCheck,
-                                notificationManager = graph.notificationManager,
-                                uiInteraction = graph.uiInteraction,
-                                builtInSearchables = graph.builtInSearchables,
-                                bolusProgressData = graph.bolusProgressData,
-                                clientControlActionDispatcher = graph.clientControlActionDispatcher,
-                                commandQueue = graph.commandQueue,
-                                pumpCommunicationStatus = graph.pumpCommunicationStatus,
-                                appName = appName,
-                                authorizationFailedMessage = "Authorization failed",
+                                manageViewModel = metroViewModel<ManageViewModel>(),
+                                statusViewModel = metroViewModel<StatusViewModel>(),
+                                statusLightsDef = graph.builtInSearchables.statusLights,
                                 onNavigate = { request -> navigator.handleNavigationRequest(request) },
-                                onSearchResultClick = { entry -> navigator.handleSearchResultClick(entry) },
-                                onNotificationActionClick = { n -> navigator.handleNotificationAction(n.id) },
-                                onQuickLaunchActionClick = { action -> navigator.handleQuickLaunchAction(action) },
-                                // The destination is already in the shared graph and the view model is
-                                // already handed to it above, so this is the same call the other two
-                                // shells make. It was a placeholder only while iOS had no importer.
-                                onImportSettingsNavigate = { source -> navController.navigate(AppRoute.ImportSettings.createRoute(source.name)) },
-                                // Needs a UIDocumentPicker, which nothing on iOS has yet.
-                                onDirectoryClick = { reportNotReady("directory picker") },
-                                // The Google sign in, and the only thing that reaches this callback.
-                                // Shown *over* AAPS rather than handed to Safari: switching to Safari
-                                // lets iOS suspend this app within seconds, and the loopback listener
-                                // waiting for Google's redirect goes with it - so the sign in would
-                                // never complete. `urlOpener` is right for ordinary links and wrong
-                                // for this one. See AuthBrowser.
-                                onLaunchBrowser = { url -> graph.authBrowser.show(url) },
-                                // Android says "bring the app back" because the browser took over the
-                                // screen; on iOS the browser is a sheet this app presented, so the
-                                // same intent is to close it.
-                                //
-                                // Only ever after the wait has ended, never while it is running. This
-                                // event is also emitted when a sign in fails, and the first version
-                                // dismissed on that too - which closed the Google page while the user
-                                // was still typing into it, because the wait had timed out at a
-                                // minute. The timeout is now five minutes; this stays defensive
-                                // because "bring the app forward" is harmless on Android and
-                                // destructive here.
-                                onBringToForeground = { graph.authBrowser.dismiss() },
-                                // No activity to recreate. A Compose scene is not restarted this way.
-                                onRecreateActivity = { logger.debug(LTag.CORE, "Nothing to recreate on iOS after a database reset") },
-                                onAuthorizationFailed = { logger.error(LTag.CORE, "Authorization failed") },
+                                onTbrChipClick = mainViewModel::showTbrInfo,
+                                onIobChipClick = chips::showIobInfo,
+                                notificationsFlow = graph.notificationManager.notifications,
+                                onDismissNotification = { notification ->
+                                    graph.notificationManager.dismiss(NotificationHandle(notification.instanceKey))
+                                },
+                                onNotificationActionClick = { notification ->
+                                    navigator.handleNotificationAction(notification.id)
+                                },
                                 autoShowNotificationSheet = false,
-                                onAutoShowConsumed = {}
+                                onAutoShowConsumed = {},
+                                activeSceneState = activeSceneState,
+                                sceneExpired = sceneExpired,
+                                onEndScene = mainViewModel::requestSceneDeactivation,
+                                onDismissScene = mainViewModel::dismissExpiredScene,
+                                endSceneEnabled = masterReachable,
+                                commandsAllowed = masterOrPairedClient,
+                                formatDuration = mainViewModel::formatDuration,
+                                paddingValues = PaddingValues(0.dp),
+                                bolusStateFlow = graph.bolusProgressData.state,
+                                isTrio = false,
+                                timeInRangeTodayFlow = mainViewModel.timeInRangeToday,
+                                sensorInfo = sensorInfo,
+                                loadSensorInfo = mainViewModel::loadSensorInfo
                             )
                         }
                     )

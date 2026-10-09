@@ -7,7 +7,6 @@ import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.model.RM
 import app.aaps.core.data.model.TE
 import app.aaps.core.data.plugin.PluginType
-import app.aaps.core.interfaces.ui.UrlOpener
 import app.aaps.core.interfaces.aps.Loop
 import app.aaps.core.interfaces.aps.APSResult
 import app.aaps.core.interfaces.automation.Automation
@@ -164,6 +163,9 @@ internal class MainViewModelTest {
         whenever(preferences.get(LongNonKey.LastLoopRunTimestamp)).thenReturn(0L)
         whenever(preferences.get(DoubleNonKey.LastPumpReservoirUnits)).thenReturn(-1.0)
         whenever(rh.gs(any<TextRef>())).thenReturn("")
+        runBlocking {
+            whenever(persistenceLayer.getBgReadingsDataFromTimeToTime(any(), any(), any())).thenReturn(emptyList())
+        }
 
         sut = createViewModel()
     }

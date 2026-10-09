@@ -1,6 +1,7 @@
 package app.aaps.plugins.sync.nsclientV3.ws
 
 import app.aaps.core.interfaces.notifications.NotificationAction
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.nsclient.StoreDataForDb
 import app.aaps.core.keys.BooleanKey
@@ -277,7 +278,8 @@ class NsFrameHandlerTest : TestBaseWithProfile() {
         val actions = argumentCaptor<List<NotificationAction>>()
         verify(notificationManager).post(
             id = eq(NotificationId.NS_ALARM), text = any(), level = any(),
-            validMinutes = any(), actions = actions.capture(), validityCheck = anyOrNull()
+            validMinutes = any(), sound = anyOrNull<AlarmSound>(),
+            actions = actions.capture(), validityCheck = anyOrNull()
         )
         assertThat(actions.firstValue).hasSize(3)
     }
@@ -321,7 +323,8 @@ class NsFrameHandlerTest : TestBaseWithProfile() {
         val actions = argumentCaptor<List<NotificationAction>>()
         verify(notificationManager).post(
             id = any(), text = any(), level = any(),
-            validMinutes = any(), actions = actions.capture(), validityCheck = anyOrNull()
+            validMinutes = any(), sound = anyOrNull<AlarmSound>(),
+            actions = actions.capture(), validityCheck = anyOrNull()
         )
         return actions.firstValue
     }

@@ -13,6 +13,7 @@ import app.aaps.core.interfaces.calibration.AddEntryResult
 import app.aaps.core.interfaces.calibration.CalibrationContext
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.iob.GlucoseStatusProvider
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
@@ -208,14 +209,15 @@ class LinearCalibrationPluginTest : TestBase() {
             any<String>(),
             any<NotificationLevel>(),
             any<Int>(),
+            anyOrNull<AlarmSound>(),
             any<List<NotificationAction>>(),
-            anyOrNull()
+            anyOrNull<() -> Boolean>()
         )
     }
 
     @Test
     fun calibrate_gapWithNearbySensorChange_skipsNotification() = runTest {
-        whenever(persistenceLayer.getTherapyEventDataFromToTime(any(), any())).thenReturn(
+        whenever(persistenceLayer.getTherapyEventDataFromToTime(any<Long>(), any<Long>())).thenReturn(
             listOf(sensorChange(now - T.mins(35).msecs()))
         )
         val data = mutableListOf(
@@ -229,8 +231,9 @@ class LinearCalibrationPluginTest : TestBase() {
             any<String>(),
             any<NotificationLevel>(),
             any<Int>(),
+            anyOrNull<AlarmSound>(),
             any<List<NotificationAction>>(),
-            anyOrNull()
+            anyOrNull<() -> Boolean>()
         )
     }
 

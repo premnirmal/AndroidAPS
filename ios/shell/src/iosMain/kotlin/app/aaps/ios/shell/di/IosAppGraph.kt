@@ -4,7 +4,6 @@ import app.aaps.core.interfaces.bgQualityCheck.BgQualityCheck
 import app.aaps.core.interfaces.clientcontrol.ClientControlActionDispatcher
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.configuration.ConfigBuilder
-import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
@@ -162,9 +161,7 @@ interface IosAppGraph : MetroViewModelMultibindings {
     val chipsViewModelFactory: ChipsViewModel.Factory
     val overviewDataCache: OverviewDataCache
 
-    // What the overview needs beyond the above. `Objectives` and `PumpCommunicationStatus` became
-    // available when ObjectivesPlugin and the pump status moved to commonMain.
-    val objectives: Objectives
+    // What the overview needs beyond the above.
     val bgQualityCheck: BgQualityCheck
     val uiInteraction: UiInteraction
     val bolusProgressData: BolusProgressData

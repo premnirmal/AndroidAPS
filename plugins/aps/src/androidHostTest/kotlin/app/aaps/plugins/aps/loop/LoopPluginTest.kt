@@ -91,13 +91,13 @@ class LoopPluginTest : TestBaseWithProfile() {
     }
 
     @Test
-    fun `restores the last loop timestamp from preferences`() {
+    fun `does not treat the saved overview timestamp as a loop result`() {
         val timestamp = 1_234_567L
         whenever(preferences.get(LongNonKey.LastLoopRunTimestamp)).thenReturn(timestamp)
 
         loopPlugin = buildLoopPlugin()
 
-        assertThat(loopPlugin.lastRun?.lastAPSRun).isEqualTo(timestamp)
+        assertThat(loopPlugin.lastRun).isNull()
     }
 
     /**
