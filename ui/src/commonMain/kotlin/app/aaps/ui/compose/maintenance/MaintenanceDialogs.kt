@@ -69,6 +69,7 @@ fun MaintenanceDialogs(
     val cloudDirectoryState by maintenanceViewModel.cloudDirectoryState.collectAsStateWithLifecycle()
     val exportConfig by maintenanceViewModel.exportConfig.collectAsStateWithLifecycle()
     val isDirectoryAccessGranted by maintenanceViewModel.isDirectoryAccessGranted.collectAsStateWithLifecycle()
+    val directoryPath by maintenanceViewModel.directoryPath.collectAsStateWithLifecycle()
 
     // Collect maintenance events
     LaunchedEffect(Unit) {
@@ -112,6 +113,7 @@ fun MaintenanceDialogs(
             onResetDbClick = { showConfirmResetDb = true },
             exportConfig = exportConfig,
             isDirectoryAccessGranted = isDirectoryAccessGranted,
+            directoryPath = directoryPath,
             onToggleSettingsLocal = { maintenanceViewModel.toggleSettingsLocal(it) },
             onToggleSettingsCloud = { maintenanceViewModel.toggleSettingsCloud(it) },
             onToggleLogEmail = { maintenanceViewModel.toggleLogEmail(it) },

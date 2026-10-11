@@ -1,6 +1,8 @@
 package app.aaps.ui.compose.main
 
 import androidx.lifecycle.viewModelScope
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.GV
 import app.aaps.core.data.model.GlucoseUnit
@@ -61,7 +63,10 @@ import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.keys.interfaces.VisibilityContext
 import app.aaps.core.objects.wizard.QuickWizard
 import app.aaps.core.ui.compose.navigation.NavigationRequest
+import app.aaps.ui.compose.quickLaunch.QuickLaunchAction
 import app.aaps.ui.compose.quickLaunch.QuickLaunchResolver
+import app.aaps.ui.compose.quickLaunch.QuickLaunchSerializer
+import app.aaps.ui.compose.quickLaunch.ResolvedQuickLaunchItem
 import com.google.common.truth.Truth.assertThat
 import kotlin.reflect.KClass
 import kotlinx.coroutines.CancellationException
@@ -89,6 +94,9 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.doSuspendableAnswer
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.stub
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -175,6 +183,10 @@ internal class MainViewModelTest {
         runBlocking {
             whenever(persistenceLayer.getBgReadingsDataFromTimeToTime(any(), any(), any())).thenReturn(emptyList())
         }
+        // Toolbar actions are valid unless a test says otherwise. The view model built here refreshes its
+        // toolbar when the first runTest runs the deferred collectors, and an unstubbed isValid (false)
+        // would then remove every action from the saved toolbar.
+        whenever(quickLaunchResolver.isValid(any())).thenReturn(true)
 
         sut = createViewModel()
     }
@@ -417,6 +429,8 @@ internal class MainViewModelTest {
         )
         whenever(sceneStore.scenesFlow).thenReturn(catalog)
         whenever(sceneChainTargetResolver.resolveCatalogChainTarget(scene)).thenReturn(Scene(id = "s2", name = "Cooldown"))
+        whenever(config.initProgressFlow).thenReturn(MutableStateFlow(InitProgress()))
+        whenever(rxBus.toFlow(any<KClass<Event>>())).thenReturn(emptyFlow())
         sut = createViewModel()
         mainDispatcher.scheduler.runCurrent()
         assertThat(sut.activeSceneChainTargetName.value).isEqualTo("Cooldown")
@@ -629,5 +643,40 @@ internal class MainViewModelTest {
         whenever(bgSource.sensorBatteryLevel).thenReturn(40)
         assertThat(runBlocking { viewModel.loadSensorInfo() }).isEqualTo(SensorInfo(startedAt = 1_000L, batteryLevel = 40))
         viewModel.viewModelScope.cancel()
+    }
+
+    /**
+     * A QuickWizard entry on the toolbar follows its overview button: outside its time window or in its
+     * cool-down it is hidden. It stays in the saved toolbar, so it comes back when it is active again.
+     */
+    @Test
+    fun `the toolbar hides a QuickWizard entry that is not active and keeps it saved`() {
+        val qw = QuickLaunchAction.QuickWizardAction("qw-1")
+        val configButton = QuickLaunchAction.QuickLaunchConfig
+        val json = QuickLaunchSerializer.toJson(listOf(QuickLaunchAction.Wizard, qw, configButton))
+        var qwActive = false
+        val changes = MutableStateFlow(0)
+        whenever(preferences.observe(StringNonKey.QuickLaunchActions)).thenReturn(MutableStateFlow(json))
+        whenever(quickWizard.changes).thenReturn(changes)
+        whenever(quickLaunchResolver.isShownNow(any())).thenAnswer { it.getArgument<QuickLaunchAction>(0) != qw || qwActive }
+        whenever(quickLaunchResolver.resolveItem(any())).thenAnswer {
+            ResolvedQuickLaunchItem(action = it.getArgument(0), label = "item", icon = Icons.Default.Add)
+        }
+        whenever(config.initProgressFlow).thenReturn(MutableStateFlow(InitProgress()))
+        whenever(rxBus.toFlow(any<KClass<Event>>())).thenReturn(emptyFlow())
+        sut.viewModelScope.cancel()
+        sut = createViewModel()
+        sut.quickLaunchItems.launchIn(sut.viewModelScope)
+        mainDispatcher.scheduler.runCurrent()
+
+        assertThat(sut.quickLaunchItems.value.map { it.action }).containsExactly(QuickLaunchAction.Wizard, configButton).inOrder()
+
+        // The time window opens (or the cool-down ends) and the entry is used or edited: it is back.
+        qwActive = true
+        changes.value = 1
+        mainDispatcher.scheduler.runCurrent()
+
+        assertThat(sut.quickLaunchItems.value.map { it.action }).containsExactly(QuickLaunchAction.Wizard, qw, configButton).inOrder()
+        verify(preferences, never()).put(eq(StringNonKey.QuickLaunchActions), any<String>())
     }
 }

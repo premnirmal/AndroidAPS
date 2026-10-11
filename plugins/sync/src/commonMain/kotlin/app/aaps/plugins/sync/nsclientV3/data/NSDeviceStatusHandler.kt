@@ -102,7 +102,6 @@ class NSDeviceStatusHandler(
                 updateDeviceData(nsDeviceStatus)
                 updateOpenApsData(nsDeviceStatus)
                 updateUploaderData(nsDeviceStatus)
-                appScope.launch { calculationWorkflow.runOnReceivedPredictions(overviewData) }
             }
         }
         if (config.AAPSCLIENT && deviceStatuses.isNotEmpty()) {
@@ -120,6 +119,8 @@ class NSDeviceStatusHandler(
                     .maxOrNull() ?: 0L
                 if (newestCreatedAt > 0L) nsClientV3Plugin().bumpDevicestatusHeartbeat(newestCreatedAt)
             }
+            // Once per batch, not once per document: the predictions are read from the newest data only (#5247)
+            appScope.launch { calculationWorkflow.runOnReceivedPredictions(overviewData) }
             rxBus.send(EventNsClientStatusUpdated())
         }
     }

@@ -29,9 +29,11 @@ import app.aaps.core.interfaces.plugin.ActivePlugin
 import app.aaps.core.interfaces.profile.ProfileFunction
 import app.aaps.core.interfaces.pump.BolusProgressData
 import app.aaps.core.interfaces.pump.BolusProgressState
+import app.aaps.core.interfaces.pump.PumpInsulin
 import app.aaps.core.interfaces.pump.PumpWithConcentration
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.bus.RxBus
+import app.aaps.core.interfaces.rx.events.EventConfigBuilderChange
 import app.aaps.core.interfaces.rx.events.EventCustomActionsChanged
 import app.aaps.core.interfaces.rx.events.EventAutosensCalculationFinished
 import app.aaps.core.interfaces.rx.events.EventInitializationChanged
@@ -161,13 +163,15 @@ internal class OverviewViewModelFixture(private val screen: AapsScreenFixture) {
         whenever(bgSource.sensorBatteryLevel).thenReturn(-1)
         whenever(activePump.pumpDescription).thenReturn(pumpDescription)
         whenever(activePump.batteryLevel).thenReturn(MutableStateFlow<Int?>(null))
+        whenever(activePump.reservoirLevel).thenReturn(MutableStateFlow(PumpInsulin(0.0)))
         whenever(pumpPlugin.pumpDescription).thenReturn(pumpDescription)
         whenever(pumpPlugin.batteryLevel).thenReturn(MutableStateFlow<Int?>(null))
         whenever(bolusProgressData.state).thenReturn(MutableStateFlow<BolusProgressState?>(null))
         whenever(rxBus.toFlow(EventAutosensCalculationFinished::class)).thenReturn(emptyFlow())
         whenever(rxBus.toFlow(EventInitializationChanged::class)).thenReturn(emptyFlow())
         whenever(rxBus.toFlow(EventLoopUpdateGui::class)).thenReturn(emptyFlow())
-        whenever(rxBus.toFlow(EventPumpStatusChanged::class)).thenReturn(emptyFlow())
+        whenever(rxBus.toFlow<EventPumpStatusChanged>(EventPumpStatusChanged::class)).thenReturn(emptyFlow())
+        whenever(rxBus.toFlow<EventConfigBuilderChange>(EventConfigBuilderChange::class)).thenReturn(emptyFlow())
         whenever(rxBus.toFlow(EventNsClientStatusUpdated::class)).thenReturn(emptyFlow())
         whenever(rxBus.toFlow(EventCustomActionsChanged::class)).thenReturn(emptyFlow())
         whenever(persistenceLayer.observeChanges(TE::class)).thenReturn(emptyFlow())

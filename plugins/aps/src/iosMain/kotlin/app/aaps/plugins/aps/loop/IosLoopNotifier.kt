@@ -94,7 +94,12 @@ class IosLoopNotifier(
      * same behaviour the Android side gets from reusing one notification id.
      *
      * These notifications use a time-sensitive interruption level so they remain visible without
-     * playing a sound.
+     * playing a sound on iOS. `AndroidLoopNotifier` posts both of these on an `IMPORTANCE_HIGH`
+     * channel that vibrates, so on Android they alert. This implementation posts silently, which
+     * made "the loop wants carbs" and "there is a suggestion waiting" easy to miss entirely - and
+     * unlike `IosSystemNotificationPlatform` there is no separate `AlarmSoundPlayer` path here to
+     * carry the audio instead. The interface says a silent implementation of this is a safety
+     * problem; it was one.
      */
     private fun post(title: String, text: String, category: String?) {
         val content = UNMutableNotificationContent().apply {
