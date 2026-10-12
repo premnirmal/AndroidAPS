@@ -161,6 +161,8 @@ internal class MainViewModelTest {
         whenever(quickWizard.changes).thenReturn(MutableStateFlow(0))
         whenever(loop.isRunning).thenReturn(loopRunning)
         whenever(activePlugin.activePump).thenReturn(pump)
+        // App init, also folded into chipStateFlow: the QuickWizard items are built once it completes.
+        whenever(config.initProgressFlow).thenReturn(MutableStateFlow(InitProgress(done = true)))
 
         // Active scene state and the scene catalog, read as fields (activeSceneState, sceneExpired.map,
         // activeSceneChainTargetName's combine).

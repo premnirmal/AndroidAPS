@@ -1,4 +1,4 @@
-package app.aaps.pump.omnipod.omnipod5.history.data
+package app.aaps.pump.omnipod.common.history.data
 
 import app.aaps.pump.omnipod.common.definition.OmnipodCommandType
 
