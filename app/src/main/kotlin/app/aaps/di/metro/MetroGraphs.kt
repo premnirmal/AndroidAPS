@@ -69,7 +69,6 @@ import app.aaps.plugins.constraints.signatureVerifier.SignatureVerifierPlugin
 import app.aaps.plugins.source.di.SourceMetroGraph
 import app.aaps.plugins.sync.di.OpenHumansMetroBridge
 import app.aaps.plugins.sync.nsclientV3.NsIncomingDataProcessor
-import app.aaps.ui.activityMonitor.ActivityMonitor
 import dev.zacsweers.metro.MembersInjector
 import dev.zacsweers.metro.createGraphFactory
 import dev.zacsweers.metrox.viewmodel.MetroViewModelFactory
@@ -272,7 +271,6 @@ class MetroGraphs(
     val persistenceLayer: PersistenceLayer get() = root.persistenceLayer
     val appRepository: AppRepository get() = root.appRepository
     val constraintsChecker: ConstraintsChecker get() = root.constraintsChecker
-    val activityMonitor: ActivityMonitor get() = root.activityMonitor
     val notificationManager: NotificationManager get() = root.notificationManager
     val profileSwitchExpiryScheduler: ProfileSwitchExpiryScheduler get() = root.profileSwitchExpiryScheduler
     val snackbarNotificationFallback: SnackbarNotificationFallback get() = root.snackbarNotificationFallback
