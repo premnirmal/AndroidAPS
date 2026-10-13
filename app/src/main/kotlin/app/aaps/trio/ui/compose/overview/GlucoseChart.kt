@@ -126,8 +126,6 @@ private val BOLUS_MARKER_TOP_MARGIN = 10.dp
 private const val BOLUS_VALUE_THRESHOLD_UNITS = 0.5
 // Smoothed readings further apart than this are not joined, so a sensor gap shows as a gap.
 private const val SMOOTHED_LINE_MAX_GAP_MILLIS = 15 * 60_000L
-// Raw readings are hidden for now; set to true to draw them as outlined dots behind the smoothed line.
-private const val SHOW_RAW_READINGS = false
 
 /**
  * The part of a time-sorted list within [start, end], found by binary search. When [includeBounds]
@@ -313,7 +311,7 @@ private fun GlucoseChartContent(
     // Keep a separate raw series for drawing, and prefer smoothed values at shared timestamps for
     // inspection and markers, matching the regular AAPS glucose graph.
     val rawReadingsAsc = remember(readings) {
-        if (SHOW_RAW_READINGS) readings.sortedBy(BgDataPoint::timestamp) else emptyList()
+        readings.sortedBy(BgDataPoint::timestamp)
     }
     val readingsAsc = remember(readings, bucketedReadings) {
         val toShow = bucketedReadings.ifEmpty {
@@ -809,10 +807,10 @@ private fun GlucoseChartContent(
             // Raw readings (when shown) are outlined dots, as in BgGraphCompose; the smoothed line is drawn on top.
             rawSorted.forEach { reading ->
                 drawCircle(
-                    color = rangeColor(reading.range).copy(alpha = 0.4f),
+                    color = rangeColor(reading.range),
                     radius = 3.dp.toPx(),
                     center = Offset(xFor(reading.timestamp), yFor(reading.value)),
-                    style = Stroke(width = 1.dp.toPx()),
+                    alpha = 0.2f,
                 )
             }
 
