@@ -119,12 +119,14 @@ fun BgInfoSection(
         modifier = modifier
             .semantics { contentDescription = a11yDescription }
     ) {
-        Surface(
-            modifier = Modifier.size(size),
-            shape = CircleShape,
-            color = circleColor,
-            shadowElevation = elevation
-        ) {}
+        if (useGradientRing) {
+            Surface(
+                modifier = Modifier.size(size),
+                shape = CircleShape,
+                color = circleColor,
+                shadowElevation = elevation
+            ) {}
+        }
         // Background ring + trend arc indicator
         Canvas(modifier = Modifier.size(size)) {
             val strokeWidth = ringStrokeWidth.toPx()
