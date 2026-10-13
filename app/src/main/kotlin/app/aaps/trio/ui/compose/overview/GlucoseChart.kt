@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -43,16 +44,19 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -61,13 +65,23 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.interfaces.overview.graph.BgDataPoint
 import app.aaps.core.interfaces.overview.graph.BgRange
 import app.aaps.core.interfaces.overview.graph.BgType
+import app.aaps.core.interfaces.overview.graph.BasalGraphData
 import app.aaps.core.interfaces.overview.graph.BolusGraphPoint
+import app.aaps.core.interfaces.overview.graph.CobGraphData
 import app.aaps.core.interfaces.overview.graph.GraphDataPoint
+import app.aaps.core.interfaces.overview.graph.IobGraphData
+import app.aaps.core.interfaces.overview.graph.TargetLineData
+import app.aaps.core.interfaces.overview.graph.TreatmentGraphData
+import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.LocalDateUtil
+import app.aaps.core.ui.compose.LocalPreferences
+import app.aaps.core.ui.compose.preference.PreviewPreferences
+import app.aaps.shared.impl.utils.DateUtilImpl
 import app.aaps.core.ui.R as CoreUiR
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
+import app.aaps.ui.compose.overview.graphs.ChartConfig
 import app.aaps.ui.compose.overview.graphs.allPoints
 import app.aaps.ui.R
 import kotlinx.coroutines.Job
@@ -77,6 +91,8 @@ import java.text.NumberFormat
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 private const val HOUR_MILLIS = 3_600_000L
 private const val DEFAULT_VIEWPORT_MILLIS = 6 * HOUR_MILLIS
@@ -108,6 +124,10 @@ private val GLUCOSE_TO_IOB_GAP = 8.dp
 private val IOB_STRIP_HEIGHT = 50.dp
 private val BOLUS_MARKER_TOP_MARGIN = 10.dp
 private const val BOLUS_VALUE_THRESHOLD_UNITS = 0.5
+// Smoothed readings further apart than this are not joined, so a sensor gap shows as a gap.
+private const val SMOOTHED_LINE_MAX_GAP_MILLIS = 15 * 60_000L
+// Raw readings are hidden for now; set to true to draw them as outlined dots behind the smoothed line.
+private const val SHOW_RAW_READINGS = false
 
 /**
  * The part of a time-sorted list within [start, end], found by binary search. When [includeBounds]
@@ -186,6 +206,55 @@ private fun buildFillPath(offsets: List<Offset>, baseline: Float): Path = Path()
     close()
 }
 
+/** Splits time-sorted readings into runs, starting a new run where two readings are more than [maxGapMillis] apart. */
+private fun splitAtGaps(readings: List<BgDataPoint>, maxGapMillis: Long): List<List<BgDataPoint>> {
+    val runs = mutableListOf<MutableList<BgDataPoint>>()
+    readings.forEach { reading ->
+        val current = runs.lastOrNull()
+        if (current == null || reading.timestamp - current.last().timestamp > maxGapMillis) {
+            runs.add(mutableListOf(reading))
+        } else {
+            current.add(reading)
+        }
+    }
+    return runs
+}
+
+/**
+ * Slopes for a monotone cubic curve through [points] (Fritsch-Carlson). Unlike a plain spline, the
+ * curve never goes above or below the readings it joins, so it does not show peaks that did not happen.
+ */
+private fun monotoneTangents(points: List<Offset>): FloatArray {
+    val n = points.size
+    val tangents = FloatArray(n)
+    if (n < 2) return tangents
+    val slopes = FloatArray(n - 1) { i ->
+        val dx = points[i + 1].x - points[i].x
+        if (dx == 0f) 0f else (points[i + 1].y - points[i].y) / dx
+    }
+    tangents[0] = slopes[0]
+    tangents[n - 1] = slopes[n - 2]
+    for (i in 1 until n - 1) {
+        tangents[i] = if (slopes[i - 1] * slopes[i] <= 0f) 0f else (slopes[i - 1] + slopes[i]) / 2f
+    }
+    for (i in 0 until n - 1) {
+        if (slopes[i] == 0f) {
+            tangents[i] = 0f
+            tangents[i + 1] = 0f
+            continue
+        }
+        val a = tangents[i] / slopes[i]
+        val b = tangents[i + 1] / slopes[i]
+        val sum = a * a + b * b
+        if (sum > 9f) {
+            val scale = 3f / sqrt(sum)
+            tangents[i] = scale * a * slopes[i]
+            tangents[i + 1] = scale * b * slopes[i]
+        }
+    }
+    return tangents
+}
+
 /**
  * Pannable, pinch-zoomable glucose chart with fling and double-tap zoom (12h/6h/3h). Bands from top
  * to bottom: basal, glucose, IOB/COB. Adapted from TrioFollower's GlucoseChart to draw from the
@@ -208,9 +277,44 @@ fun GlucoseChart(
     val cobData by graphViewModel.cobGraphFlow.collectAsStateWithLifecycle()
     val targetLine by graphViewModel.targetLineFlow.collectAsStateWithLifecycle()
 
+    GlucoseChartContent(
+        readings = readings,
+        bucketedReadings = bucketedReadings,
+        predictions = predictions,
+        chartConfig = chartConfig,
+        nowTimestamp = nowTimestamp,
+        treatments = treatments,
+        basal = basal,
+        iobData = iobData,
+        cobData = cobData,
+        targetLine = targetLine,
+        height = height,
+        modifier = modifier
+    )
+}
+
+@Composable
+private fun GlucoseChartContent(
+    readings: List<BgDataPoint>,
+    bucketedReadings: List<BgDataPoint>,
+    predictions: List<BgDataPoint>,
+    chartConfig: ChartConfig,
+    nowTimestamp: Long,
+    treatments: TreatmentGraphData,
+    basal: BasalGraphData,
+    iobData: IobGraphData,
+    cobData: CobGraphData,
+    targetLine: TargetLineData,
+    height: Dp,
+    modifier: Modifier = Modifier,
+    dateUtil: DateUtil = LocalDateUtil.current,
+) {
     // bucketedReadings holds the smoothed values (see [app.aaps.core.data.iob.InMemoryGlucoseValue.recalculated]).
-    // Put them first so distinctBy keeps the smoothed value instead of the raw one whenever both
-    // share a timestamp, matching the regular AAPS glucose graph.
+    // Keep a separate raw series for drawing, and prefer smoothed values at shared timestamps for
+    // inspection and markers, matching the regular AAPS glucose graph.
+    val rawReadingsAsc = remember(readings) {
+        if (SHOW_RAW_READINGS) readings.sortedBy(BgDataPoint::timestamp) else emptyList()
+    }
     val readingsAsc = remember(readings, bucketedReadings) {
         val toShow = bucketedReadings.ifEmpty {
             readings
@@ -238,12 +342,10 @@ fun GlucoseChart(
     }
 
     val density = LocalDensity.current
-    val dateUtil = LocalDateUtil.current
     val textMeasurer = rememberTextMeasurer()
     val colors = AapsTheme.generalColors
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val gridColor = MaterialTheme.colorScheme.outline
-    val lineColor = MaterialTheme.colorScheme.onSurfaceVariant
     val coroutineScope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current
 
@@ -284,7 +386,8 @@ fun GlucoseChart(
     val lowMark = chartConfig.lowMark
     val highMark = chartConfig.highMark
 
-    val dataMinMillis = readingsAsc.firstOrNull()?.timestamp ?: (nowTimestamp - DEFAULT_VIEWPORT_MILLIS)
+    val dataMinMillis = (rawReadingsAsc.firstOrNull()?.timestamp ?: readingsAsc.firstOrNull()?.timestamp)
+        ?: (nowTimestamp - DEFAULT_VIEWPORT_MILLIS)
     val forecastEndMillis = visiblePredictions.lastOrNull()?.timestamp ?: nowTimestamp
     val futureMillis = (forecastEndMillis - nowTimestamp).coerceAtLeast(0L)
     // Always reserve a 25% future strip at the resting position, even when the prediction is short,
@@ -503,6 +606,7 @@ fun GlucoseChart(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val viewportStartMillis = viewportEndMillis - viewportDurationMillis
             val sorted = readingsAsc.sliceByMillis(viewportStartMillis, viewportEndMillis) { it.timestamp }
+            val rawSorted = rawReadingsAsc.sliceByMillis(viewportStartMillis, viewportEndMillis) { it.timestamp }
 
             val leftGutter = LEFT_GUTTER.toPx()
             val chartWidth = size.width - leftGutter
@@ -518,7 +622,7 @@ fun GlucoseChart(
             val glucoseChartHeight = (glucoseBottom - glucoseTop).coerceAtLeast(1f)
 
             // Y range in user units, from the visible readings/predictions plus the target marks.
-            val visibleValues = sorted.map { it.value } +
+            val visibleValues = (sorted + rawSorted).map { it.value } +
                 visiblePredictions.sliceByMillis(viewportStartMillis, viewportEndMillis) { it.timestamp }.map { it.value }
             val defaultYMin = 0.75f * lowMark
             val defaultYMax = 1.25f * highMark
@@ -702,17 +806,45 @@ fun GlucoseChart(
                 }
             }
 
-            // Glucose line and colored dots.
-            for (i in 0 until sorted.size - 1) {
-                val a = sorted[i]
-                val b = sorted[i + 1]
-                drawLine(
-                    color = lineColor.copy(alpha = 0.5f),
-                    start = Offset(xFor(a.timestamp), yFor(a.value)),
-                    end = Offset(xFor(b.timestamp), yFor(b.value)),
-                    strokeWidth = 1.5.dp.toPx(),
+            // Raw readings (when shown) are outlined dots, as in BgGraphCompose; the smoothed line is drawn on top.
+            rawSorted.forEach { reading ->
+                drawCircle(
+                    color = rangeColor(reading.range).copy(alpha = 0.4f),
+                    radius = 3.dp.toPx(),
+                    center = Offset(xFor(reading.timestamp), yFor(reading.value)),
+                    style = Stroke(width = 1.dp.toPx()),
                 )
             }
+
+            // Smoothed readings are a smooth line colored by BG range. The points just outside the
+            // viewport are kept so the line reaches the edges, and the line breaks over sensor gaps.
+            val lineReadings = readingsAsc.sliceByMillis(viewportStartMillis, viewportEndMillis, includeBounds = true) { it.timestamp }
+            clipRect(left = leftGutter, top = glucoseTop, right = size.width, bottom = glucoseBottom) {
+                splitAtGaps(lineReadings, SMOOTHED_LINE_MAX_GAP_MILLIS).forEach { run ->
+                    val points = run.map { Offset(xFor(it.timestamp), yFor(it.value)) }
+                    val tangents = monotoneTangents(points)
+                    for (i in 0 until points.size - 1) {
+                        val start = points[i]
+                        val end = points[i + 1]
+                        val third = (end.x - start.x) / 3f
+                        val segment = Path().apply {
+                            moveTo(start.x, start.y)
+                            cubicTo(
+                                start.x + third, start.y + tangents[i] * third,
+                                end.x - third, end.y - tangents[i + 1] * third,
+                                end.x, end.y
+                            )
+                        }
+                        drawPath(
+                            segment,
+                            color = rangeColor(run[i].range),
+                            style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+                        )
+                    }
+                }
+            }
+
+            // Smoothed readings are also drawn as filled dots on the line, as in BgGraphCompose.
             sorted.forEach { reading ->
                 drawCircle(
                     color = rangeColor(reading.range),
@@ -870,6 +1002,60 @@ fun GlucoseChart(
 
     if (showPredictionInfo) {
         PredictionLegendBottomSheet(onDismiss = { showPredictionInfo = false })
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400, heightDp = 500)
+@Composable
+private fun GlucoseChartPreview() {
+    val now = System.currentTimeMillis()
+    // 6 hours of 5-minute readings: a smooth curve for the smoothed series, raw values scattered around it.
+    val minutesAgo = (72 downTo 0).map { it * 5 }
+    val smoothedValues = minutesAgo.map { 140.0 + 55.0 * sin(it / 60.0) }
+    val rawValues = smoothedValues.mapIndexed { index, value -> value + if (index % 2 == 0) 6.0 else -5.0 }
+    fun rangeFor(value: Double) = when {
+        value >= 180.0 -> BgRange.HIGH
+        value < 70.0   -> BgRange.LOW
+        else           -> BgRange.IN_RANGE
+    }
+    val rawReadings = minutesAgo.zip(rawValues).map { (ago, value) ->
+        BgDataPoint(
+            timestamp = now - ago * 60_000L,
+            value = value,
+            range = rangeFor(value),
+            type = BgType.REGULAR
+        )
+    }
+    val smoothedReadings = minutesAgo.zip(smoothedValues).map { (ago, value) ->
+        BgDataPoint(
+            timestamp = now - ago * 60_000L,
+            value = value,
+            range = rangeFor(value),
+            type = BgType.BUCKETED
+        )
+    }
+    val context = LocalContext.current
+    val dateUtil = DateUtilImpl(context)
+    CompositionLocalProvider(
+        LocalPreferences provides PreviewPreferences,
+    ) {
+        AapsTheme {
+            GlucoseChartContent(
+                readings = rawReadings,
+                bucketedReadings = smoothedReadings,
+                predictions = emptyList(),
+                chartConfig = ChartConfig(highMark = 180.0, lowMark = 70.0),
+                nowTimestamp = now,
+                treatments = TreatmentGraphData(emptyList(), emptyList(), emptyList(), emptyList()),
+                basal = BasalGraphData(emptyList(), emptyList(), 0.0),
+                iobData = IobGraphData(emptyList(), emptyList()),
+                cobData = CobGraphData(emptyList(), emptyList()),
+                targetLine = TargetLineData(emptyList()),
+                height = 500.dp,
+                modifier = Modifier.fillMaxWidth(),
+                dateUtil = dateUtil
+            )
+        }
     }
 }
 

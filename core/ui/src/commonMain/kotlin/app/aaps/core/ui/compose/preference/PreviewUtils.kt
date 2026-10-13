@@ -40,7 +40,7 @@ import kotlinx.coroutines.flow.StateFlow
  * Only for use in previews — not for production code.
  */
 @Composable
-internal fun PreviewTheme(content: @Composable () -> Unit) {
+fun PreviewTheme(content: @Composable () -> Unit) {
     MaterialTheme {
         ProvidePreferenceTheme {
             CompositionLocalProvider(
@@ -57,7 +57,7 @@ internal fun PreviewTheme(content: @Composable () -> Unit) {
  * Minimal Preferences implementation that returns default values from keys.
  * Only for use in Compose @Preview functions.
  */
-private object PreviewPreferences : Preferences {
+object PreviewPreferences : Preferences {
 
     override val simpleMode: Boolean = false
     override val apsMode: Boolean = true
