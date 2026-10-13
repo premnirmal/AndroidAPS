@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.ArrowCircleRight
+import androidx.compose.material.icons.outlined.Sensors
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CardDefaults
@@ -121,7 +122,12 @@ import app.aaps.ui.compose.overview.chips.SensitivityUiState
 import app.aaps.ui.compose.scenes.ActiveSceneBanner
 import java.util.Locale
 import kotlin.math.roundToInt
+import kotlin.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Instant
 
 @Composable
 fun TrioOverviewScreen(
@@ -176,6 +182,9 @@ fun TrioOverviewScreen(
         if (days >= 1) stringResource(R.string.trio_pump_time_days_hours, days, hours)
         else stringResource(R.string.trio_pump_time_hours, hours)
     }
+    val pumpExpiring =  pumpEndTimeMillis?.let { endTime ->
+        (endTime - now).coerceAtLeast(0L).milliseconds < 3.hours
+    } ?: false
     val predictedText = predictions.lastOrNull()?.value?.let { value ->
         if (value >= 40.0) value.roundToInt().toString()
         else String.format(Locale.getDefault(), "%.1f", value)
@@ -207,9 +216,11 @@ fun TrioOverviewScreen(
         iobUiState = iobUiState,
         cobUiState = cobUiState,
         predictedText = predictedText,
+        sensorInfo = sensorInfo,
         onNavigate = onNavigate,
         onTbrChipClick = onTbrChipClick,
         onIobChipClick = onIobChipClick,
+        onBgClick = onBgSourceClick,
         onSensorInfoClick = { showSensorSheet = true },
         paddingValues = paddingValues,
         activeSceneState = activeSceneState,
@@ -220,6 +231,7 @@ fun TrioOverviewScreen(
         commandsAllowed = commandsAllowed,
         pumpNeedsSetup = pumpNeedsSetup,
         pumpSuspended = pumpSuspended,
+        pumpExpiring = pumpExpiring,
         pumpTimeRemainingText = pumpTimeRemainingText,
         reservoirUnits = reservoirUnits,
         notificationCount = visibleNotifications.size,
@@ -302,9 +314,11 @@ private fun TrioOverviewContent(
     iobUiState: IobUiState,
     cobUiState: CobUiState,
     predictedText: String,
+    sensorInfo: SensorInfo,
     onNavigate: (NavigationRequest) -> Unit,
     onTbrChipClick: () -> Unit,
     onIobChipClick: () -> Unit,
+    onBgClick: () -> Unit,
     onSensorInfoClick: () -> Unit,
     paddingValues: PaddingValues,
     activeSceneState: ActiveSceneState?,
@@ -315,6 +329,7 @@ private fun TrioOverviewContent(
     commandsAllowed: Boolean,
     pumpNeedsSetup: Boolean,
     pumpSuspended: Boolean,
+    pumpExpiring: Boolean,
     pumpTimeRemainingText: String?,
     reservoirUnits: Double?,
     notificationCount: Int,
@@ -398,6 +413,7 @@ private fun TrioOverviewContent(
                                 PumpEntryPoint(
                                     needsSetup = pumpNeedsSetup,
                                     suspended = pumpSuspended,
+                                    pumpExpiring = pumpExpiring,
                                     timeRemainingText = pumpTimeRemainingText,
                                     reservoirUnits = reservoirUnits,
                                     modifier = Modifier
@@ -415,6 +431,8 @@ private fun TrioOverviewContent(
                                     loopStoppedReason = loopStoppedReason,
                                     predictedText = predictedText,
                                     onClick = { showPredictionInfo = true },
+                                    sensorInfo = sensorInfo,
+                                    onSensorInfoClick = onSensorInfoClick,
                                     modifier = Modifier.weight(1f),
                                 )
                             }
@@ -445,7 +463,7 @@ private fun TrioOverviewContent(
                                     bgInfo = bgInfo,
                                     timeAgoText = bgTimeAgoText,
                                     size = bgInfoSize,
-                                    modifier = Modifier.clickable(onClick = onSensorInfoClick),
+                                    modifier = Modifier.clickable(onClick = onBgClick),
                                     useGradientRing = true,
                                     elevation = AapsSpacing.medium
                                 )
@@ -695,9 +713,14 @@ private fun TrioOverviewScreenPreview() {
             iobUiState = IobUiState(text = "1.25 U", iobTotal = 1.25),
             cobUiState = CobUiState(text = "18g", cobValue = 18.0, carbsReq = 22),
             predictedText = "132",
+            sensorInfo = SensorInfo(
+                sourceName = "xDrip+",
+                startedAt = Clock.System.now().minus(13.days).minus(2.hours).toEpochMilliseconds()
+            ),
             onNavigate = {},
             onTbrChipClick = {},
             onIobChipClick = {},
+            onBgClick = {},
             onSensorInfoClick = {},
             paddingValues = PaddingValues(),
             activeSceneState = null,
@@ -708,6 +731,7 @@ private fun TrioOverviewScreenPreview() {
             commandsAllowed = true,
             pumpNeedsSetup = false,
             pumpSuspended = false,
+            pumpExpiring = false,
             pumpTimeRemainingText = "2d 6h",
             reservoirUnits = 50.0,
             notificationCount = 2,
@@ -892,10 +916,12 @@ private fun TrioBolusingCard(
         elevation = CardDefaults.elevatedCardElevation(),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(
-                horizontal = AapsSpacing.large,
-                vertical = AapsSpacing.medium
-            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    horizontal = AapsSpacing.large,
+                    vertical = AapsSpacing.medium
+                ),
             verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
         ) {
             Row(
@@ -1012,13 +1038,13 @@ private fun LoopStatusAndPrediction(
     isLooping: Boolean,
     loopStoppedReason: String?,
     predictedText: String,
+    sensorInfo: SensorInfo?,
     onClick: () -> Unit,
+    onSensorInfoClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier.clickable(
-            onClick = onClick
-        ),
+        modifier = modifier,
         horizontalAlignment = Alignment.End,
         verticalArrangement = Arrangement.spacedBy(AapsSpacing.small)
     ) {
@@ -1028,10 +1054,24 @@ private fun LoopStatusAndPrediction(
             lastLoopAgeMillis = lastLoopAgeMillis,
             isLooping = isLooping,
             loopStoppedReason = loopStoppedReason,
+            modifier = Modifier.clickable(
+                onClick = onClick
+            ),
         )
         PredictionText(
             predictedText = predictedText,
+            modifier = Modifier.clickable(
+                onClick = onClick
+            ),
         )
+        sensorInfo?.let {
+            SensorAgeText(
+                sensorInfo = it,
+                modifier = Modifier.clickable(
+                    onClick = onSensorInfoClick
+                ),
+            )
+        }
     }
 }
 
@@ -1144,6 +1184,7 @@ private fun RM.Mode.toLoopStatusIcon() = when (this) {
 private fun PumpEntryPoint(
     needsSetup: Boolean,
     suspended: Boolean,
+    pumpExpiring: Boolean,
     timeRemainingText: String?,
     reservoirUnits: Double?,
     modifier: Modifier = Modifier
@@ -1212,7 +1253,7 @@ private fun PumpEntryPoint(
                 Icon(
                     imageVector = IcTimerSand,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface,
+                    tint = if (pumpExpiring) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(AapsSpacing.pumpStatusIconSize)
                 )
             }
@@ -1224,7 +1265,13 @@ private fun PumpEntryPoint(
                     else                      -> "--"
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (suspended) AapsTheme.generalColors.statusCritical else MaterialTheme.colorScheme.onSurface
+                color = if (suspended) {
+                    AapsTheme.generalColors.statusCritical
+                } else if (pumpExpiring) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
             )
         }
     }
@@ -1252,6 +1299,41 @@ private fun PredictionText(
             text = predictedText,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun SensorAgeText(
+    sensorInfo: SensorInfo,
+    modifier: Modifier = Modifier
+) {
+    val now = Clock.System.now().toEpochMilliseconds()
+    val age = sensorInfo.startedAt?.let {
+        (now - it).coerceAtLeast(0L)
+    }
+    val ageText = age?.let {
+        stringResource(R.string.trio_sensor_age, it / 86_400_000L, (age / 3_600_000L) % 24)
+    } ?: stringResource(R.string.trio_sensor_age_unavailable)
+    val sensorOldOrUnavailable = age?.let {
+        it.milliseconds >= 13.days
+    } ?: true
+    Row(
+        modifier = modifier
+            .padding(horizontal = AapsSpacing.medium),
+        horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Outlined.Sensors,
+            contentDescription = null,
+            tint = if (sensorOldOrUnavailable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(AapsSpacing.chipIconSize)
+        )
+        Text(
+            text = ageText,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (sensorOldOrUnavailable) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
         )
     }
 }
