@@ -181,7 +181,7 @@ class GraphScopeStabilityTest {
             "processedTbrEbData",
             "profileFunction",
             "profileRepository",
-            "profileSwitchExpiryScheduler",
+            "profileSwitchScheduler",
             "profileSwitchSilentGate",
             "profileUtil",
             "profiler",

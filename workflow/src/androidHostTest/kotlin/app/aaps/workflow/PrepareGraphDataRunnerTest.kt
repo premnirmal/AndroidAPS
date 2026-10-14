@@ -1,7 +1,5 @@
 package app.aaps.workflow
 
-import androidx.work.WorkerParameters
-import androidx.work.workDataOf
 import app.aaps.core.data.model.CA
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.aps.AutosensData
@@ -30,7 +28,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.kotlin.any
-import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -52,7 +49,6 @@ class PrepareGraphDataRunnerTest : TestBaseWithProfile() {
     @Mock lateinit var cache: OverviewDataCache
     @Mock lateinit var overviewData: OverviewData
     @Mock lateinit var signals: CalculationSignalsEmitter
-    @Mock lateinit var workerParameters: WorkerParameters
 
     private val autosensDataProvider = { mock<AutosensData>() }
 
@@ -82,7 +78,6 @@ class PrepareGraphDataRunnerTest : TestBaseWithProfile() {
 
     @BeforeEach
     fun setup() {
-        whenever(workerParameters.inputData).thenReturn(workDataOf())
         whenever(dataIobCob.ads).thenReturn(dataAds)
         whenever(dataAds.clone()).thenReturn(dataAds)
         whenever(dataAds.dataLock).thenReturn(AapsLock())
@@ -150,7 +145,7 @@ class PrepareGraphDataRunnerTest : TestBaseWithProfile() {
 
     @Test
     fun `missing or stale chain data returns failure`() = runTest {
-        whenever(workflowChainData.prepareFor(anyOrNull(), any())).thenReturn(null)
+        whenever(workflowChainData.prepareFor(any(), any())).thenReturn(null)
 
         assertIs<WorkOutcome.Failure>(run())
     }
@@ -158,7 +153,7 @@ class PrepareGraphDataRunnerTest : TestBaseWithProfile() {
     @Test
     fun `full run traverses all phases and emits progress`() = runTest {
         stubSuspendCalls()
-        whenever(workflowChainData.prepareFor(anyOrNull(), any())).thenReturn(buildData(bgDataReload = false, emitFinalProgress = true))
+        whenever(workflowChainData.prepareFor(any(), any())).thenReturn(buildData(bgDataReload = false, emitFinalProgress = true))
 
         val result = run()
 
@@ -171,7 +166,7 @@ class PrepareGraphDataRunnerTest : TestBaseWithProfile() {
     @Test
     fun `bg data reload phase loads, smooths and signals bucketed data`() = runTest {
         stubSuspendCalls()
-        whenever(workflowChainData.prepareFor(anyOrNull(), any())).thenReturn(buildData(bgDataReload = true, emitFinalProgress = false))
+        whenever(workflowChainData.prepareFor(any(), any())).thenReturn(buildData(bgDataReload = true, emitFinalProgress = false))
 
         val result = run()
 
