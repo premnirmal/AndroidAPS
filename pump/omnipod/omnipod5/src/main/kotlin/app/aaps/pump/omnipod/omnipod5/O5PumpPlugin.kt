@@ -1201,6 +1201,7 @@ class O5PumpPlugin @Inject constructor(
         if (!pendingDoseResolved()) return unresolvedDoseResult()
         return try {
             cancelActiveTempBasal()
+            if (needsBasalCorrection()) deliverBasalCorrection()
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "Error in O5 cancelTempBasal", e)
@@ -1239,7 +1240,6 @@ class O5PumpPlugin @Inject constructor(
         podStateManager.pendingDoseCommand = null
         syncTempBasalCancelled(startedAt, historyId)
         notificationManager.dismiss(NotificationId.OMNIPOD_TBR_ALERTS)
-        if (needsBasalCorrection()) deliverBasalCorrection()
     }
 
     override suspend fun setExtendedBolus(insulin: Double, durationInMinutes: Int): PumpEnactResult =
@@ -1474,14 +1474,19 @@ class O5PumpPlugin @Inject constructor(
     }
 
 
-    /** Mirrors OmnipodDashPodStateManagerImpl.needsBasalCorrection() exactly (thresholds,
-     *  cooldown, drift-reset/zero-TBR safety checks), adapted to O5's flat temp-basal
-     *  fields in place of Dash's TempBasal object. */
+    /**
+     * Uses the Dash correction thresholds, cooldown and drift reset.
+     * A zero temp basal blocks correction, except within 5 minutes of a bolus (same as Dash).
+     * Check only after a temp basal change is finished, not between cancel and replacement.
+     * While a dose is pending, its bolus pulses may not be counted yet, so basal looks too high.
+     * Drift is not read or reset then.
+     */
     private fun needsBasalCorrection(): Boolean {
         val correctionThreshold = -PodConstants.POD_PULSE_BOLUS_UNITS / 2
 
         if (podStateManager.activationProgress != ActivationProgress.COMPLETED) return false
         if (podStateManager.deliverySuspended || podStateManager.alarmType != null) return false
+        if (podStateManager.pendingDoseCommand != null) return false
 
         podStateManager.lastBasalCorrectionTime?.let {
             if (System.currentTimeMillis() - it < 2 * 60 * 1000L) return false
@@ -1509,13 +1514,13 @@ class O5PumpPlugin @Inject constructor(
      *  drift - see [needsBasalCorrection]. Reuses [waitForBolusDeliveryToComplete] for the
      *  same progress-polling/confirmation logic a regular bolus uses. */
     private fun deliverBasalCorrection(): PumpEnactResult {
-        if (!needsBasalCorrection()) {
-            aapsLogger.info(LTag.PUMP, "O5 basal correction no longer appropriate")
-            return pumpEnactResultProvider.get().success(true).enacted(false)
-        }
         if (podStateManager.pendingDoseCommand != null) {
             aapsLogger.info(LTag.PUMP, "O5 basal correction skipped: an earlier dose is still unresolved")
             return pumpEnactResultProvider.get().success(false).enacted(false)
+        }
+        if (!needsBasalCorrection()) {
+            aapsLogger.info(LTag.PUMP, "O5 basal correction no longer appropriate")
+            return pumpEnactResultProvider.get().success(true).enacted(false)
         }
         podStateManager.lastBasalCorrectionTime = System.currentTimeMillis()
 
