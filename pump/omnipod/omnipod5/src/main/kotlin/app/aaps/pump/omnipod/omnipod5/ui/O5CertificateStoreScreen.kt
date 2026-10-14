@@ -27,7 +27,6 @@ import app.aaps.pump.omnipod.common.R
 fun O5CertificateStoreScreen(
     rh: ResourceHelper,
     onBack: () -> Unit,
-    allowManualImport: Boolean
 ) {
     val viewModel: O5CredentialImportViewModel = metroViewModel()
     var showManualImport by remember { mutableStateOf(false) }
@@ -51,7 +50,7 @@ fun O5CertificateStoreScreen(
                     }
                 },
                 actions = {
-                    if (!showManualImport && allowManualImport) {
+                    if (!showManualImport) {
                         TextButton(onClick = { showManualImport = true }) {
                             Text(
                                 text = stringResource(app.aaps.core.ui.R.string.import_btn)
@@ -67,7 +66,7 @@ fun O5CertificateStoreScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (showManualImport && allowManualImport) {
+            if (showManualImport) {
                 O5CredentialManualImportScreen(viewModel = viewModel, rh = rh)
             } else {
                 O5CredentialListScreen(viewModel = viewModel, rh = rh)
