@@ -24,6 +24,7 @@ import app.aaps.pump.omnipod.omnipod5.bledriver.comm.O5BleManager
 import app.aaps.pump.omnipod.omnipod5.history.O5History
 import app.aaps.pump.omnipod.common.bledriver.event.PodEvent
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.ActivationProgress
+import app.aaps.pump.omnipod.common.bledriver.pod.definition.BasalProgram
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.AlarmType
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.AlertType
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.DeliveryStatus
@@ -35,6 +36,7 @@ import app.aaps.pump.omnipod.common.bledriver.pod.command.ProgramBasalCommand
 import app.aaps.pump.omnipod.common.bledriver.pod.command.ProgramBolusCommand
 import app.aaps.pump.omnipod.common.bledriver.pod.command.ProgramTempBasalCommand
 import app.aaps.pump.omnipod.common.bledriver.pod.command.ProgramAlertsCommand
+import app.aaps.pump.omnipod.common.bledriver.pod.command.base.Command
 import app.aaps.pump.omnipod.common.queue.command.CommandDeactivatePod
 import app.aaps.pump.omnipod.common.queue.command.CommandDeliverBasalCorrection
 import app.aaps.pump.omnipod.common.queue.command.CommandDisableSuspendAlerts
@@ -45,12 +47,13 @@ import app.aaps.pump.omnipod.common.queue.command.CommandResumeDelivery
 import app.aaps.pump.omnipod.common.queue.command.CommandSilenceAlerts
 import app.aaps.pump.omnipod.common.queue.command.CommandSuspendDelivery
 import app.aaps.pump.omnipod.common.queue.command.CommandUpdateAlertConfiguration
-import app.aaps.pump.omnipod.omnipod5.history.O5History
 import app.aaps.shared.tests.TestBaseWithProfile
 import com.google.common.truth.Truth.assertThat
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.Single
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import java.time.Duration
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -90,7 +93,6 @@ class O5PumpPluginTest : TestBaseWithProfile() {
     @Mock lateinit var bolusProgressData: BolusProgressData
     @Mock lateinit var protectionCheck: ProtectionCheck
     @Mock lateinit var blePreCheck: BlePreCheck
-    @Mock lateinit var history: O5History
 
     private lateinit var plugin: O5PumpPlugin
 
@@ -575,7 +577,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
     }
 
     @Test
-    fun `replacing a temp basal with zero sends no correction before or after the replacement`() = runBlocking<Unit> {
+    fun `replacing a temp basal with zero queues no correction before or after the replacement`() = runBlocking<Unit> {
         stubBasalCorrectionDrift(0.55)
         stubStopTempBasal()
 
@@ -587,28 +589,40 @@ class O5PumpPluginTest : TestBaseWithProfile() {
         commands.verify(bleManager).sendCommand(argThat { this is StopDeliveryCommand }, any())
         commands.verify(bleManager).sendCommand(argThat { this is ProgramTempBasalCommand }, any())
         commands.verifyNoMoreInteractions()
+        verify(commandQueue, never()).customCommand(any())
         verify(podStateManager, never()).lastBasalCorrectionTime = anyOrNull()
     }
 
     @Test
-    fun `replacing a temp basal checks correction only after the positive replacement`() = runBlocking<Unit> {
+    fun `replacing a temp basal queues a correction only after the positive replacement`() = runBlocking<Unit> {
         stubBasalCorrectionDrift(0.55)
         stubStopTempBasal()
-        whenever(bleManager.sendCommand(argThat { this is ProgramBolusCommand }, any()))
-            .thenReturn(Observable.error(IllegalStateException("Correction command not sent")))
 
         val result = plugin.setTempBasalAbsolute(0.4, 30, false, PumpSync.TemporaryBasalType.NORMAL)
 
         assertThat(result.success).isTrue()
-        val commands = inOrder(bleManager)
+        val commands = inOrder(bleManager, commandQueue)
         commands.verify(bleManager).sendCommand(argThat { this is StopDeliveryCommand }, any())
         commands.verify(bleManager).sendCommand(argThat { this is ProgramTempBasalCommand }, any())
-        commands.verify(bleManager).sendCommand(argThat { this is ProgramBolusCommand }, any())
-        commands.verifyNoMoreInteractions()
+        commands.verify(commandQueue).customCommand(argThat { this is CommandDeliverBasalCorrection })
+        verify(bleManager, never()).sendCommand(argThat { this is ProgramBolusCommand }, any())
+        verify(podStateManager, never()).lastBasalCorrectionTime = anyOrNull()
     }
 
     @Test
-    fun `a failed zero temp basal replacement does not send a correction`() = runBlocking<Unit> {
+    fun `a correction is not queued twice`() = runBlocking<Unit> {
+        stubBasalCorrectionDrift(0.55)
+        stubStopTempBasal()
+        whenever(commandQueue.isCustomCommandInQueue(CommandDeliverBasalCorrection::class)).thenReturn(true)
+
+        val result = plugin.setTempBasalAbsolute(0.4, 30, false, PumpSync.TemporaryBasalType.NORMAL)
+
+        assertThat(result.success).isTrue()
+        verify(commandQueue, never()).customCommand(any())
+    }
+
+    @Test
+    fun `a failed zero temp basal replacement does not queue a correction`() = runBlocking<Unit> {
         stubBasalCorrectionDrift(0.55)
         stubStopTempBasal()
         whenever(bleManager.sendCommand(argThat { this is ProgramTempBasalCommand }, any()))
@@ -619,23 +633,22 @@ class O5PumpPluginTest : TestBaseWithProfile() {
 
         assertThat(result.success).isFalse()
         verify(bleManager, never()).sendCommand(argThat { this is ProgramBolusCommand }, any())
+        verify(commandQueue, never()).customCommand(any())
         verify(podStateManager, never()).lastBasalCorrectionTime = anyOrNull()
     }
 
     @Test
-    fun `a standalone temp basal cancel still checks correction after the cancel`() = runBlocking<Unit> {
+    fun `a standalone temp basal cancel queues a correction after the cancel`() = runBlocking<Unit> {
         stubBasalCorrectionDrift(0.0)
         stubStopTempBasal()
-        whenever(bleManager.sendCommand(argThat { this is ProgramBolusCommand }, any()))
-            .thenReturn(Observable.error(IllegalStateException("Correction command not sent")))
 
         val result = plugin.cancelTempBasal(false)
 
         assertThat(result.success).isTrue()
-        val commands = inOrder(bleManager)
+        val commands = inOrder(bleManager, commandQueue)
         commands.verify(bleManager).sendCommand(argThat { this is StopDeliveryCommand }, any())
-        commands.verify(bleManager).sendCommand(argThat { this is ProgramBolusCommand }, any())
-        commands.verifyNoMoreInteractions()
+        commands.verify(commandQueue).customCommand(argThat { this is CommandDeliverBasalCorrection })
+        verify(bleManager, never()).sendCommand(argThat { this is ProgramBolusCommand }, any())
     }
 
     @Test
@@ -656,6 +669,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
     }
 
     private fun stubBasalCorrectionDrift(initialRate: Double) {
+        plugin.scope = CoroutineScope(Dispatchers.Unconfined)
         whenever(podStateManager.activationProgress).thenReturn(ActivationProgress.COMPLETED)
         whenever(podStateManager.totalPulsesDelivered).thenReturn(20)
         whenever(podStateManager.cumulativeBolusPulsesDelivered).thenReturn(20)
@@ -670,8 +684,27 @@ class O5PumpPluginTest : TestBaseWithProfile() {
             activeRate = it.getArgument<Double?>(0)
             null
         }.whenever(podStateManager).activeTempBasalRate = anyOrNull()
+        stubAcceptedDoseCommands()
     }
 
+    private fun stubAcceptedDoseCommands() {
+        var pending: O5PodStateManager.PendingDoseCommand? = null
+        whenever(podStateManager.pendingDoseCommand).thenAnswer { pending }
+        doAnswer {
+            pending = it.getArgument(0)
+            null
+        }.whenever(podStateManager).pendingDoseCommand = anyOrNull()
+        whenever(bleManager.sendCommand(any(), any())).thenAnswer {
+            val command = it.getArgument<Command>(0)
+            if (command is ProgramBasalCommand || command is ProgramTempBasalCommand) {
+                pending = pending?.copy(confirmedByStatus = true)
+                whenever(podStateManager.deliveryStatus).thenReturn(
+                    if (command is ProgramBasalCommand) DeliveryStatus.BASAL_ACTIVE else DeliveryStatus.TEMP_BASAL_ACTIVE
+                )
+            }
+            Observable.empty<PodEvent>()
+        }
+    }
 
 
     @Test
@@ -916,7 +949,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
     }
 
     @Test
-    fun `a pending dose restored without a sequence number falls back to the old resolution`() {
+    fun `a pending dose restored without a sequence number stays unknown when inactive`() {
         whenever(podStateManager.pendingDoseCommand).thenReturn(pendingBolus(sequenceNumber = null))
         whenever(podStateManager.sequenceNumberOfLastProgrammingCommand).thenReturn(9)
         whenever(podStateManager.deliveryStatus).thenReturn(DeliveryStatus.BASAL_ACTIVE)
@@ -927,10 +960,11 @@ class O5PumpPluginTest : TestBaseWithProfile() {
         runBlocking {
             plugin.reconcilePendingDose()
 
-            verify(pumpSync).syncBolusWithPumpId(
+            verify(pumpSync, never()).syncBolusWithPumpId(
                 any<Long>(), any(), any(), any<Long>(), eq(PumpType.OMNIPOD_5), eq("9999")
             )
         }
+        verify(podStateManager, never()).pendingDoseCommand = null
     }
 
     @Test
@@ -1221,7 +1255,8 @@ class O5PumpPluginTest : TestBaseWithProfile() {
         whenever(podStateManager.podId).thenReturn(12345L)
         whenever(podStateManager.pendingDoseCommand).thenReturn(
             O5PodStateManager.PendingDoseCommand(
-                type = O5PodStateManager.PendingDoseType.BASAL_PROGRAM, startedAt = 5_000L, sequenceNumber = 4, historyId = 7L
+                type = O5PodStateManager.PendingDoseType.BASAL_PROGRAM, startedAt = 5_000L, sequenceNumber = 4, historyId = 7L,
+                requestedBasalProgram = BasalProgram(listOf(BasalProgram.Segment(0, 48, 100)))
             )
         )
         whenever(podStateManager.sequenceNumberOfLastProgrammingCommand).thenReturn(4)
@@ -1252,6 +1287,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
         }.whenever(podStateManager).suspendAlertsEnabled = any()
         whenever(bleManager.sendCommand(any(), any())).thenReturn(Observable.empty())
 
+        stubAcceptedDoseCommands()
         val result = plugin.setNewBasalProfile(flatProfile())
 
         assertThat(result.success).isTrue()
@@ -1293,6 +1329,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
         whenever(podStateManager.deliveryStatus).thenReturn(DeliveryStatus.BASAL_ACTIVE)
         whenever(bleManager.sendCommand(any(), any())).thenReturn(Observable.empty())
 
+        stubAcceptedDoseCommands()
         val result = plugin.setNewBasalProfile(flatProfile())
 
         assertThat(result.success).isTrue()
@@ -1314,6 +1351,7 @@ class O5PumpPluginTest : TestBaseWithProfile() {
         whenever(pumpSync.expectedPumpState()).thenReturn(pumpState(zeroTempBasal(PumpSync.TemporaryBasalType.PUMP_SUSPEND), profile = profile))
         whenever(bleManager.sendCommand(any(), any())).thenReturn(Observable.empty())
 
+        stubAcceptedDoseCommands()
         val result = plugin.executeCustomCommand(CommandResumeDelivery())
 
         assertThat(result!!.success).isTrue()
