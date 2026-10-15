@@ -13,11 +13,11 @@ data class TempTargetManagementUiState(
     /** Currently active temporary target (if any) */
     val activeTT: TT? = null,
 
-    /** Remaining time in milliseconds for active TT */
-    val remainingTimeMs: Long? = null,
-
     /** List of user-defined presets (minimum 3 default presets) */
     val presets: List<TTPreset> = emptyList(),
+
+    /** Remaining time on the active temporary target */
+    val remainingTimeMs: Long? = null,
 
     /** Index of preset matching active TT (null = no match, show standalone active card) */
     val activePresetIndex: Int? = null,
@@ -49,6 +49,9 @@ data class TempTargetManagementUiState(
 
     /** Optional notes for this activation */
     val notes: String = "",
+
+    /** Whether to show the notes field (from preferences) */
+    val showNotesField: Boolean = false,
 
     // ===== Loading/Error state =====
 

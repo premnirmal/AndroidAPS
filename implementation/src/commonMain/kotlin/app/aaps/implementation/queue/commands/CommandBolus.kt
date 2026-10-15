@@ -28,10 +28,17 @@ class CommandBolus(
     override suspend fun execute(): PumpEnactResult {
         val r = activePlugin.activePump.deliverTreatment(detailedBolusInfo)
         aapsLogger.debug(LTag.PUMPQUEUE, "Result success: ${r.success} enacted: ${r.enacted}")
-        // A stopped bolus may return a successful pump result, but it did not deliver the full request.
-        // Clear its progress instead of briefly showing 100% completion.
-        if (r.success && !bolusProgressData.isStopPressed) bolusProgressData.completeAndAutoClear(bolusGeneration)
-        else bolusProgressData.clear(bolusGeneration)
+        // Generation-scoped both ways: never stamp completion onto / wipe a NEWER bolus enqueued behind this one
+        // (an SMB + manual bolus get adjacent generations at enqueue; see BolusProgressData.clear / completeAndAutoClear).
+        // A bolus the user stopped ends like a finished one, also when the driver reports the stop as a failure (some
+        // do). Clearing the progress here would clear the stop flag too, before WizardBolusExecutor reads it, and it
+        // would ring the delivery-failed alarm for a stop the user asked for. Keep stopped progress briefly without
+        // marking it complete; the executor reads the stop flag before it is cleared.
+        when {
+            bolusProgressData.isStopPressed -> bolusProgressData.clearAfterStop(bolusGeneration)
+            r.success                     -> bolusProgressData.completeAndAutoClear(bolusGeneration)
+            else                          -> bolusProgressData.clear(bolusGeneration)
+        }
         return r
     }
 

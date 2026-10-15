@@ -58,7 +58,7 @@ class CommandBolusTest : TestBaseWithProfile() {
     }
 
     @Test
-    fun `execute clears progress after a successful stop`() = runTest {
+    fun `execute does not show completion after a successful stop`() = runTest {
         val pumpResult = PumpEnactResultObject(rh).success(true).enacted(true)
         val pump = mock<PumpWithConcentration> {
             on { deliverTreatment(info) } doReturn pumpResult
@@ -69,8 +69,46 @@ class CommandBolusTest : TestBaseWithProfile() {
         val result = newCommand().execute()
 
         assertThat(result).isSameInstanceAs(pumpResult)
-        verify(bolusProgressData).clear(BOLUS_GENERATION)
+        verify(bolusProgressData).clearAfterStop(BOLUS_GENERATION)
         verify(bolusProgressData, never()).completeAndAutoClear(BOLUS_GENERATION)
+        verify(bolusProgressData, never()).clear(BOLUS_GENERATION)
+    }
+
+    @Test
+    fun `execute keeps the stop flag when the driver reports a stopped bolus as failed`() = runTest {
+        whenever(bolusProgressData.isStopPressed).thenReturn(true)
+        val pumpResult = PumpEnactResultObject(rh).success(false).enacted(false)
+        val pump = mock<PumpWithConcentration> {
+            on { deliverTreatment(info) } doReturn pumpResult
+        }
+        whenever(activePlugin.activePump).thenReturn(pump)
+
+        val result = newCommand().execute()
+
+        assertThat(result).isSameInstanceAs(pumpResult)
+        verify(bolusProgressData).clearAfterStop(BOLUS_GENERATION)
+        verify(bolusProgressData, never()).completeAndAutoClear(BOLUS_GENERATION)
+        verify(bolusProgressData, never()).clear(BOLUS_GENERATION)
+    }
+
+    /**
+     * Carelevo, EOPatch and DanaR Korean report a user stop as success = false. The command used to clear the
+     * progress, which also cleared the stop flag, so the executor rang the delivery-failed alarm for every stop.
+     */
+    @Test
+    fun `the stop flag is still set for the executor after a stopped bolus the driver reports as failed`() = runTest {
+        val progress = BolusProgressData(ch, backgroundScope)
+        val generation = progress.start(insulin = 1.0, isSMB = false)
+        val pump = mock<PumpWithConcentration> {
+            on { deliverTreatment(info) } doReturn PumpEnactResultObject(rh).success(false).enacted(false)
+        }
+        whenever(activePlugin.activePump).thenReturn(pump)
+        val command = CommandBolus(aapsLogger, rh, activePlugin, pumpEnactResultProvider::invoke, progress, info, Command.CommandType.BOLUS, generation)
+
+        progress.stopPressed()
+        command.execute()
+
+        assertThat(progress.isStopPressed).isTrue()
     }
 
     @Test

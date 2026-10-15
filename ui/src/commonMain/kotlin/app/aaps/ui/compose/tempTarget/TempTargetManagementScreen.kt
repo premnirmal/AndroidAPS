@@ -442,7 +442,6 @@ fun TempTargetManagementScreen(
                                 TempTargetCarouselCard(
                                     preset = preset,
                                     activeTT = if (isStandaloneActiveCard || isActivePreset) uiState.activeTT else null,
-                                    remainingTimeMs = uiState.remainingTimeMs,
                                     isSelected = itemState.isSelected,
                                     units = viewModel.units,
                                     onExpired = { viewModel.refreshData() },

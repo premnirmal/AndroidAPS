@@ -149,8 +149,7 @@ data class CobGraphData(
  */
 data class ActivityGraphData(
     val activity: List<GraphDataPoint>,
-    val activityPrediction: List<GraphDataPoint>,
-    val maxActivity: Double = 0.0
+    val activityPrediction: List<GraphDataPoint>
 )
 
 /**
@@ -247,7 +246,7 @@ data class BolusGraphPoint(
     val amount: Double,        // Insulin amount in units
     val bolusType: BolusType,  // NORMAL or SMB
     val isValid: Boolean,
-    val label: String          // Pre-formatted amount string (pump-supported step)
+    val label: String          // Pre-formatted amount with unit (e.g. "0.30 U")
 )
 
 /**

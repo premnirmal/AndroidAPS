@@ -123,6 +123,9 @@ class BolusProgressData(
 
     /**
      * Check if user requested stop. Used by pump drivers.
+     *
+     * Also read by the bolus executor after the bolus command has finished, so it does not alarm about a bolus the
+     * user stopped. `CommandBolus` keeps stopped progress briefly without marking it complete, then clears it.
      */
     val isStopPressed: Boolean get() = _state.value?.stopPressed == true
 
@@ -149,6 +152,16 @@ class BolusProgressData(
         appScope.launch {
             delay(AUTO_CLEAR_DELAY_MS)
             if (generation.load() == expectedGeneration) _state.value = null
+        }
+    }
+
+    /**
+     * Keeps the stop flag available to the bolus executor without showing a false 100% completion.
+     */
+    fun clearAfterStop(expectedGeneration: Long) {
+        appScope.launch {
+            delay(AUTO_CLEAR_DELAY_MS)
+            _state.update { current -> if (generation.load() == expectedGeneration) null else current }
         }
     }
 
