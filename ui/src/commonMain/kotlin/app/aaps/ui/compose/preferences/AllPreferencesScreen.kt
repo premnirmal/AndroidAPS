@@ -7,8 +7,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,7 +66,6 @@ import kotlinx.coroutines.launch
  * @param modifier Modifier applied to the preference list
  * @param onConfigurationClick Optional action shown at the bottom of the settings list
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AllPreferencesScreen(
     activePlugin: ActivePlugin,
@@ -80,6 +77,7 @@ fun AllPreferencesScreen(
     showTopBar: Boolean = true,
     showSimpleModeHiddenPreferences: Boolean = false,
     onConfigurationClick: (() -> Unit)? = null,
+    onInsulinSettingsClick: (() -> Unit)? = null,
     onMaintenanceClick: (() -> Unit)? = null,
     onAboutClick: (() -> Unit)? = null
 ) {
@@ -209,6 +207,21 @@ fun AllPreferencesScreen(
                     // Built-in: Alerts settings
                     addPreferenceContent(alertsPreferences, onShowMessage, sectionState)
                     addPreferenceContent(maintenancePreferences, onShowMessage, sectionState)
+
+                    if (trioMode) {
+                        onInsulinSettingsClick?.let { onClick ->
+                            item {
+                                Preference(
+                                    title = { Text(stringResource(CoreUiStrings.insulin_management)) },
+                                    summary = { Text(stringResource(CoreUiStrings.manage_insulin_desc)) },
+                                    onClick = onClick
+                                )
+                            }
+                            item {
+                                HorizontalDivider()
+                            }
+                        }
+                    }
 
                     // The extra maintenance entrypoint is only part of Trio settings.
                     if (trioMode) {

@@ -785,6 +785,9 @@ fun NavGraphBuilder.appNavGraph(
                 onConfigurationClick = {
                     navController.navigate(AppRoute.Configuration.route)
                 },
+                onInsulinSettingsClick = {
+                    navController.navigate(AppRoute.InsulinManagement.createRoute())
+                },
                 onMaintenanceClick = maintenanceViewModel?.let { { navController.navigate(AppRoute.Maintenance.route) } },
                 onAboutClick = aboutDialog?.let { { showAboutDialog = true } }
             )
