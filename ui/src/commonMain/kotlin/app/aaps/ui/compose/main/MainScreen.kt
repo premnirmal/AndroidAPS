@@ -541,15 +541,20 @@ fun MainScreen(
             drawerState = drawerState,
             drawerContent = {
                 MainDrawer(
-                    appTitle = mainViewModel.appTitle,
+                    drawerState = drawerState,
                     versionName = mainViewModel.versionName,
                     onNavigate = { request ->
-                        scope.launch { drawerState.close() }
-                        onDrawerClosed()
-                        onNavigate(request)
+                        // Close the drawer first, then open the screen. Opened while the drawer was still
+                        // sliding in (a fast tap, as the e2e test makes), one Back from that screen left
+                        // the app instead of coming back to the overview.
+                        scope.launch {
+                            drawerState.close()
+                            onDrawerClosed()
+                            onNavigate(request)
+                        }
                     },
                     isTreatmentsEnabled = uiState.isProfileLoaded,
-                    showAdvancedMenuItems = mainViewModel.showAdvancedMenuItems
+                    showExit = mainViewModel.showExit
                 )
             },
             gesturesEnabled = true,

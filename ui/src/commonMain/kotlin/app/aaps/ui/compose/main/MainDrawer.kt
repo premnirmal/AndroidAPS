@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -19,7 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.dp
 import app.aaps.core.interfaces.navigation.ElementType
@@ -28,22 +28,24 @@ import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.compose.navigation.description
 import app.aaps.core.ui.compose.navigation.icon
 import app.aaps.core.ui.compose.navigation.label
-import app.aaps.core.ui.compose.stringResource
 import app.aaps.core.ui.compose.stringResourceOrNull
-import app.aaps.ui.UiStrings
 
 @Composable
 fun MainDrawer(
-    appTitle: String,
+    /**
+     * The drawer's state. With it the sheet closes the drawer on Back. Without it nothing took Back while
+     * the drawer was open, and Back left the app.
+     */
+    drawerState: DrawerState,
     versionName: String,
     onNavigate: (NavigationRequest) -> Unit,
     isTreatmentsEnabled: Boolean,
-    showAdvancedMenuItems: Boolean,
     /** False on iOS, where the app may not close itself. See `MainViewModel.showExit`. */
-    showExit: Boolean = showAdvancedMenuItems,
+    showExit: Boolean,
     modifier: Modifier = Modifier
 ) {
     ModalDrawerSheet(
+        drawerState = drawerState,
         modifier = modifier.width(320.dp)
     ) {
         Spacer(modifier = Modifier.height(16.dp))
@@ -55,7 +57,7 @@ fun MainDrawer(
             LocalAppIcon.current(Modifier.size(40.dp))
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = stringResource(UiStrings.app_title_version, appTitle, versionName),
+                text = "AAPS $versionName",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -70,15 +72,13 @@ fun MainDrawer(
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            if (showAdvancedMenuItems) {
-                DrawerMenuItem(ElementType.TREATMENTS, enabled = isTreatmentsEnabled) { onNavigate(NavigationRequest.Element(ElementType.TREATMENTS)) }
-                DrawerMenuItem(ElementType.HISTORY_BROWSER) { onNavigate(NavigationRequest.Element(ElementType.HISTORY_BROWSER)) }
-                DrawerMenuItem(ElementType.STATISTICS) { onNavigate(NavigationRequest.Element(ElementType.STATISTICS)) }
-                DrawerMenuItem(ElementType.PROFILE_HELPER) { onNavigate(NavigationRequest.Element(ElementType.PROFILE_HELPER)) }
-                DrawerMenuItem(ElementType.MAINTENANCE) { onNavigate(NavigationRequest.Element(ElementType.MAINTENANCE)) }
-                DrawerMenuItem(ElementType.SETUP_WIZARD) { onNavigate(NavigationRequest.SetupWizard) }
-                DrawerMenuItem(ElementType.CONFIGURATION) { onNavigate(NavigationRequest.Element(ElementType.CONFIGURATION)) }
-            }
+            DrawerMenuItem(ElementType.TREATMENTS, enabled = isTreatmentsEnabled) { onNavigate(NavigationRequest.Element(ElementType.TREATMENTS)) }
+            DrawerMenuItem(ElementType.HISTORY_BROWSER) { onNavigate(NavigationRequest.Element(ElementType.HISTORY_BROWSER)) }
+            DrawerMenuItem(ElementType.STATISTICS) { onNavigate(NavigationRequest.Element(ElementType.STATISTICS)) }
+            DrawerMenuItem(ElementType.PROFILE_HELPER) { onNavigate(NavigationRequest.Element(ElementType.PROFILE_HELPER)) }
+            DrawerMenuItem(ElementType.MAINTENANCE) { onNavigate(NavigationRequest.Element(ElementType.MAINTENANCE)) }
+            DrawerMenuItem(ElementType.SETUP_WIZARD) { onNavigate(NavigationRequest.Element(ElementType.SETUP_WIZARD)) }
+            DrawerMenuItem(ElementType.CONFIGURATION) { onNavigate(NavigationRequest.Element(ElementType.CONFIGURATION)) }
         }
 
         // Bottom section with About and Exit
@@ -114,7 +114,7 @@ private fun DrawerMenuItem(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
+    icon: androidx.compose.ui.graphics.vector.ImageVector? = null,
     description: String? = null,
     enabled: Boolean = true,
 ) {
