@@ -54,7 +54,6 @@ import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.compose.LocalDateUtil
 import app.aaps.core.ui.compose.LocalSnackbarHostState
 import app.aaps.core.ui.compose.dialogs.OkCancelDialog
-import app.aaps.core.ui.compose.dialogs.ThreeButtonDialog
 import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
 import app.aaps.core.ui.compose.stringResource
@@ -619,33 +618,13 @@ fun MainScreen(
         )
     }
 
-    // Shared confirmation dialog (automation actions, TT presets, scene end — from toolbar or
-    // bottom sheets). When the confirmation carries a secondary action (e.g., scene chain skip),
-    // render a 3-button dialog; otherwise the standard 2-button OK/Cancel.
     val actionConfirmation by mainViewModel.actionConfirmation.collectAsStateWithLifecycle()
     actionConfirmation?.let { confirmation ->
-        val secondaryAction = confirmation.secondaryAction
-        val secondaryLabel = confirmation.secondaryLabel
-        if (secondaryAction != null && secondaryLabel != null) {
-            ThreeButtonDialog(
-                title = confirmation.title,
-                message = confirmation.message,
-                icon = confirmation.icon,
-                primaryLabel = confirmation.confirmLabel ?: stringResource(CoreUiStrings.ok),
-                onPrimary = { mainViewModel.executeConfirmableAction(confirmation.onConfirmAction) },
-                secondaryLabel = secondaryLabel,
-                onSecondary = { mainViewModel.executeConfirmableAction(secondaryAction) },
-                onDismiss = { mainViewModel.dismissActionConfirmation() }
-            )
-        } else {
-            OkCancelDialog(
-                title = confirmation.title,
-                message = confirmation.message,
-                icon = confirmation.icon,
-                onConfirm = { mainViewModel.executeConfirmableAction(confirmation.onConfirmAction) },
-                onDismiss = { mainViewModel.dismissActionConfirmation() }
-            )
-        }
+        MainActionConfirmationDialog(
+            confirmation = confirmation,
+            onConfirm = mainViewModel::executeConfirmableAction,
+            onDismiss = mainViewModel::dismissActionConfirmation
+        )
     }
 
     // Maintenance dialogs (sheets, confirmations, export chain)

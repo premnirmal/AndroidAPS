@@ -63,6 +63,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.stringResource
@@ -74,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.data.model.ActiveSceneState
 import app.aaps.core.data.model.RM
+import app.aaps.core.data.model.Scene
 import app.aaps.core.data.model.TT
 import app.aaps.core.data.model.TrendArrow
 import app.aaps.core.interfaces.navigation.ElementType
@@ -119,7 +121,9 @@ import app.aaps.ui.compose.overview.chips.CobUiState
 import app.aaps.ui.compose.overview.chips.IobUiState
 import app.aaps.ui.compose.overview.chips.SceneBadge
 import app.aaps.ui.compose.overview.chips.SensitivityUiState
-import app.aaps.ui.compose.scenes.ActiveSceneBanner
+import app.aaps.ui.compose.scenes.SceneIcons
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.time.Clock
@@ -127,7 +131,9 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Instant
+import app.aaps.core.ui.R as CoreUiR
 
 @Composable
 fun TrioOverviewScreen(
@@ -224,6 +230,7 @@ fun TrioOverviewScreen(
         onSensorInfoClick = { showSensorSheet = true },
         paddingValues = paddingValues,
         activeSceneState = activeSceneState,
+        now = now,
         sceneExpired = sceneExpired,
         onEndScene = onEndScene,
         onDismissScene = onDismissScene,
@@ -340,7 +347,8 @@ private fun TrioOverviewContent(
     timeInRangeToday: TimeInRangeToday?,
     formatDuration: (Long) -> String,
     graphContent: @Composable (Dp) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    now: Long = Clock.System.now().toEpochMilliseconds()
 ) {
     var showPredictionInfo by remember { mutableStateOf(false) }
     var bgGlowCenter by remember { mutableStateOf<Offset?>(null) }
@@ -381,15 +389,6 @@ private fun TrioOverviewContent(
                 .padding(AapsSpacing.medium),
             verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
         ) {
-            ActiveSceneBanner(
-                activeState = activeSceneState,
-                expired = sceneExpired,
-                onEndClick = onEndScene,
-                onDismiss = onDismissScene,
-                endEnabled = endSceneEnabled,
-                formatDuration = formatDuration
-            )
-
             Box(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(AapsSpacing.medium)
@@ -536,7 +535,17 @@ private fun TrioOverviewContent(
                 )
             }
 
-            if (profileCardTempTargetState.state == TempTargetChipState.Active) {
+            if (activeSceneState != null) {
+                TrioSceneCard(
+                    state = activeSceneState,
+                    expired = sceneExpired,
+                    now = now,
+                    formatDuration = formatDuration,
+                    onClick = { onNavigate(NavigationRequest.Element(ElementType.SCENE_MANAGEMENT)) },
+                    onEndClick = if (sceneExpired) onDismissScene else onEndScene,
+                    endEnabled = endSceneEnabled && commandsAllowed
+                )
+            } else if (profileCardTempTargetState.state == TempTargetChipState.Active) {
                 TrioAdjustmentCard(
                     tempTarget = profileCardTempTargetState,
                     sceneManaged = tempTargetSceneManaged,
@@ -723,7 +732,11 @@ private fun TrioOverviewScreenPreview() {
             onBgClick = {},
             onSensorInfoClick = {},
             paddingValues = PaddingValues(),
-            activeSceneState = null,
+            activeSceneState = ActiveSceneState(
+                scene = Scene(id = "123", name = "Running"),
+                activatedAt = Clock.System.now().minus(30.minutes).toEpochMilliseconds(),
+                durationMs = 1.hours.inWholeMilliseconds,
+            ),
             sceneExpired = false,
             onEndScene = {},
             onDismissScene = {},
@@ -829,6 +842,47 @@ private fun TrioAdjustmentCard(
 }
 
 @Composable
+private fun TrioSceneCard(
+    state: ActiveSceneState,
+    expired: Boolean,
+    now: Long,
+    formatDuration: (Long) -> String,
+    onClick: () -> Unit,
+    onEndClick: () -> Unit,
+    endEnabled: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val remainingMs = state.remainingMs(now)
+    TrioStatusCard(
+        title = state.scene.name,
+        subtitle = when {
+            expired -> stringResource(CoreUiR.string.scene_ended)
+            remainingMs != null -> formatDuration(remainingMs)
+            else -> stringResource(CoreUiR.string.scene_active)
+        },
+        elementType = ElementType.SCENE,
+        progress = if (!expired && remainingMs != null && state.durationMs > 0) {
+            (remainingMs.toFloat() / state.durationMs).coerceIn(0f, 1f)
+        } else 0f,
+        sceneManaged = false,
+        contentColor = if (expired) MaterialTheme.colorScheme.onSurfaceVariant else AapsTheme.elementColors.scene,
+        onClick = onClick,
+        modifier = modifier,
+        icon = SceneIcons.fromKey(state.scene.icon).icon,
+        trailingContent = {
+            IconButton(onClick = onEndClick, enabled = endEnabled) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = stringResource(
+                        if (expired) CoreUiR.string.close else CoreUiR.string.scene_deactivate
+                    )
+                )
+            }
+        }
+    )
+}
+
+@Composable
 private fun TrioStatusCard(
     title: String,
     subtitle: String,
@@ -837,7 +891,9 @@ private fun TrioStatusCard(
     sceneManaged: Boolean,
     contentColor: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    icon: ImageVector = elementType.icon(),
+    trailingContent: @Composable () -> Unit = {}
 ) {
     OutlinedCard(
         onClick = onClick,
@@ -862,7 +918,7 @@ private fun TrioStatusCard(
                     modifier = Modifier.size(AapsSpacing.chipHeight)
                 ) {
                     Icon(
-                        imageVector = elementType.icon(),
+                        imageVector = icon,
                         contentDescription = null,
                         tint = contentColor,
                         modifier = Modifier.padding(AapsSpacing.medium)
@@ -885,6 +941,7 @@ private fun TrioStatusCard(
                 if (sceneManaged) {
                     SceneBadge()
                 }
+                trailingContent()
             }
             if (progress > 0f) {
                 LinearProgressIndicator(

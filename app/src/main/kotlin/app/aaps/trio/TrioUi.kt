@@ -13,6 +13,8 @@ interface TrioUi {
     fun bottomBar(
         selectedTab: TrioNavTab,
         carbsRequired: Int,
+        activeSceneCount: Int,
+        onScenesClick: () -> Unit,
         onTabSelected: (TrioNavTab) -> Unit,
         onAddClick: () -> Unit,
         modifier: Modifier
@@ -34,6 +36,8 @@ interface TrioUi {
         selectedTab: TrioNavTab,
         title: String,
         carbsRequired: Int,
+        activeSceneCount: Int,
+        onScenesClick: () -> Unit,
         onTabSelected: (TrioNavTab) -> Unit,
         onBolusClick: () -> Unit,
         onCarbsClick: () -> Unit,

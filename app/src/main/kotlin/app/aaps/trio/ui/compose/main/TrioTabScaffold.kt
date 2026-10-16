@@ -28,6 +28,8 @@ fun TrioTabScaffold(
     onBolusClick: () -> Unit,
     onCarbsClick: () -> Unit,
     onWizardClick: () -> Unit,
+    activeSceneCount: Int = 0,
+    onScenesClick: () -> Unit = {},
     modifier: Modifier = Modifier,
     showTopBar: Boolean = true,
     topBarActions: @Composable RowScope.() -> Unit = {},
@@ -51,6 +53,8 @@ fun TrioTabScaffold(
             TrioBottomBar(
                 selectedTab = selectedTab,
                 carbsRequired = carbsRequired,
+                activeSceneCount = activeSceneCount,
+                onScenesClick = onScenesClick,
                 onTabSelected = onTabSelected,
                 onAddClick = { showAddSheet = true }
             )

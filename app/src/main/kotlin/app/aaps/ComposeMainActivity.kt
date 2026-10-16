@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
@@ -49,6 +50,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import app.aaps.core.data.ue.Sources
+import app.aaps.core.data.model.SceneLifecycle
 import app.aaps.appshell.AapsAppRoot
 import app.aaps.appshell.navigation.AppRoute
 import app.aaps.appshell.navigation.ElementNavigator
@@ -121,6 +123,7 @@ import app.aaps.ui.compose.clientcontrol.ClientControlPendingDialog
 import app.aaps.ui.compose.configuration.ConfigurationViewModel
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
 import app.aaps.ui.compose.main.MainScreen
+import app.aaps.ui.compose.main.MainActionConfirmationDialog
 import app.aaps.ui.compose.main.MainViewModel
 import app.aaps.ui.compose.main.TrioNavTab
 import app.aaps.ui.compose.manageSheet.ManageSheetHost
@@ -140,6 +143,7 @@ import app.aaps.ui.compose.profileManagement.viewmodels.ProfileManagementViewMod
 import app.aaps.ui.compose.quickWizard.viewmodels.QuickWizardManagementViewModel
 import app.aaps.ui.compose.runningMode.RunningModeManagementViewModel
 import app.aaps.ui.compose.scenesSheet.ScenesViewModel
+import app.aaps.ui.compose.scenesSheet.ScenesBottomSheet
 import app.aaps.ui.compose.siteRotationDialog.viewModels.SiteRotationManagementViewModel
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import app.aaps.ui.compose.tempTarget.TempTargetManagementViewModel
@@ -473,6 +477,14 @@ class ComposeMainActivity : MetroAppCompatActivity() {
 
         val cobUiState by chipsViewModel.cobUiState.collectAsStateWithLifecycle()
         val appSnackbarHostState = LocalSnackbarHostState.current
+        val activeSceneState by mainViewModel.activeSceneState.collectAsStateWithLifecycle()
+        val activeSceneCount = if (activeSceneState?.lifecycle == SceneLifecycle.ACTIVE) 1 else 0
+        val backStackEntry by navController.currentBackStackEntryAsState()
+        var showTrioScenesSheet by remember { mutableStateOf(false) }
+        val onTrioScenesClick = {
+            scenesViewModel.refreshState()
+            showTrioScenesSheet = true
+        }
 
         NavHost(
             navController = navController,
@@ -570,6 +582,8 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                         trioUi.bottomBar(
                             selectedTab = selectedTab,
                             carbsRequired = carbsRequired,
+                            activeSceneCount = activeSceneCount,
+                            onScenesClick = onTrioScenesClick,
                             onTabSelected = onTabSelected,
                             onAddClick = onAddClick,
                             modifier = modifier
@@ -722,6 +736,8 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                         selectedTab = selectedTab,
                         title = title,
                         carbsRequired = cobUiState.carbsReq,
+                        activeSceneCount = activeSceneCount,
+                        onScenesClick = onTrioScenesClick,
                         onTabSelected = { tab -> navigateToTrioTab(tab, navController) },
                         onBolusClick = { handleNavigationRequest(NavigationRequest.Element(ElementType.INSULIN), navController) },
                         onCarbsClick = { handleNavigationRequest(NavigationRequest.Element(ElementType.CARBS), navController) },
@@ -760,6 +776,33 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 },
                 onMaintenanceSnackbar = { message -> appSnackbarHostState.showSnackbar(message) },
             )
+        }
+
+        if (config.TRIO) {
+            if (showTrioScenesSheet) {
+                val scenesState by scenesViewModel.uiState.collectAsStateWithLifecycle()
+                ScenesBottomSheet(
+                    onDismiss = { showTrioScenesSheet = false },
+                    automationItems = scenesState.items,
+                    onItemClick = { mainViewModel.requestAutomationConfirmation(it.eventId) },
+                    sceneItems = scenesState.sceneItems,
+                    onSceneClick = mainViewModel::requestSceneConfirmation,
+                    onEditScenesClick = {
+                        handleNavigationRequest(NavigationRequest.Element(ElementType.SCENE_MANAGEMENT), navController)
+                    }
+                )
+            }
+            // MainScreen owns these on Home; the other tabs need the same confirmation host.
+            if (backStackEntry?.destination?.route != AppRoute.Main.route) {
+                val actionConfirmation by mainViewModel.actionConfirmation.collectAsStateWithLifecycle()
+                actionConfirmation?.let { confirmation ->
+                    MainActionConfirmationDialog(
+                        confirmation = confirmation,
+                        onConfirm = mainViewModel::executeConfirmableAction,
+                        onDismiss = mainViewModel::dismissActionConfirmation
+                    )
+                }
+            }
         }
     }
 

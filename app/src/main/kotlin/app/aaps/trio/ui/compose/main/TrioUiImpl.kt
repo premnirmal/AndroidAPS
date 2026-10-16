@@ -20,6 +20,8 @@ class TrioUiImpl @Inject constructor() : TrioUi {
     override fun bottomBar(
         selectedTab: TrioNavTab,
         carbsRequired: Int,
+        activeSceneCount: Int,
+        onScenesClick: () -> Unit,
         onTabSelected: (TrioNavTab) -> Unit,
         onAddClick: () -> Unit,
         modifier: Modifier
@@ -27,6 +29,8 @@ class TrioUiImpl @Inject constructor() : TrioUi {
         TrioBottomBar(
             selectedTab = selectedTab,
             carbsRequired = carbsRequired,
+            activeSceneCount = activeSceneCount,
+            onScenesClick = onScenesClick,
             onTabSelected = onTabSelected,
             onAddClick = onAddClick,
             modifier = modifier
@@ -58,6 +62,8 @@ class TrioUiImpl @Inject constructor() : TrioUi {
         selectedTab: TrioNavTab,
         title: String,
         carbsRequired: Int,
+        activeSceneCount: Int,
+        onScenesClick: () -> Unit,
         onTabSelected: (TrioNavTab) -> Unit,
         onBolusClick: () -> Unit,
         onCarbsClick: () -> Unit,
@@ -70,6 +76,8 @@ class TrioUiImpl @Inject constructor() : TrioUi {
             selectedTab = selectedTab,
             title = title,
             carbsRequired = carbsRequired,
+            activeSceneCount = activeSceneCount,
+            onScenesClick = onScenesClick,
             onTabSelected = onTabSelected,
             onBolusClick = onBolusClick,
             onCarbsClick = onCarbsClick,
