@@ -37,6 +37,7 @@
     <string name="trio_no_pump">No Pump</string>
     <string name="trio_pump_time_days_hours" comment="%1$d=whole days left, %2$d=remaining whole hours. Example: 2d 6h">%1$dd %2$dh</string>
     <string name="trio_pump_time_hours" comment="%1$d=whole hours left. Example: 6h">%1$dh</string>
+    <string name="trio_pump_time_minutes" comment="%1$d=minutes left, rounded up. Example: 55m">%1$dm</string>
     <string name="trio_sensor_info">Sensor information</string>
     <string name="trio_sensor_source">Source</string>
     <string name="trio_sensor_started">Started</string>

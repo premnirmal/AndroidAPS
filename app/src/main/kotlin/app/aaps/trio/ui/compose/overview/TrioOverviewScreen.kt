@@ -182,11 +182,17 @@ fun TrioOverviewScreen(
         if (bolusState == null) showBolusDialog = false
     }
     val pumpTimeRemainingText = pumpEndTimeMillis?.let { endTime ->
-        val totalHours = ((endTime - now).coerceAtLeast(0L) / 3_600_000L).toInt()
-        val days = totalHours / 24
-        val hours = totalHours % 24
-        if (days >= 1) stringResource(R.string.trio_pump_time_days_hours, days, hours)
-        else stringResource(R.string.trio_pump_time_hours, hours)
+        val remainingMillis = (endTime - now).coerceAtLeast(0L)
+        if (remainingMillis < 3_600_000L) {
+            val remainingMinutes = (remainingMillis + 59_999L) / 60_000L
+            stringResource(R.string.trio_pump_time_minutes, remainingMinutes)
+        } else {
+            val totalHours = (remainingMillis / 3_600_000L).toInt()
+            val days = totalHours / 24
+            val hours = totalHours % 24
+            if (days >= 1) stringResource(R.string.trio_pump_time_days_hours, days, hours)
+            else stringResource(R.string.trio_pump_time_hours, hours)
+        }
     }
     val pumpExpiring =  pumpEndTimeMillis?.let { endTime ->
         (endTime - now).coerceAtLeast(0L).milliseconds < 3.hours
