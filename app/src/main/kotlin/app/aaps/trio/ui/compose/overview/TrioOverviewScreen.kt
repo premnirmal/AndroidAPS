@@ -186,6 +186,10 @@ fun TrioOverviewScreen(
         if (remainingMillis < 3_600_000L) {
             val remainingMinutes = (remainingMillis + 59_999L) / 60_000L
             stringResource(R.string.trio_pump_time_minutes, remainingMinutes)
+        } else if (remainingMillis < 43_200_000L) {
+            val hours = remainingMillis / 3_600_000L
+            val minutes = remainingMillis / 60_000L % 60
+            stringResource(R.string.trio_pump_time_hours_minutes, hours, minutes)
         } else {
             val totalHours = (remainingMillis / 3_600_000L).toInt()
             val days = totalHours / 24
