@@ -61,6 +61,7 @@ import app.aaps.core.keys.IntNonKey
 import app.aaps.core.keys.LongNonKey
 import app.aaps.core.keys.StringNonKey
 import app.aaps.core.keys.interfaces.AppPlatform
+import app.aaps.core.keys.interfaces.ClientRole
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.keys.interfaces.VisibilityContext
@@ -158,6 +159,9 @@ internal class MainViewModelTest {
         // Reachability / pairing signals read as fields at construction.
         whenever(nsClient.masterReachable).thenReturn(MutableStateFlow(true))
         whenever(nsClient.masterOrPairedClientFlow).thenReturn(MutableStateFlow(true))
+        // The role filter of the toolbar reads these. A mock returns null for them, not the interface default.
+        whenever(nsClient.clientRole).thenReturn(MutableStateFlow(ClientRole.Admin))
+        whenever(visibilityContext.clientRole).thenReturn(ClientRole.Admin)
 
         // Cache flows folded into chipStateFlow's combine (getters evaluated eagerly as combine args).
         whenever(overviewDataCache.calcProgressFlow).thenReturn(MutableStateFlow(0))

@@ -262,7 +262,6 @@ fun TreatmentsScreen(
                     CoreUiStrings.careportal               ->
                         CareportalScreen(
                             viewModel = viewModel.careportalViewModel,
-                            persistenceLayer = viewModel.persistenceLayer,
                             translator = viewModel.translator,
                             setToolbarConfig = setConfig,
                             onNavigateBack = onNavigateBack
