@@ -1044,7 +1044,7 @@ private fun GlucoseChartPreview() {
                 predictions = emptyList(),
                 chartConfig = ChartConfig(highMark = 180.0, lowMark = 70.0),
                 nowTimestamp = now,
-                treatments = TreatmentGraphData(emptyList(), emptyList(), emptyList(), emptyList()),
+                treatments = TreatmentGraphData(emptyList(), emptyList(), emptyList(), emptyList(), emptyList()),
                 basal = BasalGraphData(emptyList(), emptyList(), 0.0),
                 iobData = IobGraphData(emptyList(), emptyList()),
                 cobData = CobGraphData(emptyList(), emptyList()),

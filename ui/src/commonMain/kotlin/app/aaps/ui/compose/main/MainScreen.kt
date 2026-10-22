@@ -330,6 +330,10 @@ fun MainScreen(
                         paddingValues = contentPadding,
                         fabBottomOffset = if (hasToolbar && showChrome) 56.dp else 0.dp,
                         bolusStateFlow = bolusStateFlow,
+                        // In preview mode the bottom bar lies over the content instead of above it, so the end of each
+                        // column needs its height too. The height is kept once measured, so the columns do not move each
+                        // time the bars show and hide.
+                        overlaidBarsHeight = if (previewMode) with(density) { bottomBarHeightPx.toDp() } else 0.dp,
                         pumpStatusText = pumpStatusText,
                         queueStatusText = queueStatusText,
                         isPumpCommunicating = isPumpCommunicating,

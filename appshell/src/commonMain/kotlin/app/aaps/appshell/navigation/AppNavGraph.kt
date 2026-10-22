@@ -47,6 +47,7 @@ import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventShowSnackbar
+import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.IntKey
 import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.BooleanNonKey
@@ -71,6 +72,7 @@ import app.aaps.plugins.automation.AutomationRuntime
 import app.aaps.plugins.main.MainStrings
 import app.aaps.plugins.sync.nsclientV3.clientcontrol.compose.AuthorizedClientsScreen
 import app.aaps.plugins.sync.nsclientV3.clientcontrol.compose.PairWithMasterScreen
+import app.aaps.plugins.sync.nsclientV3.clientcontrol.compose.ScanMasterQrScreen
 import app.aaps.ui.compose.calibrationDialog.CalibrationDialogScreen
 import app.aaps.ui.compose.carbsDialog.CarbsDialogScreen
 import app.aaps.ui.compose.careDialog.CareDialogScreen
@@ -126,15 +128,6 @@ import app.aaps.plugins.configuration.setupwizard.SWDefinition
 import app.aaps.plugins.configuration.setupwizard.SetupWizardScreen
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
-
-private fun NavBackStackEntry.stringArg(key: String): String? =
-    arguments?.read { if (contains(key)) getStringOrNull(key) else null }
-
-private fun NavBackStackEntry.intArg(key: String, default: Int): Int =
-    arguments?.read { if (contains(key)) getInt(key) else default } ?: default
-
-private fun NavBackStackEntry.intArgOrNull(key: String): Int? =
-    arguments?.read { if (contains(key)) getInt(key) else null }
 
 /**
  * Safe popBackStack that prevents double-navigation during transitions.
@@ -471,6 +464,7 @@ fun NavGraphBuilder.appNavGraph(
             currentPercentage = reuseValues?.first ?: 100,
             currentTimeshiftHours = reuseValues?.second ?: 0,
             hasReuseValues = reuseValues != null,
+            showNotesField = preferences.get(BooleanKey.OverviewShowNotesInDialogs),
             initialTimestamp = profileManagementViewModel.dateUtil.nowWithoutMilliseconds(),
             rh = rh,
             onNavigateBack = { navController.safePopBackStack() },
@@ -729,9 +723,34 @@ fun NavGraphBuilder.appNavGraph(
         )
     }
 
-    composable(AppRoute.PairWithMaster.route) {
+    // Opened from the setup wizard, a pairing (or a used QR code) finishes the wizard: the steps after it would only
+    // show what it did. Marked processed like the wizard's own Finish, and back to the screen under the wizard.
+    val finishSetupWizard: () -> Unit = {
+        preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
+        navController.popBackStack(AppRoute.SetupWizard.route, inclusive = true)
+    }
+    val goBack: () -> Unit = { navController.popBackStack() }
+
+    composable(
+        AppRoute.PairWithMaster.route,
+        arguments = listOf(navArgument("wizard") { type = NavType.BoolType; defaultValue = false })
+    ) { backStackEntry ->
+        val fromSetupWizard = backStackEntry.booleanArg("wizard")
         PairWithMasterScreen(
-            onNavigateBack = { navController.popBackStack() }
+            onNavigateBack = goBack,
+            onPaired = if (fromSetupWizard) finishSetupWizard else goBack,
+            onScanQr = { navController.navigate(AppRoute.ScanMasterQr.createRoute(fromSetupWizard)) }
+        )
+    }
+
+    composable(
+        AppRoute.ScanMasterQr.route,
+        arguments = listOf(navArgument("wizard") { type = NavType.BoolType; defaultValue = false })
+    ) { backStackEntry ->
+        val fromSetupWizard = backStackEntry.booleanArg("wizard")
+        ScanMasterQrScreen(
+            onNavigateBack = goBack,
+            onDone = if (fromSetupWizard) finishSetupWizard else goBack
         )
     }
 
@@ -924,6 +943,13 @@ fun NavGraphBuilder.appNavGraph(
                     preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
                     navController.safePopBackStack()
                 },
+                // Closing counts as processed, the same as finishing. The flag is "processed", not
+                // "completed": its only job is to decide whether the app opens the wizard by itself on
+                // start. Leaving it unset meant anyone who closed the wizard met it again on every
+                // launch, and on a client there was no way out - the last page is the patient name,
+                // which is not skippable, so with no name typed the Finish button is never drawn at
+                // all. This is only reached from the exit dialog's confirm, so it is a deliberate
+                // close, and the wizard stays reachable from the menu.
                 onBack = {
                     preferences.put(BooleanNonKey.GeneralSetupWizardProcessed, true)
                     navController.safePopBackStack()
@@ -936,7 +962,8 @@ fun NavGraphBuilder.appNavGraph(
                 onManageProfile = { navController.navigate(AppRoute.Profile.createRoute()) },
                 onProfileSwitch = { navController.navigate(AppRoute.ProfileActivation.createRoute(0)) },
                 onOpenAuthorizedClients = { navController.navigate(AppRoute.AuthorizedClients.route) },
-                onPairWithMaster = { navController.navigate(AppRoute.PairWithMaster.route) },
+                onPairWithMaster = { navController.navigate(AppRoute.PairWithMaster.createRoute(fromSetupWizard = true)) },
+                onScanMasterQr = { navController.navigate(AppRoute.ScanMasterQr.createRoute(fromSetupWizard = true)) },
                 onOpenNsReceiveSettings = { navController.navigate(AppRoute.PreferenceScreen.createRoute("ns_client_synchronization")) },
                 onRequestDirectoryAccess = onRequestDirectoryAccess,
                 onRequestPermission = onRequestPermission,
@@ -1110,6 +1137,22 @@ private fun AutomationContentRoute(
         }
     }
 }
+
+// `NavBackStackEntry.arguments` is a `Bundle` on Android but a `SavedState` in multiplatform
+// navigation, and only the SavedState API exists in shared code. These two keep the call sites
+// reading the way they did.
+private fun NavBackStackEntry.stringArg(key: String): String? =
+    arguments?.read { if (contains(key)) getStringOrNull(key) else null }
+
+private fun NavBackStackEntry.booleanArg(key: String): Boolean =
+    arguments?.read { if (contains(key)) getBoolean(key) else false } ?: false
+
+private fun NavBackStackEntry.intArg(key: String, default: Int): Int =
+    arguments?.read { if (contains(key)) getInt(key) else default } ?: default
+
+/** Null when the argument is absent, for routes that cannot render without it. */
+private fun NavBackStackEntry.intArgOrNull(key: String): Int? =
+    arguments?.read { if (contains(key)) getInt(key) else null }
 
 /**
  * The preference screen registered under [key], or null when nothing claims it.

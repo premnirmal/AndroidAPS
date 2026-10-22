@@ -97,6 +97,12 @@ fun OverviewScreen(
     paddingValues: PaddingValues,
     fabBottomOffset: Dp = 0.dp,
     bolusStateFlow: StateFlow<BolusProgressState?>,
+    /**
+     * Height of the bars drawn over the content instead of beside it (preview mode). The columns add it to the
+     * space at their end, so their last row can be scrolled clear of the bars and the toolbar while these show.
+     */
+    overlaidBarsHeight: Dp = 0.dp,
+    bolusState: BolusProgressState? = null,
     pumpStatusText: String = "",
     queueStatusText: AnnotatedString? = null,
     isPumpCommunicating: Boolean = false,
@@ -244,7 +250,8 @@ fun OverviewScreen(
                 endSceneEnabled = endSceneEnabled,
                 commandsAllowed = commandsAllowed,
                 onBgSourceClick = onBgSourceClick,
-                formatDuration = formatDuration
+                formatDuration = formatDuration,
+                overlaidBarsHeight = overlaidBarsHeight,
             )
         } else BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             if (isLandscape && maxWidth >= SPLIT_LAYOUT_MIN_WIDTH) {
@@ -283,7 +290,8 @@ fun OverviewScreen(
                     endSceneEnabled = endSceneEnabled,
                     commandsAllowed = commandsAllowed,
                     onBgSourceClick = onBgSourceClick,
-                    formatDuration = formatDuration
+                    formatDuration = formatDuration,
+                    overlaidBarsHeight = overlaidBarsHeight
                 )
             } else {
                 OverviewScreenStacked(
@@ -321,7 +329,8 @@ fun OverviewScreen(
                     endSceneEnabled = endSceneEnabled,
                     commandsAllowed = commandsAllowed,
                     onBgSourceClick = onBgSourceClick,
-                    formatDuration = formatDuration
+                    formatDuration = formatDuration,
+                    overlaidBarsHeight = overlaidBarsHeight
                 )
             }
         }

@@ -16,6 +16,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.data.model.ActiveSceneState
@@ -72,6 +73,8 @@ fun OverviewScreenStacked(
     commandsAllowed: Boolean = true,
     onBgSourceClick: () -> Unit = {},
     formatDuration: (Long) -> String = { ms -> "${(ms / 60000L).toInt()}m" },
+    /** Height of the bars drawn over the content in preview mode (a short window, e.g. split screen); added to the end space. */
+    overlaidBarsHeight: Dp = 0.dp,
     modifier: Modifier = Modifier
 ) {
     val config = LocalConfig.current
@@ -171,6 +174,9 @@ fun OverviewScreenStacked(
             )
         }
 
-        GraphsSection(graphViewModel = graphViewModel, isSimpleMode = isSimpleMode)
+        GraphsSection(
+            graphViewModel = graphViewModel, isSimpleMode = isSimpleMode, iobText = iobUiState.text, cobText = cobUiState.text,
+            overlaidBarsHeight = overlaidBarsHeight
+        )
     }
 }

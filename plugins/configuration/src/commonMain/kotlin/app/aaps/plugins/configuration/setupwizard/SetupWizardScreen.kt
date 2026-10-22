@@ -61,6 +61,7 @@ fun SetupWizardScreen(
     onProfileSwitch: () -> Unit,
     onOpenAuthorizedClients: () -> Unit,
     onPairWithMaster: () -> Unit,
+    onScanMasterQr: () -> Unit,
     onOpenNsReceiveSettings: () -> Unit,
     onRequestDirectoryAccess: () -> Unit,
     onRequestPermission: (app.aaps.core.interfaces.plugin.PermissionGroup) -> Unit,
@@ -79,6 +80,7 @@ fun SetupWizardScreen(
         swDefinition.onProfileSwitch = onProfileSwitch
         swDefinition.onOpenAuthorizedClients = onOpenAuthorizedClients
         swDefinition.onPairWithMaster = onPairWithMaster
+        swDefinition.onScanMasterQr = onScanMasterQr
         swDefinition.onOpenNsReceiveSettings = onOpenNsReceiveSettings
         swDefinition.onRequestDirectoryAccess = onRequestDirectoryAccess
         swDefinition.onRequestPermission = onRequestPermission
@@ -94,6 +96,7 @@ fun SetupWizardScreen(
             swDefinition.onProfileSwitch = null
             swDefinition.onOpenAuthorizedClients = null
             swDefinition.onPairWithMaster = null
+            swDefinition.onScanMasterQr = null
             swDefinition.onOpenNsReceiveSettings = null
             swDefinition.onRequestDirectoryAccess = null
             swDefinition.onRequestPermission = null
