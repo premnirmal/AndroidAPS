@@ -9,6 +9,7 @@ import app.aaps.core.interfaces.pump.BlePreCheck
 import app.aaps.core.interfaces.pump.BolusProgressData
 import app.aaps.core.interfaces.pump.DetailedBolusInfo
 import app.aaps.core.interfaces.pump.PumpSync
+import app.aaps.core.interfaces.pump.PumpTimeRemaining
 import app.aaps.core.interfaces.pump.PumpProfile
 import app.aaps.core.interfaces.profile.Profile
 import app.aaps.core.interfaces.notifications.AlarmSound
@@ -121,6 +122,45 @@ class O5PumpPluginTest : TestBaseWithProfile() {
         whenever(history.setTotalAmountDelivered(any(), anyOrNull())).thenReturn(Completable.complete())
     }
 
+
+    @Test
+    fun `pump time remaining exposes the pod expiry to the overview`() {
+        val now = System.currentTimeMillis()
+        whenever(podStateManager.podLifeInHours).thenReturn(80.toShort())
+        whenever(podStateManager.minutesSinceActivation).thenReturn(60.toShort())
+        whenever(podStateManager.lastStatusResponseReceived).thenReturn(now)
+        val pump: PumpTimeRemaining = plugin
+
+        val expectedExpiry = now + 71 * 3_600_000L
+        assertThat(pump.expectedEndTimeMillis()).isWithin(1_000L).of(expectedExpiry)
+
+        whenever(podStateManager.minutesSinceActivation).thenReturn(120.toShort())
+        assertThat(pump.expectedEndTimeMillis()).isWithin(1_000L).of(expectedExpiry - 3_600_000L)
+    }
+
+    @Test
+    fun `pump time remaining is unavailable without pod timing data`() {
+        whenever(podStateManager.podLifeInHours).thenReturn(null)
+        assertThat(plugin.expectedEndTimeMillis()).isNull()
+
+        whenever(podStateManager.podLifeInHours).thenReturn(80.toShort())
+        whenever(podStateManager.minutesSinceActivation).thenReturn(null)
+        assertThat(plugin.expectedEndTimeMillis()).isNull()
+
+        whenever(podStateManager.minutesSinceActivation).thenReturn(60.toShort())
+        whenever(podStateManager.lastStatusResponseReceived).thenReturn(null)
+        assertThat(plugin.expectedEndTimeMillis()).isNull()
+    }
+
+    @Test
+    fun `pump time remaining keeps the expiry after the nominal pod lifetime`() {
+        val now = System.currentTimeMillis()
+        whenever(podStateManager.podLifeInHours).thenReturn(80.toShort())
+        whenever(podStateManager.minutesSinceActivation).thenReturn((73 * 60).toShort())
+        whenever(podStateManager.lastStatusResponseReceived).thenReturn(now)
+
+        assertThat(plugin.expectedEndTimeMillis()).isWithin(1_000L).of(now - 3_600_000L)
+    }
 
     @Test
     fun `isBusy is false when no activation is running or started`() {

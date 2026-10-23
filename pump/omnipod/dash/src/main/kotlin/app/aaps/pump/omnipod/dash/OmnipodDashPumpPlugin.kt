@@ -31,6 +31,7 @@ import app.aaps.core.interfaces.pump.PumpPluginBase
 import app.aaps.core.interfaces.pump.PumpProfile
 import app.aaps.core.interfaces.pump.PumpRate
 import app.aaps.core.interfaces.pump.PumpSync
+import app.aaps.core.interfaces.pump.PumpTimeRemaining
 import app.aaps.core.interfaces.pump.defs.fillFor
 import app.aaps.core.interfaces.utils.Round
 import app.aaps.core.interfaces.queue.Command
@@ -152,7 +153,7 @@ class OmnipodDashPumpPlugin(
         DashStringNonPreferenceKey.entries,
     aapsLogger, rh, preferences, commandQueue, notificationManager
 ),
-    Pump, OmnipodDash, OwnDatabasePlugin {
+    Pump, OmnipodDash, OwnDatabasePlugin, PumpTimeRemaining {
 
     @Volatile var bolusCanceled = false
     @Volatile var bolusDeliveryInProgress = false
@@ -371,6 +372,8 @@ class OmnipodDashPumpPlugin(
             checkPodKaput(),
         )
     )
+
+    override fun expectedEndTimeMillis(): Long? = podStateManager.expiry?.toInstant()?.toEpochMilli()
 
     private fun checkPodKaput(): Completable = rxCompletable(Dispatchers.IO) {
         if (podStateManager.isPodKaput) {

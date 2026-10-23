@@ -10,7 +10,6 @@ import app.aaps.core.data.model.BS
 import app.aaps.core.data.model.CA
 import app.aaps.core.data.model.EB
 import app.aaps.core.data.model.EPS
-import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.model.TB
 import app.aaps.core.data.model.TDD
 import app.aaps.core.data.ue.Action
@@ -27,7 +26,6 @@ import app.aaps.core.interfaces.stats.TirCalculator
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.keys.IntNonKey
 import app.aaps.core.keys.UnitDoubleKey
-import app.aaps.core.keys.StringKey
 import app.aaps.core.keys.StringNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.ui.compose.stats.AgpStatsData
@@ -38,13 +36,11 @@ import app.aaps.ui.compose.stats.TddStatsData
 import app.aaps.ui.compose.stats.TirStatsData
 import app.aaps.ui.compose.stats.calculateAgpStatsData
 import app.aaps.ui.compose.stats.TrioCarbStatsData
-import app.aaps.ui.compose.stats.TrioStatsData
 import app.aaps.ui.compose.stats.TrioInsulinStatsData
 import app.aaps.ui.compose.stats.TrioStatsSection
 import app.aaps.ui.compose.stats.TrioStatsRange
 import app.aaps.ui.compose.stats.calculateTrioCarbStatsData
 import app.aaps.ui.compose.stats.calculateTrioInsulinStatsData
-import app.aaps.ui.compose.stats.calculateTrioStatsData
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
@@ -97,18 +93,10 @@ class StatsViewModel(
     private val preferences: Preferences
 ) : ViewModel() {
 
-    val trioLowMgdl: Double
-        get() = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewLowMark))
-    val trioHighMgdl: Double
-        get() = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewHighMark))
-    val trioGlucoseUnit: GlucoseUnit
-        get() = GlucoseUnit.fromText(preferences.get(StringKey.GeneralUnits))
-
     private val _uiState = MutableStateFlow(StatsUiState())
     val uiState: StateFlow<StatsUiState> = _uiState.asStateFlow()
 
     private var cycleLoadJob: Job? = null
-    private var trioStatsLoadJob: Job? = null
     private var trioInsulinStatsLoadJob: Job? = null
     private var trioCarbStatsLoadJob: Job? = null
     private var agpLoadJob: Job? = null
@@ -230,40 +218,6 @@ class StatsViewModel(
                 throw exception
             } catch (_: Exception) {
                 _uiState.update { it.copy(agpLoading = false, agpError = true) }
-            }
-        }
-    }
-
-    fun loadTrioStats(range: TrioStatsRange) {
-        if (
-            uiState.value.trioRange == range &&
-            uiState.value.trioStatsData != null
-        ) return
-
-        trioStatsLoadJob?.cancel()
-        trioStatsLoadJob = viewModelScope.launch {
-            _uiState.update {
-                it.copy(
-                    trioRange = range,
-                    trioStatsLoading = true
-                )
-            }
-
-            val data = withContext(aapsIoDispatcher) {
-                val endTime = dateUtil.now()
-                val startTime = range.startTime(endTime)
-                val readings = persistenceLayer.getBgReadingsDataFromTimeToTime(startTime, endTime, true)
-                calculateTrioStatsData(
-                    readings = readings,
-                    lowMgdl = trioLowMgdl,
-                    highMgdl = trioHighMgdl
-                )
-            }
-            _uiState.update {
-                it.copy(
-                    trioStatsData = data,
-                    trioStatsLoading = false
-                )
             }
         }
     }
@@ -534,8 +488,6 @@ data class StatsUiState(
     val agpError: Boolean = false,
     val tirStatsData: TirStatsData? = null,
     val dexcomTirData: DexcomTIR? = null,
-    val trioStatsData: TrioStatsData? = null,
-    val trioRange: TrioStatsRange = TrioStatsRange.TODAY,
     val trioStatsSection: TrioStatsSection = TrioStatsSection.GLUCOSE,
     val trioInsulinStatsData: TrioInsulinStatsData? = null,
     val trioInsulinRange: TrioStatsRange = TrioStatsRange.TODAY,
@@ -546,7 +498,6 @@ data class StatsUiState(
     val tddLoading: Boolean = true,
     val tirLoading: Boolean = true,
     val dexcomTirLoading: Boolean = true,
-    val trioStatsLoading: Boolean = true,
     val trioInsulinStatsLoading: Boolean = true,
     val trioCarbStatsLoading: Boolean = true,
     val tddCycleLoading: Boolean = true,
