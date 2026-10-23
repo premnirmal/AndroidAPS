@@ -11,7 +11,6 @@ import javax.crypto.spec.GCMParameterSpec
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
-import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.binding
 
 /**
@@ -47,7 +46,6 @@ interface O5RegistrationCipher {
 }
 
 @ContributesBinding(AppScope::class, binding = binding<O5RegistrationCipher>())
-@SingleIn(AppScope::class)
 class AndroidKeystoreAesCipher @Inject constructor() : O5RegistrationCipher {
 
     private val keyAlias: String = DEFAULT_KEY_ALIAS

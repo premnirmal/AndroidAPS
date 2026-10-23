@@ -77,7 +77,7 @@ class CarelevoAlarmNotifierTest {
     private lateinit var sut: CarelevoAlarmNotifier
 
     // Must match the private channelId in the SUT.
-    private val channelId = "carelevo_alarm_channel_silent"
+    private val channelId = "carelevo_alarm_channel"
 
     private fun alarm(
         cause: AlarmCause,

@@ -29,8 +29,9 @@ import app.aaps.core.interfaces.rx.collectResilient
 import app.aaps.core.interfaces.rx.events.EventInitializationChanged
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.keys.interfaces.Preferences
-import app.aaps.core.ui.compose.ScreenAction
 import app.aaps.core.ui.compose.StatusLevel
+import app.aaps.core.ui.compose.pump.ActionCategory
+import app.aaps.core.ui.compose.pump.PumpAction
 import app.aaps.core.ui.compose.pump.PumpCommunicationStatus
 import app.aaps.core.ui.compose.pump.PumpInfoRow
 import app.aaps.core.ui.compose.pump.PumpOverviewUiState
@@ -313,15 +314,17 @@ class DiaconnOverviewViewModel(
 
         // Actions
         val primaryActions = listOf(
-            ScreenAction(
+            PumpAction(
                 label = rh.gs(CoreUiR.string.refresh),
                 icon = Icons.Filled.Refresh,
+                category = ActionCategory.PRIMARY,
                 visible = isInitialized,
                 onClick = { onRefreshClick() }
             ),
-            ScreenAction(
+            PumpAction(
                 label = rh.gs(CoreUiR.string.pump_history),
                 icon = Icons.AutoMirrored.Filled.List,
+                category = ActionCategory.PRIMARY,
                 visible = isInitialized,
                 onClick = { onHistoryClick() }
             )
@@ -329,9 +332,10 @@ class DiaconnOverviewViewModel(
 
         val managementActions = buildList {
             add(
-                ScreenAction(
+                PumpAction(
                     label = rh.gs(R.string.diaconng8_pump_settings),
                     icon = Icons.Filled.Settings,
+                    category = ActionCategory.MANAGEMENT,
                     visible = isInitialized,
                     onClick = { onUserSettingsClick() }
                 )
@@ -339,17 +343,19 @@ class DiaconnOverviewViewModel(
 
             if (isConfigured) {
                 add(
-                    ScreenAction(
+                    PumpAction(
                         label = rh.gs(CoreUiR.string.pump_unpair),
                         icon = Icons.Filled.Bluetooth,
+                        category = ActionCategory.MANAGEMENT,
                         onClick = { onUnpairClick() }
                     )
                 )
             } else {
                 add(
-                    ScreenAction(
+                    PumpAction(
                         label = rh.gs(CoreUiR.string.pump_pair),
                         icon = Icons.Filled.Bluetooth,
+                        category = ActionCategory.MANAGEMENT,
                         onClick = { onPairClick() }
                     )
                 )

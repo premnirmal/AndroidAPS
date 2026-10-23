@@ -31,9 +31,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.aaps.core.ui.compose.ScreenAction
 import app.aaps.core.ui.compose.StatusLevel
 import app.aaps.core.ui.compose.icons.IcLoopPaused
+import app.aaps.core.ui.compose.pump.ActionCategory
+import app.aaps.core.ui.compose.pump.PumpAction
 import app.aaps.core.ui.compose.pump.PumpInfoRow
 import app.aaps.core.ui.compose.pump.PumpOverviewScreen
 import app.aaps.core.ui.compose.pump.PumpOverviewUiState
@@ -243,16 +244,18 @@ private fun CarelevoOverviewScreenConnectedPreview() {
                 ),
                 primaryActions = emptyList(),
                 managementActions = listOf(
-                    ScreenAction(
+                    PumpAction(
                         label = stringResource(R.string.carelevo_overview_pump_discard_btn_label),
                         icon = Icons.Filled.Delete,
+                        category = ActionCategory.MANAGEMENT,
                         enabled = true,
                         visible = true,
                         onClick = {}
                     ),
-                    ScreenAction(
+                    PumpAction(
                         label = stringResource(R.string.carelevo_overview_pump_suspend_btn_label),
                         icon = IcLoopPaused,
+                        category = ActionCategory.MANAGEMENT,
                         enabled = true,
                         visible = true,
                         onClick = {}
@@ -290,7 +293,7 @@ private fun CarelevoOverviewScreenDisconnectedPreview() {
                     )
                 ),
                 primaryActions = listOf(
-                    ScreenAction(
+                    PumpAction(
                         label = stringResource(R.string.carelevo_overview_connect_btn_label),
                         icon = Icons.Filled.SwapHoriz,
                         enabled = true,

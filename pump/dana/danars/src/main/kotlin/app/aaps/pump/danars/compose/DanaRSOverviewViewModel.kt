@@ -21,8 +21,9 @@ import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.keys.interfaces.Preferences
-import app.aaps.core.ui.compose.ScreenAction
 import app.aaps.core.ui.compose.StatusLevel
+import app.aaps.core.ui.compose.pump.ActionCategory
+import app.aaps.core.ui.compose.pump.PumpAction
 import app.aaps.core.ui.compose.pump.StatusBanner
 import app.aaps.pump.dana.DanaPump
 import app.aaps.pump.dana.R
@@ -91,13 +92,14 @@ class DanaRSOverviewViewModel(
         return StatusBanner(rh.gs(app.aaps.core.ui.R.string.ble_not_supported_or_not_paired), StatusLevel.CRITICAL)
     }
 
-    override fun buildManagementActions(pump: DanaPump, isInitialized: Boolean, isConfigured: Boolean): List<ScreenAction> = buildList {
+    override fun buildManagementActions(pump: DanaPump, isInitialized: Boolean, isConfigured: Boolean): List<PumpAction> = buildList {
         // User Settings (only for RS pumps with non-legacy firmware)
         if (pump.hwModel != 1 && pump.protocol != 0x00) {
             add(
-                ScreenAction(
+                PumpAction(
                     label = rh.gs(R.string.danar_user_options),
                     icon = Icons.Filled.Settings,
+                    category = ActionCategory.MANAGEMENT,
                     visible = isInitialized,
                     onClick = { onUserSettingsClick() }
                 )
@@ -107,17 +109,19 @@ class DanaRSOverviewViewModel(
         // Pair / Unpair
         if (isConfigured) {
             add(
-                ScreenAction(
+                PumpAction(
                     label = rh.gs(app.aaps.core.ui.R.string.pump_unpair),
                     icon = Icons.Filled.Bluetooth,
+                    category = ActionCategory.MANAGEMENT,
                     onClick = { onUnpairClick() }
                 )
             )
         } else {
             add(
-                ScreenAction(
+                PumpAction(
                     label = rh.gs(app.aaps.core.ui.R.string.pairing),
                     icon = Icons.Filled.Bluetooth,
+                    category = ActionCategory.MANAGEMENT,
                     onClick = { onPairClick() }
                 )
             )

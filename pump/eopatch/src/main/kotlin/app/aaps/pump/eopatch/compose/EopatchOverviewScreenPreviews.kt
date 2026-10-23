@@ -5,9 +5,10 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import app.aaps.core.ui.compose.ScreenAction
 import app.aaps.core.ui.compose.StatusLevel
 import app.aaps.core.ui.compose.icons.IcLoopPaused
+import app.aaps.core.ui.compose.pump.ActionCategory
+import app.aaps.core.ui.compose.pump.PumpAction
 import app.aaps.core.ui.compose.pump.PumpInfoRow
 import app.aaps.core.ui.compose.pump.PumpOverviewScreen
 import app.aaps.core.ui.compose.pump.PumpOverviewUiState
@@ -26,10 +27,10 @@ internal fun EopatchOverviewActivatedPreview() {
                     PumpInfoRow(label = "Serial", value = "EO00-AB12")
                 ),
                 primaryActions = listOf(
-                    ScreenAction(label = "Suspend pump", icon = IcLoopPaused, onClick = {})
+                    PumpAction(label = "Suspend pump", icon = IcLoopPaused, onClick = {})
                 ),
                 managementActions = listOf(
-                    ScreenAction(label = "Discard Patch", icon = Icons.Filled.SwapHoriz, onClick = {})
+                    PumpAction(label = "Discard Patch", icon = Icons.Filled.SwapHoriz, category = ActionCategory.MANAGEMENT, onClick = {})
                 )
             )
         )
@@ -44,7 +45,7 @@ internal fun EopatchOverviewNotActivatedPreview() {
             state = PumpOverviewUiState(
                 statusBanner = StatusBanner(text = "Patch not activated", level = StatusLevel.WARNING),
                 primaryActions = listOf(
-                    ScreenAction(label = "Activate Patch", icon = Icons.Filled.SwapHoriz, onClick = {})
+                    PumpAction(label = "Activate Patch", icon = Icons.Filled.SwapHoriz, onClick = {})
                 )
             )
         )

@@ -21,9 +21,10 @@ import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.interfaces.utils.Round
-import app.aaps.core.ui.compose.ScreenAction
 import app.aaps.core.ui.compose.StatusLevel
 import app.aaps.core.ui.compose.icons.IcLoopPaused
+import app.aaps.core.ui.compose.pump.ActionCategory
+import app.aaps.core.ui.compose.pump.PumpAction
 import app.aaps.core.ui.compose.pump.PumpCommunicationStatus
 import app.aaps.core.ui.compose.pump.PumpInfoRow
 import app.aaps.core.ui.compose.pump.PumpOverviewUiState
@@ -848,9 +849,10 @@ class CarelevoOverviewViewModel @Inject constructor(
 
         val primaryActions = when (patchState) {
             PatchState.NotConnectedNotBooting -> listOf(
-                ScreenAction(
+                PumpAction(
                     label = rh.gs(R.string.carelevo_overview_connect_btn_label),
                     icon = Icons.Filled.SwapHoriz,
+                    category = ActionCategory.PRIMARY,
                     onClick = { triggerEvent(CarelevoOverviewEvent.StartConnectionFlow) }
                 )
             )
@@ -862,18 +864,20 @@ class CarelevoOverviewViewModel @Inject constructor(
         // they reconnect-on-tap via the queue rather than being gated behind a live link.
         val managementActions = if (patchState == PatchState.ConnectedBooted || patchState == PatchState.NotConnectedBooted) {
             listOf(
-                ScreenAction(
+                PumpAction(
                     label = rh.gs(R.string.carelevo_overview_pump_discard_btn_label),
                     icon = Icons.Filled.Delete,
+                    category = ActionCategory.MANAGEMENT,
                     onClick = { triggerEvent(CarelevoOverviewEvent.ShowPumpDiscardDialog) }
                 ),
-                ScreenAction(
+                PumpAction(
                     label = if (overviewData.isPumpStopped) {
                         rh.gs(R.string.carelevo_overview_pump_resume_btn_label)
                     } else {
                         rh.gs(R.string.carelevo_overview_pump_suspend_btn_label)
                     },
                     icon = if (overviewData.isPumpStopped) Icons.Filled.PlayArrow else IcLoopPaused,
+                    category = ActionCategory.MANAGEMENT,
                     onClick = { triggerEvent(CarelevoOverviewEvent.ClickPumpStopResumeBtn) }
                 )
             )

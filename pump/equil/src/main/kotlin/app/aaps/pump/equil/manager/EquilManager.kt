@@ -875,7 +875,8 @@ class EquilManager(
         record.resolvedStatus = ResolvedResult.SUCCESS
         record.note = text
         equilHistoryRecordDao.insert(record)
-        rxBus.send(EventEquilAlarm(text))
+        val recent = dateUtil.now() - eventTime < T.mins(ALARM_SOUND_MAX_AGE_MINUTES).msecs()
+        rxBus.send(EventEquilAlarm(text, sound = recent))
     }
 
     /**
@@ -976,6 +977,9 @@ class EquilManager(
     }
 
     companion object {
+
+        /** A pump alarm read later than this after it happened is shown without sound. */
+        const val ALARM_SOUND_MAX_AGE_MINUTES = 30L
 
         /** Bolus step 0.05 U. */
         private const val BOLUS_STEPS_PER_UNIT = 20.0

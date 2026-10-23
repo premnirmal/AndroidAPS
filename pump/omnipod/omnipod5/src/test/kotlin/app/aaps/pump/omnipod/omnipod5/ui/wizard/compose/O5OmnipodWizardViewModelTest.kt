@@ -21,9 +21,9 @@ import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.O5BleManager
-import app.aaps.pump.omnipod.omnipod5.history.O5History
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.AlarmType
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.O5PodStateManager
+import app.aaps.pump.omnipod.omnipod5.history.O5History
 import app.aaps.shared.tests.rx.TestAapsSchedulers
 import com.google.common.truth.Truth.assertThat
 import io.reactivex.rxjava3.core.Observable

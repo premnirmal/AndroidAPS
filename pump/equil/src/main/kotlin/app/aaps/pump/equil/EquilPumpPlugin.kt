@@ -158,13 +158,13 @@ class EquilPumpPlugin(
 
         rxBus.toFlow(EventEquilAlarm::class)
             .collectResilient(newScope, aapsLogger, LTag.PUMP) { eventEquilError ->
-                aapsLogger.info(LTag.PUMPCOMM, "eventEquilError.tips====${eventEquilError.tips}")
+                aapsLogger.info(LTag.PUMPCOMM, "eventEquilError.tips====${eventEquilError.tips} sound=${eventEquilError.sound}")
                 // Alarms come from the pump history, which is read once per record after every connection,
-                // so each pump alarm arrives here exactly once (#5077).
+                // so each pump alarm arrives here exactly once (#5077). An old one read late gets no sound.
                 // The history is read only after a bolus has ended (EquilManager.bolus corrects the amount),
                 // so do not stop the bolus here: that sent a stop command while the history read was running.
                 notificationManager.dismiss(NotificationId.EQUIL_ALARM)
-                notificationManager.post(NotificationId.EQUIL_ALARM, eventEquilError.tips)
+                notificationManager.post(NotificationId.EQUIL_ALARM, eventEquilError.tips, sound = if (eventEquilError.sound) AlarmSound.ALARM else null)
             }
         preferences.observe(EquilIntPreferenceKey.EquilTone).drop(1).collectResilient(newScope, aapsLogger, LTag.PUMP) {
             val mode = preferences.get(EquilIntPreferenceKey.EquilTone)

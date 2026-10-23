@@ -19,9 +19,10 @@ import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.AapsSchedulers
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.utils.DateUtil
-import app.aaps.core.ui.compose.ScreenAction
 import app.aaps.core.ui.compose.StatusLevel
 import app.aaps.core.ui.compose.icons.IcLoopPaused
+import app.aaps.core.ui.compose.pump.ActionCategory
+import app.aaps.core.ui.compose.pump.PumpAction
 import app.aaps.core.ui.compose.pump.PumpCommunicationStatus
 import app.aaps.core.ui.compose.pump.PumpInfoRow
 import app.aaps.core.ui.compose.pump.PumpOverviewStateBuilder
@@ -336,18 +337,20 @@ class EopatchOverviewViewModel(
         val primaryActions = buildList {
             if (!isActivated) {
                 add(
-                    ScreenAction(
+                    PumpAction(
                         label = rh.gs(R.string.string_activate_patch),
                         icon = Icons.Filled.SwapHoriz,
+                        category = ActionCategory.PRIMARY,
                         onClick = { onClickActivation() }
                     )
                 )
             }
             if (isActivated) {
                 add(
-                    ScreenAction(
+                    PumpAction(
                         label = if (isPaused) rh.gs(CoreUiR.string.pump_resume) else rh.gs(CoreUiR.string.pump_suspend),
                         icon = if (isPaused) Icons.Filled.PlayArrow else IcLoopPaused,
+                        category = ActionCategory.PRIMARY,
                         onClick = { } // Click handled in screen composable (needs dialog)
                     )
                 )
@@ -357,9 +360,10 @@ class EopatchOverviewViewModel(
         val managementActions = buildList {
             if (isActivated) {
                 add(
-                    ScreenAction(
+                    PumpAction(
                         label = rh.gs(R.string.string_discard_patch),
                         icon = Icons.Filled.SwapHoriz,
+                        category = ActionCategory.MANAGEMENT,
                         onClick = { onClickDeactivation() }
                     )
                 )

@@ -34,10 +34,11 @@ import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.collectResilient
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.ui.compose.ComposablePluginContent
-import app.aaps.core.ui.compose.ScreenAction
 import app.aaps.core.ui.compose.ToolbarConfig
 import app.aaps.core.ui.compose.dialogs.OkCancelDialog
+import app.aaps.core.ui.compose.pump.ActionCategory
 import app.aaps.core.ui.compose.pump.BlePreCheckHost
+import app.aaps.core.ui.compose.pump.PumpAction
 import app.aaps.core.ui.compose.pump.PumpInfoRow
 import app.aaps.core.ui.compose.pump.PumpOverviewScreen
 import app.aaps.core.ui.compose.pump.PumpOverviewUiState
@@ -455,13 +456,14 @@ internal class InsightOverviewState(
         }
     }
 
-    private fun buildPrimaryActions(isInitialized: Boolean): List<ScreenAction> = buildList {
+    private fun buildPrimaryActions(isInitialized: Boolean): List<PumpAction> = buildList {
         if (!isInitialized) return@buildList
 
         add(
-            ScreenAction(
+            PumpAction(
                 label = rh.gs(CoreUiR.string.refresh),
                 icon = Icons.Filled.Refresh,
+                category = ActionCategory.PRIMARY,
                 enabled = !refreshPending,
                 onClick = {
                     refreshPending = true
@@ -478,9 +480,10 @@ internal class InsightOverviewState(
         insightPlugin.tBROverNotificationBlock?.let { block ->
             val labelRes = if (block.isEnabled) R.string.disable_tbr_over_notification else R.string.enable_tbr_over_notification
             add(
-                ScreenAction(
+                PumpAction(
                     label = rh.gs(labelRes),
                     icon = Icons.Filled.Notifications,
+                    category = ActionCategory.PRIMARY,
                     enabled = !tbrOverNotificationPending,
                     onClick = {
                         tbrOverNotificationPending = true
@@ -496,21 +499,23 @@ internal class InsightOverviewState(
         }
     }
 
-    private fun buildManagementActions(service: InsightConnectionService?): List<ScreenAction> = buildList {
+    private fun buildManagementActions(service: InsightConnectionService?): List<PumpAction> = buildList {
         if (service == null) return@buildList
         if (service.isPaired) {
             add(
-                ScreenAction(
+                PumpAction(
                     label = rh.gs(R.string.unpair),
                     icon = Icons.Filled.Bluetooth,
+                    category = ActionCategory.MANAGEMENT,
                     onClick = { _events.tryEmit(InsightOverviewEvent.RequestUnpair) }
                 )
             )
         } else {
             add(
-                ScreenAction(
+                PumpAction(
                     label = rh.gs(R.string.insight_pairing),
                     icon = Icons.Filled.Bluetooth,
+                    category = ActionCategory.MANAGEMENT,
                     onClick = { _events.tryEmit(InsightOverviewEvent.StartPairing) }
                 )
             )

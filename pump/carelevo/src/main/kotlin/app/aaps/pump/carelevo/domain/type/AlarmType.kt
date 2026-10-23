@@ -25,8 +25,8 @@ enum class AlarmType(val code: Int) {
         }
 
         /**
-         * True for the tiers that must take the strongest visual and vibration path: both
-         * pump-fault tiers, WARNING and ALERT.
+         * True for the tiers that must take the STRONGEST surfacing path (global alarm sound +
+         * full-screen, never a silent banner): both pump-fault tiers, WARNING and ALERT.
          *
          * DEVICE-VERIFY: confirm against vendor protocol docs that no ALERT cause is intentionally
          * low-priority.

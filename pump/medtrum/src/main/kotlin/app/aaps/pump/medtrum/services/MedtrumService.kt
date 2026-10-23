@@ -11,6 +11,7 @@ import app.aaps.core.interfaces.di.MetroMemberInjector
 import app.aaps.core.interfaces.insulin.ConcentrationHelper
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
 import app.aaps.core.interfaces.notifications.NotificationManager
@@ -608,7 +609,8 @@ class MedtrumService : MetroService(), MedtrumBleCallback {
                         notificationManager.post(
                             NotificationId.PUMP_SYNC_ERROR,
                             TextRef.AndroidRes(R.string.pump_sync_error),
-                            level = NotificationLevel.URGENT)
+                            level = NotificationLevel.URGENT,
+                            sound = AlarmSound.ALARM)
                     } else if (failureCount >= 2) {
                         break
                     }
@@ -693,7 +695,8 @@ class MedtrumService : MetroService(), MedtrumBleCallback {
                     notificationManager.post(
                         NotificationId.PUMP_ERROR,
                         TextRef.AndroidRes(R.string.patch_reset_after_primed_error),
-                        level = NotificationLevel.URGENT)
+                        level = NotificationLevel.URGENT,
+                        sound = AlarmSound.ALARM)
                 }
             }
 
@@ -730,7 +733,8 @@ class MedtrumService : MetroService(), MedtrumBleCallback {
                 notificationManager.post(
                     NotificationId.PUMP_SUSPENDED,
                     TextRef.AndroidRes(R.string.pump_is_suspended_hour_max),
-                    level = NotificationLevel.URGENT)
+                    level = NotificationLevel.URGENT,
+                    sound = AlarmSound.ALARM)
                 // Pump will report proper TBR for this from loadEvents()
                 scope.launch { commandQueue.loadEvents() }
             }
@@ -739,7 +743,8 @@ class MedtrumService : MetroService(), MedtrumBleCallback {
                 notificationManager.post(
                     NotificationId.PUMP_SUSPENDED,
                     TextRef.AndroidRes(R.string.pump_is_suspended_day_max),
-                    level = NotificationLevel.URGENT)
+                    level = NotificationLevel.URGENT,
+                    sound = AlarmSound.ALARM)
                 // Pump will report proper TBR for this from loadEvents()
                 scope.launch { commandQueue.loadEvents() }
             }
@@ -757,7 +762,8 @@ class MedtrumService : MetroService(), MedtrumBleCallback {
                 // Pump suspended due to error, show error!
                 notificationManager.post(
                     NotificationId.PUMP_ERROR,
-                    TextRef.AndroidRes(R.string.pump_error, listOf(alarmState?.let { medtrumPump.alarmStateToString(it) }.toString())))
+                    TextRef.AndroidRes(R.string.pump_error, listOf(alarmState?.let { medtrumPump.alarmStateToString(it) }.toString())),
+                    sound = AlarmSound.ALARM)
                 // Get pump status, use readStatus here as for loadEvents() we cannot be sure callback is executed
                 scope.launch {
                     commandQueue.readStatus(rh.gs(app.aaps.core.ui.R.string.device_changed))

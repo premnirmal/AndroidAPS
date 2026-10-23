@@ -206,24 +206,24 @@ class EquilManagerTest : TestBaseWithProfile() {
     }
 
     @Test
-    fun `a new blockage record alarms once`() = runTest {
+    fun `a new blockage record alarms once with sound`() = runTest {
         prepareHistory()
         val alarms = collectAlarms()
 
         equilManager.decodeHistory(historyRecord(1700, now - 2 * minute, 4, 2, 2))
 
-        assertEquals(listOf(EventEquilAlarm("Blockage")), alarms)
+        assertEquals(listOf(EventEquilAlarm("Blockage", sound = true)), alarms)
         verify(equilHistoryRecordDao).insert(argThat<EquilHistoryRecord> { type == EquilHistoryRecord.EventType.EQUIL_ALARM && note == "Blockage" })
     }
 
     @Test
-    fun `a blockage read 2 hours late is still raised`() = runTest {
+    fun `a blockage read 2 hours late is shown without sound`() = runTest {
         prepareHistory()
         val alarms = collectAlarms()
 
         equilManager.decodeHistory(historyRecord(1700, now - 120 * minute, 4, 2, 2))
 
-        assertEquals(listOf(EventEquilAlarm("Blockage")), alarms)
+        assertEquals(listOf(EventEquilAlarm("Blockage", sound = false)), alarms)
     }
 
     @Test
