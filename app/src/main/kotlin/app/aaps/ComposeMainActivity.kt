@@ -3,10 +3,8 @@ package app.aaps
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -263,7 +261,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         // so a plain enableEdgeToEdge() here is enough.
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        updateLauncherComponents(config.TRIO)
 
         // Activity result launchers (from base class)
         accessTree = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -853,8 +850,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             preferences.observe(StringKey.GeneralLanguage).drop(1).collect { recreate() }
         }
         lifecycleScope.launch {
-            preferences.observe(BooleanKey.GeneralTrioMode).drop(1).collect { isTrio ->
-                updateLauncherComponents(isTrio)
+            preferences.observe(BooleanKey.GeneralTrioMode).drop(1).collect {
                 rxBus.send(EventRefreshOverview("Trio UI changed"))
                 recreate()
             }
@@ -875,26 +871,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         } else {
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
-    }
-
-    private fun updateLauncherComponents(isTrio: Boolean) {
-        if (!config.APS) return
-
-        val trioLauncher = ComponentName(this, "app.aaps.TrioLauncher")
-        val androidApsLauncher = ComponentName(this, "app.aaps.AndroidApsLauncher")
-        val enabledLauncher = if (isTrio) trioLauncher else androidApsLauncher
-        val disabledLauncher = if (isTrio) androidApsLauncher else trioLauncher
-
-        packageManager.setComponentEnabledSetting(
-            enabledLauncher,
-            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-            PackageManager.DONT_KILL_APP
-        )
-        packageManager.setComponentEnabledSetting(
-            disabledLauncher,
-            PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-            PackageManager.DONT_KILL_APP
-        )
     }
 
     /**
