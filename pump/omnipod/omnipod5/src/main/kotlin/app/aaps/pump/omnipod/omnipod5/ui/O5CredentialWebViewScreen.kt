@@ -2,6 +2,8 @@ package app.aaps.pump.omnipod.omnipod5.ui
 
 import android.annotation.SuppressLint
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.foundation.layout.Box
@@ -22,13 +24,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import app.aaps.core.ui.compose.AapsSpacing
 import app.aaps.pump.omnipod.common.R
+import java.io.IOException
 import kotlin.math.max
+import app.aaps.core.ui.R as CoreUiR
 
 /**
  * Name the web page uses to reach the app bridge: the page calls
@@ -37,10 +41,27 @@ import kotlin.math.max
 private const val BRIDGE_NAME = "aapsKeymanagerBridge"
 
 /**
- * Origins the bridge accepts messages from. "*" allows every origin, which is fine for the
- * stubbed URL; tighten this once the real certificate page URL is known.
+ * Only the certificate service origin may send messages through the bridge.
  */
-private val ALLOWED_ORIGIN_RULES = setOf("*")
+private val ALLOWED_ORIGIN_RULES = setOf("https://api.osaid-keymanager.org")
+
+internal class O5CertificateNetworkException(message: String) : IOException(message)
+
+internal class O5CredentialWebViewClient(
+    private val onError: (Throwable) -> Unit
+) : WebViewClient() {
+
+    override fun onReceivedError(view: WebView?, request: WebResourceRequest, error: WebResourceError) {
+        if (!request.isForMainFrame) return
+
+        val message = error.description.toString()
+        val failure = when (error.errorCode) {
+            ERROR_HOST_LOOKUP, ERROR_CONNECT, ERROR_IO, ERROR_TIMEOUT -> O5CertificateNetworkException(message)
+            else                                                   -> IOException(message)
+        }
+        onError(failure)
+    }
+}
 
 /**
  * Full-screen WebView shown instead of the manual certificate import screen when no Omnipod 5
@@ -93,7 +114,7 @@ fun O5CredentialWebViewScreen(
                                 maxProgress = max(maxProgress, newProgress)
                             }
                         }
-                        webViewClient = WebViewClient()
+                        webViewClient = O5CredentialWebViewClient { currentOnCredentialError(it) }
                         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
                             WebViewCompat.addWebMessageListener(
                                 this,
@@ -110,9 +131,7 @@ fun O5CredentialWebViewScreen(
                         loadUrl(url)
                     }
                 },
-                update = {
-                    it.loadUrl(url)
-                }
+                onRelease = { it.destroy() }
             )
             if (maxProgress <= 50) {
                 Column(modifier = Modifier.align(Alignment.Center)) {
@@ -120,8 +139,8 @@ fun O5CredentialWebViewScreen(
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                     Text(
-                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 8.dp),
-                        text = stringResource(app.aaps.core.ui.R.string.loading)
+                        modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = AapsSpacing.small),
+                        text = stringResource(CoreUiR.string.loading)
                     )
                 }
             }

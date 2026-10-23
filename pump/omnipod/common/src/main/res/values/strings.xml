@@ -123,22 +123,12 @@
     <string name="omnipod_common_pod_fault_time_label">Fault Occurred</string>
 
     <!-- Omnipod - PDM Notification -->
+    <!-- The row label and the plain "Ref: ..." line used elsewhere (e.g. the fault announcement) are
+         shared. The per-category fault message itself (header + explanation + optional Ref code) is
+         owned by each pump module (see omnipod_dash_pdm_notification_* / omnipod_o5_pdm_notification_*),
+         so Dash and Omnipod 5 can word it differently. -->
     <string name="omnipod_common_pdm_notification_label">PDM Notification</string>
     <string name="omnipod_common_pdm_ref" comment="%1$s=PDM-style reference code, e.g. 17-01234-05606-020. Shown for support calls, kept in the same format the PDM itself would show.">Ref: %1$s</string>
-
-    <!-- Fault header/text shown as if the Dash PDM itself had shown it, so the user can report the fault
-         to Insulet as if they had used a PDM. One header + one text per PDM-style fault category (see
-         AlarmType.pdmFaultCategory / PdmFaultCategory). -->
-    <string name="omnipod_common_pdm_notification_header_reservoir_empty">Empty Reservoir</string>
-    <string name="omnipod_common_pdm_notification_text_reservoir_empty">Insulin delivery stopped. Change Pod now.</string>
-    <string name="omnipod_common_pdm_notification_header_auto_off">Auto-Off</string>
-    <string name="omnipod_common_pdm_notification_text_auto_off">Insulin delivery stopped. Your PDM and Pod have not communicated in the last 4 hours. To resume insulin delivery, change Pod now.</string>
-    <string name="omnipod_common_pdm_notification_header_pod_expired">Pod Expired</string>
-    <string name="omnipod_common_pdm_notification_text_pod_expired">Insulin delivery stopped. Change Pod now.</string>
-    <string name="omnipod_common_pdm_notification_header_occluded">Occlusion Detected</string>
-    <string name="omnipod_common_pdm_notification_text_occluded">Insulin delivery stopped. Change Pod now. Check your BG</string>
-    <string name="omnipod_common_pdm_notification_header_pod_error">Pod error</string>
-    <string name="omnipod_common_pdm_notification_text_pod_error">Insulin delivery stopped. Change Pod now.</string>
 
     <!-- Omnipod - Alerts -->
     <string name="omnipod_common_alert_expiration">Pod will expire soon</string>
@@ -225,6 +215,8 @@
     <string name="omnipod_5_certificate_import_parse_error">Could not parse that certificate - check it was copied completely</string>
     <string name="omnipod_5_certificate_import_failed">Could not import the certificate. Please try again.</string>
     <string name="omnipod_5_certificate_import_try_again">Try again</string>
+    <string name="omnipod_5_certificate_internet_required">Internet connection needed</string>
+    <string name="omnipod_5_certificate_internet_required_message">Unable to connect. An internet connection is needed to retrieve your Omnipod 5 certificate. This is a one-time step before pairing your first pod. Once the certificate is retrieved, you can pair later pods without internet. Please try again once you have a network connection.</string>
     <string name="omnipod_5_certificate_imported">Omnipod 5 certificate imported</string>
     <string name="omnipod_5_certificate_import_error">Error importing certificate</string>
     <string name="omnipod_5_certificate_bridge_unsupported">This device\'s WebView does not support the certificate bridge. Please update Android System WebView and try again.</string>
