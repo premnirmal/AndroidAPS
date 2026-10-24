@@ -11,6 +11,7 @@ import app.aaps.core.data.model.TE
 import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.data.model.Scene
 import app.aaps.core.data.model.SceneEndAction
+import app.aaps.core.interfaces.InterfacesStrings
 import app.aaps.core.interfaces.aps.Loop
 import app.aaps.core.interfaces.aps.APSResult
 import app.aaps.core.interfaces.automation.Automation
@@ -195,7 +196,7 @@ internal class MainViewModelTest {
             whenever(persistenceLayer.getBgReadingsDataFromTimeToTime(any(), any(), any())).thenReturn(emptyList())
         }
         // Toolbar actions are valid unless a test says otherwise. The view model built here refreshes its
-        // toolbar when the first runTest runs the deferred collectors, and an unstubbed isValid (false)
+        // toolbar when the scheduler runs the deferred collectors, and an unstubbed isValid (false)
         // would then remove every action from the saved toolbar.
         whenever(quickLaunchResolver.isValid(any())).thenReturn(true)
 
@@ -364,6 +365,8 @@ internal class MainViewModelTest {
         whenever(profileUtil.toTargetRangeString(90.0, 110.0, GlucoseUnit.MGDL, GlucoseUnit.MGDL))
             .thenReturn("90-110")
         whenever(dateUtil.untilString(65_000L, rh)).thenReturn("(1 min)")
+        whenever(dateUtil.untilString(65_000L, rh, withParentheses = false)).thenReturn("1 min")
+        whenever(rh.gs(InterfacesStrings.value_with_detail, "140", "1 min")).thenReturn("140 (1 min)")
         val targets = MutableStateFlow<TempTargetDisplayData?>(
             TempTargetDisplayData("140", TempTargetState.ACTIVE, 5_000L, 60_000L)
         )
