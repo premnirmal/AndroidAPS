@@ -28,19 +28,20 @@ class CommandBolus(
     override suspend fun execute(): PumpEnactResult {
         val r = activePlugin.activePump.deliverTreatment(detailedBolusInfo)
         aapsLogger.debug(LTag.PUMPQUEUE, "Result success: ${r.success} enacted: ${r.enacted}")
-        // Generation-scoped both ways: never stamp completion onto / wipe a NEWER bolus enqueued behind this one
-        // (an SMB + manual bolus get adjacent generations at enqueue; see BolusProgressData.clear / completeAndAutoClear).
-        // A bolus the user stopped ends like a finished one, also when the driver reports the stop as a failure (some
-        // do). Clearing the progress here would clear the stop flag too, before MasterActionExecutor reads it, and it
-        // would ring the delivery-failed alarm for a stop the user asked for. The real amount comes from the pump.
-        if (r.success || bolusProgressData.isStopPressed) bolusProgressData.completeAndAutoClear(bolusGeneration)
-        else bolusProgressData.clear(bolusGeneration)
+        // Keep the stop flag for the executor without showing a stopped bolus as fully delivered.
+        // Every path uses this command's generation so it cannot clear a newer bolus.
+        when {
+            bolusProgressData.isStopPressed -> bolusProgressData.clearAfterStop(bolusGeneration)
+            r.success                      -> bolusProgressData.completeAndAutoClear(bolusGeneration)
+            else                           -> bolusProgressData.clear(bolusGeneration)
+        }
         return r
     }
 
     override fun status(): String {
-        return (if (detailedBolusInfo.insulin > 0) rh.gs(CoreUiStrings.bolus_u_min, detailedBolusInfo.insulin) else "") +
-            if (detailedBolusInfo.carbs > 0) rh.gs(CoreUiStrings.carbs_g, detailedBolusInfo.carbs.toInt()) else ""
+        val bolus = if (detailedBolusInfo.insulin > 0) rh.gs(CoreUiStrings.bolus_u_min, detailedBolusInfo.insulin) else ""
+        val carbs = if (detailedBolusInfo.carbs > 0) rh.gs(CoreUiStrings.carbs_g, detailedBolusInfo.carbs.toInt()) else ""
+        return if (bolus.isNotEmpty() && carbs.isNotEmpty()) rh.gs(InterfacesStrings.values_with_comma, bolus, carbs) else bolus + carbs
     }
 
     override fun log(): String {

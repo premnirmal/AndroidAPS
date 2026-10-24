@@ -24,7 +24,9 @@ import app.aaps.shared.tests.AAPSLoggerTest
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -72,7 +74,11 @@ class IobCobCalculatorPluginTimeZoneTest {
             mock<CalculationSignalsEmitter>(), mock<NotificationManager>()
         ) { mock<OverviewDataCache>() }
         sut.timeZoneResetDebounce = DEBOUNCE
-        runBlocking { sut.onStart() }
+        runBlocking {
+            sut.onStart()
+            // Debounce subscribes upstream in a child coroutine, even with an undispatched collector.
+            withTimeout(WAIT_MS) { timeZoneEvents.subscriptionCount.first { it > 0 } }
+        }
     }
 
     @AfterEach

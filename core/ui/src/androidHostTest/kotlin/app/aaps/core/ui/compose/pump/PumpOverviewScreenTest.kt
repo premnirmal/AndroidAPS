@@ -5,7 +5,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.text.AnnotatedString
-import app.aaps.core.ui.compose.ScreenAction
 import app.aaps.core.ui.compose.StatusLevel
 import org.junit.Rule
 import org.junit.Test
@@ -78,10 +77,10 @@ class PumpOverviewScreenTest {
     fun showsActionButtons() {
         val state = PumpOverviewUiState(
             primaryActions = listOf(
-                ScreenAction(label = "Refresh", onClick = {})
+                PumpAction(label = "Refresh", onClick = {})
             ),
             managementActions = listOf(
-                ScreenAction(label = "Pump history", onClick = {})
+                PumpAction(label = "Pump history", onClick = {})
             )
         )
         compose.setContent {
@@ -96,8 +95,8 @@ class PumpOverviewScreenTest {
     fun hidesInvisibleAction() {
         val state = PumpOverviewUiState(
             managementActions = listOf(
-                ScreenAction(label = "Visible action", onClick = {}),
-                ScreenAction(label = "Hidden action", visible = false, onClick = {})
+                PumpAction(label = "Visible action", onClick = {}),
+                PumpAction(label = "Hidden action", visible = false, onClick = {})
             )
         )
         compose.setContent {

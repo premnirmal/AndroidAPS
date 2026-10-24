@@ -87,9 +87,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -698,18 +696,22 @@ internal class MainViewModelTest {
      * closed as if the switch was done; now it says why.
      */
     @Test
-    fun `a profile switch from the toolbar that the commit refuses says why`() = runTest {
+    fun `a profile switch from the toolbar that the commit refuses says why`() = runBlocking {
+        sut.viewModelScope.cancel()
+        whenever(config.initProgressFlow).thenReturn(MutableStateFlow(InitProgress()))
+        whenever(rxBus.toFlow(any<KClass<Event>>())).thenReturn(emptyFlow())
+        sut = createViewModel()
         whenever(rh.gs(any<TextRef>())).thenReturn("Profile switch")
         whenever(batchExecutor.prepare(any(), any(), any())).thenReturn(ActionProgress.Prepared(id = 7L))
         whenever(batchExecutor.commit(eq(7L), any(), any(), any()))
             .thenReturn(ActionProgress.Rejected(FailureReason.ExecutionFailed, "The pump cannot take it"))
 
         sut.requestProfileConfirmation("Basal", 150, 60)
-        advanceUntilIdle()
+        mainDispatcher.scheduler.runCurrent()
         val confirmation = argumentCaptor<Event>()
         verify(rxBus).send(confirmation.capture())
         (confirmation.firstValue as EventShowDialog.OkCancel).onOk()
-        advanceUntilIdle()
+        mainDispatcher.scheduler.runCurrent()
 
         val sent = argumentCaptor<Event>()
         verify(rxBus, times(2)).send(sent.capture())

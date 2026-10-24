@@ -30,7 +30,9 @@ data class InsulinDialogUiState(
     val units: GlucoseUnit = GlucoseUnit.MGDL,
     val simpleMode: Boolean = true,
     val isAapsClient: Boolean = false,
-    val forcedRecordOnly: Boolean = false
+    val forcedRecordOnly: Boolean = false,
+    /** An SMB is being delivered on this phone (always false on a client: its master decides). */
+    val smbBeingDelivered: Boolean = false
 )
 
 val InsulinDialogUiState.eventTimeChanged: Boolean
@@ -45,7 +47,11 @@ val InsulinDialogUiState.recordOnlyEnabled: Boolean
     get() = !forcedRecordOnly
 
 val InsulinDialogUiState.confirmEnabled: Boolean
-    get() = insulin > 0.0 || eatingSoonTtChecked
+    get() = (insulin > 0.0 || eatingSoonTtChecked) && !waitsForSmb
+
+/** OK waits: the pump would give this bolus, and an SMB is being delivered right now (#5381). */
+val InsulinDialogUiState.waitsForSmb: Boolean
+    get() = smbBeingDelivered && insulin > 0.0 && !recordOnlyChecked
 
 /**
  * The step the amount field is formatted with. A record-only dose is kept as typed (a pen can give 1.33 U), so it

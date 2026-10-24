@@ -10,7 +10,6 @@ import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventLoopUpdateGui
 import app.aaps.core.interfaces.utils.DateUtil
-import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.ui.R
 import app.aaps.plugins.aps.loop.events.EventLoopSetLastRunGui
 import app.aaps.shared.tests.stubTextRefResolution
@@ -52,7 +51,6 @@ class LoopComposeContentTest {
             rxBus = rxBus,
             rh = rh,
             dateUtil = mock<DateUtil>(),
-            decimalFormatter = mock<DecimalFormatter>(),
             aapsLogger = mock<AAPSLogger>()
         )
 

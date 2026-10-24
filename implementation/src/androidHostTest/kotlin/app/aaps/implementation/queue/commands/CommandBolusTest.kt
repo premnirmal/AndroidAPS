@@ -5,6 +5,7 @@ import app.aaps.core.interfaces.pump.DetailedBolusInfo
 import app.aaps.core.interfaces.pump.PumpWithConcentration
 import app.aaps.core.interfaces.queue.Command
 import app.aaps.core.interfaces.queue.cancel
+import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.implementation.pump.PumpEnactResultObject
 import app.aaps.shared.tests.TestBaseWithProfile
 import com.google.common.truth.Truth.assertThat
@@ -105,10 +106,12 @@ class CommandBolusTest : TestBaseWithProfile() {
         whenever(activePlugin.activePump).thenReturn(pump)
         val command = CommandBolus(aapsLogger, rh, activePlugin, pumpEnactResultProvider::invoke, progress, info, Command.CommandType.BOLUS, generation)
 
+        progress.updateProgress(40, TextRef.Literal("Stopped"))
         progress.stopPressed()
         command.execute()
 
         assertThat(progress.isStopPressed).isTrue()
+        assertThat(progress.state.value?.percent).isEqualTo(40)
     }
 
     @Test

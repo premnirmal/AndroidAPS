@@ -33,6 +33,16 @@ expect fun platformColorScheme(isDark: Boolean, fallback: ColorScheme): ColorSch
 expect fun smallestScreenWidthDp(): Int
 
 /**
+ * Longest side of the screen in dp, the other half of [smallestScreenWidthDp].
+ *
+ * The two together say how much room a layout has in either orientation, which is what the text
+ * scale in [AapsTheme] is decided from. Platform specific for the same reason as
+ * [smallestScreenWidthDp].
+ */
+@Composable
+expect fun longestScreenSideDp(): Int
+
+/**
  * Whether the screen is currently wider than it is tall.
  *
  * Platform specific for the same reason as [smallestScreenWidthDp]: Android answers from the device

@@ -1,4 +1,5 @@
 package app.aaps.plugins.sync.wear.wearintegration
+import app.aaps.core.data.model.CarbsType
 import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.model.RM
 import app.aaps.core.data.model.TT
@@ -345,6 +346,24 @@ class DataHandlerMobileWearBolusTest : TestBaseWithProfile() {
         assertThat(sent.returnCommand).isInstanceOf(EventData.Error::class.java)
         verifyBlocking(wizardExecutor, never()) { prepare(any(), any()) }
     }
+    @Test fun `wizard precheck with a meal type splits the grams into carbs now and eCarbs`() = runTest {
+        // The watch sends the total and the type. The phone splits like its own wizard: pizza = 80 % now,
+        // 35 % as eCarbs after 60 min over 3 h. A watch without the type sends none, and bread keeps all carbs now.
+        val ads = mock<AutosensDataStore>()
+        whenever(iobCobCalculator.ads).thenReturn(ads)
+        whenever(ads.actualBg()).thenReturn(mock())
+        whenever(profileFunction.getUnits()).thenReturn(GlucoseUnit.MGDL)
+        whenever(preferences.get(any<BooleanKey>())).thenReturn(true)
+        stubWizardPrepared(555L, lines = emptyList())
+        capturedConfirm { sut.handleWizardPreCheck(EventData.ActionWizardPreCheck(carbs = 65, percentage = 100, carbsType = CarbsType.PIZZA)) }
+        val captor = argumentCaptor<WizardExecutor.WizardSource>()
+        verifyBlocking(wizardExecutor) { prepare(captor.capture(), any()) }
+        val inputs = (captor.firstValue as WizardExecutor.WizardSource.Manual).inputs
+        assertThat(inputs.carbs).isEqualTo(52)
+        assertThat(inputs.eCarbsGrams).isEqualTo(22)
+        assertThat(inputs.eCarbsDelayMinutes).isEqualTo(60)
+        assertThat(inputs.eCarbsDurationHours).isEqualTo(3)
+    }
     // --- QuickWizard tile modes (branch on entry.mode() exactly like the phone's MainViewModel) -----------
     //
     // The wear QuickWizard handler used to ALWAYS recompute via WizardExecutor, so a fixed INSULIN button
@@ -467,7 +486,7 @@ class DataHandlerMobileWearBolusTest : TestBaseWithProfile() {
         // Status, resend, snooze and the like are not control: the watch keeps showing data with the switch off.
         whenever(preferences.get(BooleanKey.WearControl)).thenReturn(false)
         rxBus.send(EventData.SnoozeAlert(0L))
-        verify(uiInteraction, timeout(2000)).stopAlarm("Muted from wear")
+        verify(uiInteraction, timeout(2000)).stopAlarm("Dismissed from wear")
     }
     @Test fun `rejectIfWearControlOff refuses with an Error reply when off and passes when on`() {
         whenever(preferences.get(BooleanKey.WearControl)).thenReturn(false)

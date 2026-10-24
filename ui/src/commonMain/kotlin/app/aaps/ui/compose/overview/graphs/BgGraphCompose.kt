@@ -10,6 +10,8 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
@@ -19,6 +21,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.aaps.core.data.configuration.Constants
+import app.aaps.core.data.ui.MarkerTier
 import app.aaps.core.graph.vico.Square
 import app.aaps.core.interfaces.overview.graph.ActivityGraphData
 import app.aaps.core.interfaces.overview.graph.BasalGraphData
@@ -32,6 +35,7 @@ import app.aaps.core.ui.compose.LocalDateUtil
 import app.aaps.core.ui.compose.icons.IcBgCheck
 import app.aaps.core.ui.compose.icons.IcProfile
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.VicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.VicoZoomState
 import com.patrykandpatrick.vico.compose.cartesian.axis.Axis
@@ -40,7 +44,7 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
-import com.patrykandpatrick.vico.compose.cartesian.decoration.HorizontalBox
+import com.patrykandpatrick.vico.compose.cartesian.decoration.Decoration
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
@@ -70,20 +74,15 @@ private const val SERIES_PRED_ZT = "pred_zt"
 private val PREDICTION_SERIES = listOf(SERIES_PRED_IOB, SERIES_PRED_COB, SERIES_PRED_ACOB, SERIES_PRED_UAM, SERIES_PRED_ZT)
 
 /**
- * Half the space between the insulin and the carbs half of one meal, as a share of the Y axis.
- * The axis is a fixed height on screen, so this is a steady distance in dp whatever the glucose
- * range is — about 1 dp on each side. Enough that the two triangles do not merge into a block,
- * small enough that they still read as one marker.
+ * From the centre of a reading to the tip of the marker that points at it: the 6 dp dot's radius
+ * and 1 dp of air, the same rule as the watch. Both halves of a meal keep this distance, so the
+ * reading stays visible as the seam between them. The gap is drawn into the marker shapes, see
+ * [createMarkerLine], not added to the marker's y: a dp is steady, a share of the axis is not.
  */
-private const val MARKER_GAP_FRACTION = 0.015
+private val MARKER_TIP_GAP = 4.dp
 
 /** Height of a marker that has no reading near it, as a share of the Y axis above its floor. */
 private const val MARKER_FALLBACK_FRACTION = 0.04
-
-/** Marker sizes per [MarkerTier]. The largest must stay within [NORMALIZER_POINT_SIZE]. */
-private val MARKER_SIZE_SMALL = 12.dp
-private val MARKER_SIZE_MEDIUM = 17.dp
-private val MARKER_SIZE_LARGE = 22.dp
 
 /** Size of the icon drawn at a measured glucose value (calibration, BG check). */
 private val MARKER_SIZE_CALIBRATION = 14.dp
@@ -117,8 +116,7 @@ private val BG_VISIBLE_RANGE_KEY = ExtraStore.Key<Pair<Long?, Long?>>()
 private class MutableYRangeProvider(
     @Volatile var maxX: Double,
     @Volatile var minY: Double,
-    @Volatile var maxY: Double,
-    @Volatile var yStep: Double = 0.0
+    @Volatile var maxY: Double
 ) : CartesianLayerRangeProvider {
     override fun getMinX(minX: Double, maxX: Double, extraStore: ExtraStore) = 0.0
     override fun getMaxX(minX: Double, maxX: Double, extraStore: ExtraStore) = this.maxX
@@ -131,8 +129,8 @@ private class MutableYRangeProvider(
  *
  * Layer 0 (start axis): BG readings — regular (outlined circles) + bucketed (filled, range-colored)
  * Layer 1 (end axis, hidden): Basal — profile (dashed step) + actual delivered (solid step + area fill)
- * Layer 5 (start axis): treatment markers — a manual bolus grows up from the reading, carbs down
- * from it, and a measured value (calibration, BG check) sits on its own value. See
+ * Layer 5 (start axis): treatment markers — a manual bolus above the reading pointing down at it,
+ * carbs below it pointing up, and a measured value (calibration, BG check) sits on its own value. See
  * [treatmentMarkers] for the placement rules.
  *
  * Basal Y-axis is scaled so maxBasal occupies [BASAL_HEIGHT_FRACTION] of the chart height (maxY = maxBasal / BASAL_HEIGHT_FRACTION).
@@ -218,7 +216,7 @@ fun BgGraphCompose(
     // the LaunchedEffect below rather than recreated (see MutableYRangeProvider).
     val startAxisRangeProvider = remember {
         val initialScale = niceScale(chartConfig.lowMark, chartConfig.highMark)
-        MutableYRangeProvider(maxX = maxX, minY = initialScale.min, maxY = initialScale.max, yStep = initialScale.step)
+        MutableYRangeProvider(maxX = maxX, minY = initialScale.min, maxY = initialScale.max)
     }
 
     // Track which series are currently included (for matching LineProvider)
@@ -369,10 +367,10 @@ fun BgGraphCompose(
             }
 
             // Block 6 → Treatment markers (layer 5, start axis — drawn at the glucose value of the
-            // moment they happened, see TreatmentMarkers.kt). Insulin grows up from the reading and
-            // carbs down from the same value, so a meal entered with its bolus is one diamond; a
-            // measured value sits on its own value.
-            // Drawn last on purpose: a carbs marker hangs into the curve, and under the BG layer it
+            // moment they happened, see TreatmentMarkers.kt). Insulin points down at the reading from
+            // above and carbs point up at it from below, so a meal entered with its bolus is one marker
+            // with both tips on the curve; a measured value sits on its own value.
+            // Drawn last on purpose: a carbs marker reaches into the curve, and under the BG layer it
             // was covered by the reading dots and the profile icon. It does cover the one reading
             // it sits on.
             // Fixed series order, always all 7: insulin small/medium/large, carbs small/medium/large,
@@ -430,10 +428,10 @@ fun BgGraphCompose(
         // loaded range), floored/ceiled at chartConfig.lowMark/highMark (the "Low mark"/"High mark"
         // target-range preferences) so the axis never shrinks past the configured target range —
         // but also never stays locked at a fixed 0 floor when real data sits well above it, which
-        // used to leave a large empty band under the curve (worse for mmol/L users, since niceScale
-        // can round the top up to a proportionally huge ceiling like 15 mmol/L). niceScale(...)
-        // rounds both bounds and the tick step to clean numbers (e.g. 70, 180) instead of the raw
-        // data values. Mutate the stable provider in place (see MutableYRangeProvider) — Vico picks
+        // used to leave a large empty band under the curve. niceScale(...) rounds both bounds out
+        // a little, to a grid of about a tenth of the range, instead of using the raw data values;
+        // the labels are placed apart from that (NiceVerticalAxisItemPlacer).
+        // Mutate the stable provider in place (see MutableYRangeProvider) — Vico picks
         // up the new values when it processes the transaction submitted below, without ever
         // recreating BG's chart object.
         // Includes predictions (when shown) — otherwise scrolling into a region with only future
@@ -454,7 +452,6 @@ fun BgGraphCompose(
         startAxisRangeProvider.maxX = maxX
         startAxisRangeProvider.minY = niceBgScale.min
         startAxisRangeProvider.maxY = niceBgScale.max
-        startAxisRangeProvider.yStep = niceBgScale.step
 
         // Activity overlay: zero anchored on the low mark (bottom edge of the green in-range belt),
         // scaled from the visible window like every other curve. The BG axis above is never changed
@@ -485,7 +482,8 @@ fun BgGraphCompose(
             maxX = maxX,
             minY = niceBgScale.min,
             maxY = niceBgScale.max,
-            gap = axisSpan * MARKER_GAP_FRACTION,
+            // The markers sit on the reading itself; the space to it is in the shapes, see MARKER_TIP_GAP
+            gap = 0.0,
             fallbackY = niceBgScale.min + axisSpan * MARKER_FALLBACK_FRACTION
         )
 
@@ -665,11 +663,11 @@ fun BgGraphCompose(
 
     val treatmentLines = remember(insulinColor, carbsColor, bgCheckColor, bgCheckPainter) {
         buildList {
-            for (size in listOf(MARKER_SIZE_SMALL, MARKER_SIZE_MEDIUM, MARKER_SIZE_LARGE)) {
-                add(createMarkerLine(insulinColor, TriangleShape, size))
+            for (tier in MarkerTier.entries) {
+                add(createMarkerLine(insulinColor, ::invertedTriangleShape, tier.markerSize))
             }
-            for (size in listOf(MARKER_SIZE_SMALL, MARKER_SIZE_MEDIUM, MARKER_SIZE_LARGE)) {
-                add(createMarkerLine(carbsColor, TriangleBelowShape, size))
+            for (tier in MarkerTier.entries) {
+                add(createMarkerLine(carbsColor, ::triangleBelowShape, tier.markerSize))
             }
             add(
                 LineCartesianLayer.Line(
@@ -702,17 +700,13 @@ fun BgGraphCompose(
     val lowMark = chartConfig.lowMark
     val highMark = chartConfig.highMark
     val inRangeBox = remember(lowMark, highMark, inRangeColor) {
-        HorizontalBox(
-            y = { lowMark..highMark },
-            box = ShapeComponent(fill = Fill(inRangeColor.copy(alpha = 0.2f))),
-            verticalAxisPosition = Axis.Position.Vertical.Start
-        )
+        InRangeBand(low = lowMark, high = highMark, color = inRangeColor.copy(alpha = 0.2f))
     }
 
-    val inspectMarker = remember(inspect) { inspect?.let { GraphInspectMarker(it) } }
+    val inspectMarker = remember(inspect) { inspect?.let { SilentInspectMarker } }
     // Always called, so the composable calls do not depend on inspect
     val defaultMarkerController = CartesianMarkerController.rememberShowOnPress()
-    val inspectLine = rememberInspectLine(inspect)
+    val inspectLine = rememberInspectLine(inspect, dotOnReading = true)
 
     val decorations = remember(inRangeBox, nowLine, inspectLine) { listOfNotNull(inRangeBox, nowLine, inspectLine) }
 
@@ -769,7 +763,7 @@ fun BgGraphCompose(
                 verticalAxisPosition = Axis.Position.Vertical.Start
             ),
             startAxis = VerticalAxis.rememberStart(
-                itemPlacer = VerticalAxis.ItemPlacer.step({ startAxisRangeProvider.yStep }),
+                itemPlacer = remember { NiceVerticalAxisItemPlacer() },
                 label = rememberTextComponent(
                     style = TextStyle(color = MaterialTheme.colorScheme.onSurface),
                     minWidth = TextComponent.MinWidth.fixed(30.dp)
@@ -798,14 +792,49 @@ fun BgGraphCompose(
 }
 
 /**
- * A line that draws no line at all, only a [shape] marker in [color] at every point. Used for the
+ * A line that draws no line at all, only a marker in [color] at every point. Used for the
  * treatment markers on the BG graph, one line per size.
+ *
+ * The point box is [size] grown by [MARKER_TIP_GAP] on both sides, and [shapeOf] gets the gap as
+ * a share of that box, so the triangle keeps the proportions of [size] and its tip stops
+ * [MARKER_TIP_GAP] away from the reading at the box centre.
  */
-private fun createMarkerLine(color: Color, shape: Shape, size: Dp): LineCartesianLayer.Line =
-    LineCartesianLayer.Line(
+private fun createMarkerLine(color: Color, shapeOf: (tipInset: Float) -> Shape, size: Dp): LineCartesianLayer.Line {
+    val boxSize = size + MARKER_TIP_GAP * 2
+    val shape = shapeOf(MARKER_TIP_GAP / boxSize)
+    return LineCartesianLayer.Line(
         fill = LineCartesianLayer.LineFill.single(Fill(Color.Transparent)),
         areaFill = null,
         pointProvider = LineCartesianLayer.PointProvider.single(
-            LineCartesianLayer.Point(component = ShapeComponent(fill = Fill(color), shape = shape), size = size)
+            LineCartesianLayer.Point(component = ShapeComponent(fill = Fill(color), shape = shape), size = boxSize)
         )
     )
+}
+
+/**
+ * The in-range belt between [low] and [high] on the BG axis, drawn under the layers. Vico's
+ * `HorizontalBox` draws over them, and its translucent green then tinted every reading and marker
+ * inside the belt, so a bolus looked one colour in range and another out of it.
+ */
+private data class InRangeBand(private val low: Double, private val high: Double, private val color: Color) : Decoration {
+
+    override fun drawUnderLayers(context: CartesianDrawingContext) {
+        with(context) {
+            val yRange = ranges.getYRange(Axis.Position.Vertical.Start)
+            if (yRange.length == 0.0) return
+            fun canvasY(value: Double): Float =
+                (layerBounds.bottom - ((value - yRange.minY) / yRange.length).toFloat() * layerBounds.height)
+                    .coerceIn(layerBounds.top, layerBounds.bottom)
+            val top = canvasY(high)
+            val bottom = canvasY(low)
+            if (bottom <= top) return
+            with(mutableDrawScope) {
+                drawRect(
+                    color = this@InRangeBand.color,
+                    topLeft = Offset(layerBounds.left, top),
+                    size = Size(layerBounds.width, bottom - top)
+                )
+            }
+        }
+    }
+}

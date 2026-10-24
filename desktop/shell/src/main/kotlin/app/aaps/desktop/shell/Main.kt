@@ -31,11 +31,10 @@ import app.aaps.appshell.navigation.AppRoute
 import app.aaps.appshell.navigation.ElementNavigator
 import app.aaps.appshell.navigation.appNavGraph
 import app.aaps.appshell.navigation.handleNotificationAction
-import app.aaps.appshell.navigation.handleQuickLaunchAction
-import app.aaps.appshell.navigation.handleSearchResultClick
 import app.aaps.core.interfaces.configuration.ExternalOptions
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
+import app.aaps.core.interfaces.notifications.NotificationHandle
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.resources.LanguageTag
 import app.aaps.core.interfaces.resources.TextRefValueRegistry
@@ -47,7 +46,6 @@ import app.aaps.desktop.shell.config.GeneratedBuildInfo
 import app.aaps.desktop.shell.di.DesktopAppGraph
 import app.aaps.desktop.shell.di.GeneratedStringOwners
 import app.aaps.implementation.logging.AAPSLoggerDesktop
-import app.aaps.desktop.shell.platform.openFolder
 import app.aaps.implementation.maintenance.DesktopFolders
 import app.aaps.shared.clientbindings.ClientGraphBindings
 import app.aaps.shared.clientbindings.ClientViewModelFactory
@@ -55,24 +53,20 @@ import app.aaps.ui.compose.configuration.ConfigurationViewModel
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
 import app.aaps.ui.compose.main.MainViewModel
 import app.aaps.ui.compose.maintenance.ImportViewModel
-import app.aaps.ui.compose.maintenance.MaintenanceViewModel
 import app.aaps.ui.compose.manageSheet.ManageViewModel
+import app.aaps.ui.compose.overview.OverviewScreen
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import app.aaps.ui.compose.overview.statusLights.StatusViewModel
-import app.aaps.ui.compose.permissionsSheet.PermissionsViewModel
 import app.aaps.ui.compose.profileManagement.viewmodels.ProfileEditorViewModel
 import app.aaps.ui.compose.profileManagement.viewmodels.ProfileHelperViewModel
 import app.aaps.ui.compose.profileManagement.viewmodels.ProfileManagementViewModel
 import app.aaps.ui.compose.quickWizard.viewmodels.QuickWizardManagementViewModel
 import app.aaps.ui.compose.runningMode.RunningModeManagementViewModel
-import app.aaps.ui.compose.scenesSheet.ScenesViewModel
 import app.aaps.ui.compose.siteRotationDialog.viewModels.SiteRotationManagementViewModel
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import app.aaps.ui.compose.tempTarget.TempTargetManagementViewModel
 import app.aaps.ui.compose.treatments.viewmodels.TreatmentsViewModel
-import app.aaps.ui.compose.treatmentsSheet.TreatmentViewModel
-import app.aaps.ui.search.SearchViewModel
 import dev.zacsweers.metro.createGraphFactory
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
@@ -412,46 +406,65 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter) {
                     onRequestDirectoryAccess = { logger.debug(LTag.CORE, "Desktop reads its own folder; nothing to grant") },
                     onRequestPermission = { group -> logger.notWiredYet("permission request $group") },
                     overview = {
+                        val state by mainViewModel.uiState.collectAsState()
+                        val activeSceneState by mainViewModel.activeSceneState.collectAsState()
+                        val sceneExpired by mainViewModel.sceneExpired.collectAsState()
+                        val activeSceneChainTargetName by mainViewModel.activeSceneChainTargetName.collectAsState()
+                        val masterReachable by mainViewModel.masterReachable.collectAsState()
+                        val masterOrPairedClient by mainViewModel.masterOrPairedClient.collectAsState()
+                        val sensorInfo by mainViewModel.sensorInfo.collectAsState()
+                        val calcProgress by mainViewModel.calcProgressFlow.collectAsState()
                         OverviewScreen(
-                            mainViewModel = mainViewModel,
-                            manageViewModel = metroViewModel<ManageViewModel>(),
-                            maintenanceViewModel = metroViewModel<MaintenanceViewModel>(),
-                            statusViewModel = metroViewModel<StatusViewModel>(),
-                            treatmentViewModel = metroViewModel<TreatmentViewModel>(),
-                            scenesViewModel = metroViewModel<ScenesViewModel>(),
-                            loopActionViewModel = metroViewModel<LoopActionViewModel>(),
-                            searchViewModel = metroViewModel<SearchViewModel>(),
-                            permissionsViewModel = metroViewModel<PermissionsViewModel>(),
+                            profileName = state.profileName,
+                            profilePsId = state.profilePsId,
+                            isProfileModified = state.isProfileModified,
+                            profileProgress = state.profileProgress,
+                            profilePercentage = state.profilePercentage,
+                            profileTargetRangeText = state.profileTargetRangeText,
+                            profileCardTempTargetStateFlow = mainViewModel.profileCardTempTargetStateFlow,
+                            runningMode = state.runningMode,
+                            runningModeText = state.runningModeText,
+                            runningModeRemaining = state.runningModeRemaining,
+                            runningModeProgress = state.runningModeProgress,
+                            runningModeRecordId = state.runningModeRecordId,
+                            lastLoopAgeMillis = state.lastLoopAgeMillis,
+                            isLooping = state.isLooping,
+                            algorithmReasoning = state.algorithmReasoning,
+                            loopStoppedReason = state.loopStoppedReason,
+                            tbrState = state.tbrState,
+                            smbEnabled = state.smbEnabled,
+                            isSimpleMode = state.isSimpleMode,
+                            calcProgress = calcProgress,
+                            calcProgressFlow = mainViewModel.calcProgressFlow,
                             graphViewModel = graphs,
                             chipsViewModel = chips,
-                            activePlugin = graph.activePlugin,
-                            config = graph.config,
-                            objectives = graph.objectives,
-                            bgQualityCheck = graph.bgQualityCheck,
-                            notificationManager = graph.notificationManager,
-                            uiInteraction = graph.uiInteraction,
-                            builtInSearchables = graph.builtInSearchables,
-                            bolusProgressData = graph.bolusProgressData,
-                            clientControlActionDispatcher = graph.clientControlActionDispatcher,
-                            commandQueue = graph.commandQueue,
-                            pumpCommunicationStatus = graph.pumpCommunicationStatus,
-                            appName = appName,
-                            authorizationFailedMessage = "Authorization failed",
+                            manageViewModel = metroViewModel<ManageViewModel>(),
+                            statusViewModel = metroViewModel<StatusViewModel>(),
+                            statusLightsDef = graph.builtInSearchables.statusLights,
                             onNavigate = { request -> navigator.handleNavigationRequest(request) },
-                            onSearchResultClick = { entry -> navigator.handleSearchResultClick(entry) },
-                            onNotificationActionClick = { n -> navigator.handleNotificationAction(n.id) },
-                            onQuickLaunchActionClick = { action -> navigator.handleQuickLaunchAction(action) },
-                            onImportSettingsNavigate = { source -> navController.navigate(AppRoute.ImportSettings.createRoute(source.name)) },
-                            onDirectoryClick = { openFolder(DesktopFolders.root, logger) },
-                            // authBrowser, not urlOpener: the sign in ends at a port this app is
-                            // listening on, and DesktopAuthBrowser has the fallback launcher an
-                            // ordinary link opener does not. See AuthBrowser.
-                            onLaunchBrowser = { url -> graph.authBrowser.show(url) },
-                            onBringToForeground = { logger.debug(LTag.CORE, "Desktop window is already in front") },
-                            onRecreateActivity = { logger.notWiredYet("window recreate") },
-                            onAuthorizationFailed = { logger.error(LTag.CORE, "Authorization failed") },
+                            onTbrChipClick = mainViewModel::showTbrInfo,
+                            onIobChipClick = chips::showIobInfo,
+                            notificationsFlow = graph.notificationManager.notifications,
+                            onDismissNotification = { notification ->
+                                graph.notificationManager.dismiss(NotificationHandle(notification.instanceKey))
+                            },
+                            onNotificationActionClick = { notification -> navigator.handleNotificationAction(notification.id) },
                             autoShowNotificationSheet = false,
-                            onAutoShowConsumed = {}
+                            onAutoShowConsumed = {},
+                            activeSceneState = activeSceneState,
+                            sceneExpired = sceneExpired,
+                            activeSceneChainTargetName = activeSceneChainTargetName,
+                            onEndScene = mainViewModel::requestSceneDeactivation,
+                            onDismissScene = mainViewModel::dismissExpiredScene,
+                            endSceneEnabled = masterReachable,
+                            commandsAllowed = masterOrPairedClient,
+                            formatDuration = mainViewModel::formatDuration,
+                            paddingValues = PaddingValues(0.dp),
+                            bolusStateFlow = graph.bolusProgressData.state,
+                            isTrio = false,
+                            timeInRangeTodayFlow = mainViewModel.timeInRangeToday,
+                            sensorInfo = sensorInfo,
+                            loadSensorInfo = mainViewModel::loadSensorInfo
                         )
                     },
                     isTrio = false,

@@ -413,7 +413,7 @@ class GarminPluginTest : TestBaseWithProfile() {
     fun testOnPostCarbs_OnClient() {
         val uri = createUri(mapOf("carbs" to "12"))
         assertEquals("", clientPlugin().onPostCarbs(uri))
-        assertEquals("The Garmin watch sent 12 g of carbs. This phone is a client, so they were not entered. Enter them in AAPS.", postedNotice())
+        assertEquals("The Garmin watch sent 12g of carbs. This phone is a client, so they were not entered. Enter them in AAPS.", postedNotice())
     }
 
     @Test
