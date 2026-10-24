@@ -209,7 +209,6 @@ class OverviewSizeSweepTest {
             runningMode = RM.Mode.CLOSED_LOOP, runningModeText = RM_TEXT,
             runningModeRemaining = "", runningModeProgress = 0f,
             tbrState = TbrState.NONE, smbEnabled = true, isSimpleMode = false, calcProgress = 100,
-            calcProgressFlow = remember { MutableStateFlow(100) },
             graphViewModel = viewModels.graphViewModel, chipsViewModel = viewModels.chipsViewModel,
             manageViewModel = viewModels.manageViewModel, statusViewModel = status,
             statusLightsDef = PreferenceSubScreenDef(key = "statuslights", titleResId = CoreUiR.string.statuslights),
@@ -218,7 +217,6 @@ class OverviewSizeSweepTest {
             onDismissNotification = {}, onNotificationActionClick = {},
             autoShowNotificationSheet = false, onAutoShowConsumed = {},
             bolusStateFlow = remember { MutableStateFlow<BolusProgressState?>(null) },
-            timeInRangeTodayFlow = remember { MutableStateFlow<TimeInRangeToday?>(null) },
             paddingValues = PaddingValues(0.dp)
         )
     }

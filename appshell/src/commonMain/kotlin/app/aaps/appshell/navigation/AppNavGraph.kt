@@ -3,7 +3,6 @@ package app.aaps.appshell.navigation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -85,7 +84,6 @@ import app.aaps.ui.compose.history.HistoryScreen
 import app.aaps.ui.compose.insulinDialog.InsulinDialogScreen
 import app.aaps.ui.compose.insulinManagement.InsulinManagementScreen
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
-import app.aaps.ui.compose.main.VersionOverlay
 import app.aaps.ui.compose.main.TrioNavTab
 import app.aaps.ui.compose.maintenance.ImportSettingsScreen
 import app.aaps.ui.compose.maintenance.ImportSource
@@ -112,8 +110,6 @@ import app.aaps.ui.compose.scenes.SceneListScreen
 import app.aaps.ui.compose.scenes.wizard.SceneWizardScreen
 import app.aaps.ui.compose.siteRotationDialog.SiteRotationManagementScreen
 import app.aaps.ui.compose.siteRotationDialog.viewModels.SiteRotationManagementViewModel
-import app.aaps.ui.compose.stats.TrioStatsScreen
-import app.aaps.ui.compose.stats.StatsScreen
 import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import app.aaps.ui.compose.tempBasalDialog.TempBasalDialogScreen
 import app.aaps.ui.compose.tempTarget.TempTargetManagementScreen
@@ -539,66 +535,29 @@ fun NavGraphBuilder.appNavGraph(
     }
 
     if (isTrio) {
-        composable(AppRoute.TrioTreatmentList.route) {
-            trioTabScaffold(
-                TrioNavTab.Treatments,
-                stringResource(CoreUiStrings.treatments),
-                false,
-                {}
-            ) { paddingValues ->
-                TreatmentsScreen(
-                    viewModel = treatmentsViewModel,
-                    onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
-                    modifier = Modifier
-                        .padding(paddingValues)
-                        .consumeWindowInsets(paddingValues)
-                )
-            }
-        }
-
-        composable(AppRoute.TrioTreatments.route) {
-            trioTabScaffold(
-                TrioNavTab.Adjustments,
-                stringResource(UiStrings.trio_tab_adjustments),
-                false,
-                {}
-            ) { paddingValues ->
-                TempTargetManagementScreen(
-                    viewModel = tempTargetManagementViewModel,
-                    initialMode = ScreenMode.EDIT,
-                    onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
-                    onRequestEditMode = {
-                        requestEditModeAuthorization { tempTargetManagementViewModel.setScreenMode(ScreenMode.EDIT) }
-                    },
-                    modifier = Modifier
-                        .padding(paddingValues)
-                        .consumeWindowInsets(paddingValues)
-                )
-            }
-        }
+        trioNavGraph(
+            navController = navController,
+            treatmentsViewModel = treatmentsViewModel,
+            tempTargetManagementViewModel = tempTargetManagementViewModel,
+            statsViewModel = statsViewModel,
+            activePlugin = activePlugin,
+            rh = rh,
+            builtInSearchables = builtInSearchables,
+            configBuilder = configBuilder,
+            requestEditModeAuthorization = requestEditModeAuthorization,
+            onNavigateToTrioTab = onNavigateToTrioTab,
+            trioTabScaffold = trioTabScaffold,
+            aboutDialog = aboutDialog,
+            onMaintenanceClick = maintenanceViewModel?.let { { navController.navigate(AppRoute.Maintenance.route) } }
+        )
     }
 
     composable(AppRoute.Statistics.route) {
-        if (isTrio) {
-            TrioStatsScreen(
-                viewModel = statsViewModel,
-                onNavigateBack = { navController.safePopBackStack() }
-            )
-        } else {
-            StatsScreen(
-                viewModel = statsViewModel,
-                onNavigateBack = { navController.safePopBackStack() }
-            )
-        }
-    }
-
-    if (isTrio) {
-        composable(AppRoute.TrioStats.route) {
-            TrioStatsScreen(
-                viewModel = statsViewModel,
-                onNavigateBack = { navController.safePopBackStack() }
-            )
-        }
+        AppStatistics(
+            isTrio = isTrio,
+            viewModel = statsViewModel,
+            onNavigateBack = { navController.safePopBackStack() }
+        )
     }
 
     composable(AppRoute.ProfileHelper.route) {
@@ -613,26 +572,6 @@ fun NavGraphBuilder.appNavGraph(
             title = stringResource(MainStrings.nav_history_browser),
             onNavigateBack = { navController.safePopBackStack() }
         )
-    }
-
-    if (isTrio) {
-        composable(AppRoute.TrioHistory.route) {
-            trioTabScaffold(
-                TrioNavTab.Adjustments,
-                stringResource(MainStrings.nav_history_browser),
-                true,
-                {}
-            ) { paddingValues ->
-                HistoryScreen(
-                    title = stringResource(MainStrings.nav_history_browser),
-                    onNavigateBack = { onNavigateToTrioTab(TrioNavTab.Overview) },
-                    modifier = Modifier
-                        .padding(paddingValues)
-                        .consumeWindowInsets(paddingValues),
-                    showTopBar = false
-                )
-            }
-        }
     }
 
     composable(AppRoute.Preferences.route) {
@@ -777,44 +716,6 @@ fun NavGraphBuilder.appNavGraph(
             },
             onDismissHardwarePump = { configurationViewModel.dismissHardwarePumpDialog() }
         )
-    }
-
-    if (isTrio) {
-        composable(AppRoute.TrioSettings.route) {
-        var showAboutDialog by rememberSaveable { mutableStateOf(false) }
-        trioTabScaffold(
-            TrioNavTab.Settings,
-            stringResource(CoreUiStrings.settings),
-            true,
-            {
-                VersionOverlay()
-            }
-        ) { paddingValues ->
-            AllPreferencesScreen(
-                activePlugin = activePlugin,
-                rh = rh,
-                builtInSearchables = builtInSearchables,
-                configBuilder = configBuilder,
-                onBackClick = { onNavigateToTrioTab(TrioNavTab.Overview) },
-                modifier = Modifier
-                    .padding(paddingValues)
-                    .consumeWindowInsets(paddingValues),
-                showTopBar = false,
-                showSimpleModeHiddenPreferences = true,
-                onConfigurationClick = {
-                    navController.navigate(AppRoute.Configuration.route)
-                },
-                onInsulinSettingsClick = {
-                    navController.navigate(AppRoute.InsulinManagement.createRoute())
-                },
-                onMaintenanceClick = maintenanceViewModel?.let { { navController.navigate(AppRoute.Maintenance.route) } },
-                onAboutClick = aboutDialog?.let { { showAboutDialog = true } }
-            )
-        }
-        if (showAboutDialog) {
-            aboutDialog?.invoke { showAboutDialog = false }
-        }
-    }
     }
 
     composable(

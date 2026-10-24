@@ -115,6 +115,7 @@ import app.aaps.plugins.configuration.setupwizard.SWDefinition
 import app.aaps.plugins.source.DexcomPlugin
 import app.aaps.plugins.source.activities.RequestDexcomPermissionActivity
 import app.aaps.trio.TrioUi
+import app.aaps.trio.ui.compose.main.TrioMainScreen
 import app.aaps.ui.compose.aboutDialog.AboutBottomSheet
 import app.aaps.ui.compose.careDialog.CareportalEventType
 import app.aaps.ui.compose.clientcontrol.ClientControlPendingDialog
@@ -542,6 +543,14 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 }
 
 
+                val onStopBolus = {
+                    if (config.AAPSCLIENT) {
+                        clientControlActionDispatcher.stopBolus()
+                        bolusProgressData.stopPressed()
+                    } else {
+                        commandQueue.cancelAllBoluses(null)
+                    }
+                }
                 MainScreen(
                     mainViewModel = mainViewModel,
                     uiState = state,
@@ -573,31 +582,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     onDismissSearchHardwarePump = { searchViewModel.dismissHardwarePump() },
                     onMenuClick = { mainViewModel.openDrawer() },
                     onNavigate = { request -> handleNavigationRequest(request, navController) },
-                    onTrioTabSelected = { tab -> navigateToTrioTab(tab, navController) },
-                    trioSelectedTab = trioTabForRoute(currentRoute),
-                    trioBottomBar = { selectedTab, carbsRequired, onTabSelected, onAddClick, modifier ->
-                        trioUi.bottomBar(
-                            selectedTab = selectedTab,
-                            carbsRequired = carbsRequired,
-                            activeSceneCount = activeSceneCount,
-                            onScenesClick = onTrioScenesClick,
-                            onTabSelected = onTabSelected,
-                            onAddClick = onAddClick,
-                            modifier = modifier
-                        )
-                    },
-                    trioAddActionsSheet = { onDismiss, onBolusClick, onCarbsClick, onWizardClick ->
-                        trioUi.addActionsSheet(
-                            onDismiss = onDismiss,
-                            onBolusClick = onBolusClick,
-                            onCarbsClick = onCarbsClick,
-                            onWizardClick = onWizardClick
-                        )
-                    },
-                    // Must be a lambda, not `trioUi::overview`. Compose does not redraw a composable
-                    // passed as a function reference when its argument changes, so the loop status,
-                    // profile and running mode stayed frozen until the app was reopened.
-                    trioOverview = { model -> trioUi.overview(model) },
                     onDrawerClosed = { mainViewModel.closeDrawer() },
                     onAboutDialogDismiss = { mainViewModel.setShowAboutDialog(false) },
                     onOpenBatteryHelp = if (mainViewModel.showBatteryHelp) {
@@ -659,14 +643,35 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     treatmentButtonsDef = builtInSearchables.treatmentButtons,
                     // Pump activity
                     bolusStateFlow = bolusProgressData.state,
-                    onStopBolus = {
-                        if (config.AAPSCLIENT) {
-                            clientControlActionDispatcher.stopBolus()
-                            bolusProgressData.stopPressed()
-                        } else {
-                            commandQueue.cancelAllBoluses(null)
+                    onStopBolus = onStopBolus,
+                    content = if (config.TRIO) {
+                        {
+                            TrioMainScreen(
+                                trioUi = trioUi,
+                                mainViewModel = mainViewModel,
+                                uiState = state,
+                                graphViewModel = graphViewModel,
+                                chipsViewModel = chipsViewModel,
+                                selectedTab = trioTabForRoute(currentRoute),
+                                activeSceneCount = activeSceneCount,
+                                onScenesClick = onTrioScenesClick,
+                                onTabSelected = { tab -> navigateToTrioTab(tab, navController) },
+                                onNavigate = { request -> handleNavigationRequest(request, navController) },
+                                pumpNeedsSetup = pumpSetupPlugin != null,
+                                notificationsFlow = notificationManager.notifications,
+                                onDismissNotification = { notification ->
+                                    notificationManager.dismiss(NotificationHandle(notification.instanceKey))
+                                },
+                                onNotificationActionClick = { notification ->
+                                    handleNotificationAction(notification.id, navController)
+                                },
+                                autoShowNotificationSheet = _autoShowNotifications.value,
+                                onAutoShowConsumed = { _autoShowNotifications.value = false },
+                                bolusStateFlow = bolusProgressData.state,
+                                onStopBolus = onStopBolus
+                            )
                         }
-                    }
+                    } else null
                 )
             }
 

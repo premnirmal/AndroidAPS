@@ -412,30 +412,22 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter) {
                         val activeSceneChainTargetName by mainViewModel.activeSceneChainTargetName.collectAsState()
                         val masterReachable by mainViewModel.masterReachable.collectAsState()
                         val masterOrPairedClient by mainViewModel.masterOrPairedClient.collectAsState()
-                        val sensorInfo by mainViewModel.sensorInfo.collectAsState()
                         val calcProgress by mainViewModel.calcProgressFlow.collectAsState()
                         OverviewScreen(
                             profileName = state.profileName,
                             profilePsId = state.profilePsId,
                             isProfileModified = state.isProfileModified,
                             profileProgress = state.profileProgress,
-                            profilePercentage = state.profilePercentage,
-                            profileTargetRangeText = state.profileTargetRangeText,
                             profileCardTempTargetStateFlow = mainViewModel.profileCardTempTargetStateFlow,
                             runningMode = state.runningMode,
                             runningModeText = state.runningModeText,
                             runningModeRemaining = state.runningModeRemaining,
                             runningModeProgress = state.runningModeProgress,
                             runningModeRecordId = state.runningModeRecordId,
-                            lastLoopAgeMillis = state.lastLoopAgeMillis,
-                            isLooping = state.isLooping,
-                            algorithmReasoning = state.algorithmReasoning,
-                            loopStoppedReason = state.loopStoppedReason,
                             tbrState = state.tbrState,
                             smbEnabled = state.smbEnabled,
                             isSimpleMode = state.isSimpleMode,
                             calcProgress = calcProgress,
-                            calcProgressFlow = mainViewModel.calcProgressFlow,
                             graphViewModel = graphs,
                             chipsViewModel = chips,
                             manageViewModel = metroViewModel<ManageViewModel>(),
@@ -460,11 +452,7 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter) {
                             commandsAllowed = masterOrPairedClient,
                             formatDuration = mainViewModel::formatDuration,
                             paddingValues = PaddingValues(0.dp),
-                            bolusStateFlow = graph.bolusProgressData.state,
-                            isTrio = false,
-                            timeInRangeTodayFlow = mainViewModel.timeInRangeToday,
-                            sensorInfo = sensorInfo,
-                            loadSensorInfo = mainViewModel::loadSensorInfo
+                            bolusStateFlow = graph.bolusProgressData.state
                         )
                     },
                     isTrio = false,

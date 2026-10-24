@@ -422,6 +422,14 @@ its own permission (it wipes the app). When asked:
 
 ## Project Info
 
+### Trio UI ownership
+
+- Keep Trio screen layout and overview model assembly under `app/.../trio/ui/compose/`.
+- `MainScreen` has a content slot for a different layout. Keep its dialogs shared; do not add Trio branches to it or to the shared `OverviewScreen`.
+- Register Trio-only routes in `TrioNavGraph.kt`, not among the shared routes in `AppNavGraph.kt`.
+- Keep extra Trio data reads in `TrioOverviewData.kt`. Keep shared chip refresh and error handling in `MainViewModel`.
+- Keep the chip refresh event sources and extra COB text formatting in `OverviewChipData.kt`, so `ChipsViewModel` stays close to dev.
+
 - Android project (AndroidAPS - open source artificial pancreas system)
 - Main branch: `master`
 - Development branch: `dev`

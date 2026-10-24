@@ -1,5 +1,9 @@
 package app.aaps.ui.compose.overview.chips
 
+import androidx.lifecycle.viewModelScope
+import app.aaps.core.data.iob.CobInfo
+import app.aaps.core.interfaces.InterfacesStrings
+import app.aaps.core.interfaces.aps.APSResult
 import app.aaps.core.interfaces.aps.Loop
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.db.PersistenceLayer
@@ -15,13 +19,19 @@ import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventAutosensCalculationFinished
 import app.aaps.core.interfaces.rx.events.EventLoopUpdateGui
 import app.aaps.core.interfaces.utils.DecimalFormatter
+import app.aaps.ui.UiStrings
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -29,6 +39,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.whenever
+import org.mockito.kotlin.mock
 
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class ChipsViewModelTest {
@@ -62,7 +73,10 @@ internal class ChipsViewModelTest {
     }
 
     @AfterEach
-    fun tearDown() = Dispatchers.resetMain()
+    fun tearDown() {
+        sut.viewModelScope.cancel()
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun `default uiState exposes empty initial values`() {
@@ -73,5 +87,35 @@ internal class ChipsViewModelTest {
         assertThat(sut.sensitivityUiState.value.ratio).isEqualTo(1.0)
         assertThat(sut.sensitivityUiState.value.isEnabled).isTrue()
         assertThat(sut.sensitivityUiState.value.hasData).isFalse()
+    }
+
+    @Test
+    fun `COB keeps the plain value separate from the required carbs message`() = runTest {
+        try {
+            val result = mock<APSResult>()
+            whenever(result.carbsReq).thenReturn(15)
+            whenever(loop.lastRun).thenReturn(
+                Loop.LastRun().apply {
+                    constraintsProcessed = result
+                    lastAPSRun = 1_000L
+                }
+            )
+            whenever(config.APS).thenReturn(true)
+            whenever(iobCobCalculator.getCobInfo("ChipsViewModel COB")).thenReturn(CobInfo(1_000L, 25.0, 0.0))
+            whenever(persistenceLayer.getNewestCarbs()).thenReturn(null)
+            whenever(rh.gs(InterfacesStrings.format_carbs, 25)).thenReturn("25 g")
+            whenever(rh.gs(InterfacesStrings.format_carbs, 15)).thenReturn("15 g")
+            whenever(rh.gs(UiStrings.cob_with_carbs_required, "25 g", "15 g")).thenReturn("25 g (15 g required)")
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { sut.cobUiState.collect {} }
+
+            runCurrent()
+
+            assertThat(sut.cobUiState.value.baseText).isEqualTo("25 g")
+            assertThat(sut.cobUiState.value.text).isEqualTo("25 g (15 g required)")
+            assertThat(sut.cobUiState.value.carbsReq).isEqualTo(15)
+            assertThat(sut.cobUiState.value.cobValue).isEqualTo(25.0)
+        } finally {
+            sut.viewModelScope.cancel()
+        }
     }
 }

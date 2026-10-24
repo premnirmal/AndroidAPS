@@ -378,29 +378,21 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                             val sceneExpired by mainViewModel.sceneExpired.collectAsState()
                             val masterReachable by mainViewModel.masterReachable.collectAsState()
                             val masterOrPairedClient by mainViewModel.masterOrPairedClient.collectAsState()
-                            val sensorInfo by mainViewModel.sensorInfo.collectAsState()
                             OverviewScreen(
                                 profileName = state.profileName,
                                 profilePsId = state.profilePsId,
                                 isProfileModified = state.isProfileModified,
                                 profileProgress = state.profileProgress,
-                                profilePercentage = state.profilePercentage,
-                                profileTargetRangeText = state.profileTargetRangeText,
                                 profileCardTempTargetStateFlow = mainViewModel.profileCardTempTargetStateFlow,
                                 runningMode = state.runningMode,
                                 runningModeText = state.runningModeText,
                                 runningModeRemaining = state.runningModeRemaining,
                                 runningModeProgress = state.runningModeProgress,
                                 runningModeRecordId = state.runningModeRecordId,
-                                lastLoopAgeMillis = state.lastLoopAgeMillis,
-                                isLooping = state.isLooping,
-                                algorithmReasoning = state.algorithmReasoning,
-                                loopStoppedReason = state.loopStoppedReason,
                                 tbrState = state.tbrState,
                                 smbEnabled = state.smbEnabled,
                                 isSimpleMode = state.isSimpleMode,
                                 calcProgress = mainViewModel.calcProgressFlow.value,
-                                calcProgressFlow = mainViewModel.calcProgressFlow,
                                 graphViewModel = graphs,
                                 chipsViewModel = chips,
                                 manageViewModel = metroViewModel<ManageViewModel>(),
@@ -426,11 +418,7 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                                 commandsAllowed = masterOrPairedClient,
                                 formatDuration = mainViewModel::formatDuration,
                                 paddingValues = PaddingValues(0.dp),
-                                bolusStateFlow = graph.bolusProgressData.state,
-                                isTrio = false,
-                                timeInRangeTodayFlow = mainViewModel.timeInRangeToday,
-                                sensorInfo = sensorInfo,
-                                loadSensorInfo = mainViewModel::loadSensorInfo
+                                bolusStateFlow = graph.bolusProgressData.state
                             )
                         }
                     )

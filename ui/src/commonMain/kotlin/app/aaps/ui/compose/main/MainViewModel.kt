@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import app.aaps.core.data.configuration.Constants
 import app.aaps.core.data.iob.InMemoryGlucoseValue
 import app.aaps.core.data.model.ActiveSceneState
-import app.aaps.core.data.model.GV
 import app.aaps.core.data.model.GlucoseUnit
 import app.aaps.core.data.model.RM
 import app.aaps.core.data.model.SceneLifecycle
@@ -54,7 +53,6 @@ import app.aaps.core.interfaces.pump.PumpTimeRemaining
 import app.aaps.core.interfaces.queue.SmbPause
 import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.interfaces.rx.bus.RxBus
-import app.aaps.core.interfaces.rx.events.EventConfigBuilderChange
 import app.aaps.core.interfaces.rx.events.EventLoopUpdateGui
 import app.aaps.core.interfaces.rx.events.EventPumpStatusChanged
 import app.aaps.core.interfaces.rx.events.EventQueueChanged
@@ -67,7 +65,6 @@ import app.aaps.core.interfaces.scenes.SceneStore
 import app.aaps.core.interfaces.sync.NsClient
 import app.aaps.core.interfaces.ui.UrlOpener
 import app.aaps.core.interfaces.utils.DateUtil
-import app.aaps.core.interfaces.utils.MidnightTime
 import app.aaps.core.interfaces.utils.Round
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
@@ -76,7 +73,6 @@ import app.aaps.core.keys.DoubleNonKey
 import app.aaps.core.keys.IntNonKey
 import app.aaps.core.keys.LongNonKey
 import app.aaps.core.keys.StringNonKey
-import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.core.keys.interfaces.AppPlatform
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.VisibilityContext
@@ -128,15 +124,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -186,72 +179,11 @@ class MainViewModel(
     private val appScope: CoroutineScope
 ) : ViewModel() {
 
-    /**
-     * Asks [sensorInfo] to read the sensor data again. A counter in a StateFlow, not an event, so a
-     * request made before [sensorInfo] starts to listen is not lost.
-     */
-    private val sensorInfoRefresh = MutableStateFlow(0)
-
-    /**
-     * Sensor data for the sensor info sheet.
-     *
-     * The first read waits for the app to finish start up, because the active BG source is not known
-     * before that. After that it reads again when the data behind it changes: a new sensor change
-     * event, a new BG reading (the sensor battery comes with it), a cleared database or a new BG
-     * source. It also reads again when the overview is shown (see [refreshSensorInfo]). The timer
-     * reads again for changes that send no event.
-     */
-    val sensorInfo: StateFlow<SensorInfo> = flow {
-        config.initProgressFlow.first { it.done }
-        // sensorInfoRefresh is a StateFlow, so it gives the first read as soon as this starts.
-        emitAll(
-            merge(
-                persistenceLayer.observeChanges(TE::class),
-                persistenceLayer.observeChanges(GV::class),
-                persistenceLayer.databaseClearedFlow,
-                rxBus.toFlow(EventConfigBuilderChange::class),
-                sensorInfoRefresh,
-                flow {
-                    while (true) {
-                        delay(30_000L)
-                        emit(Unit)
-                    }
-                }
-            ).map { }
-        )
-    }
-        .conflate()
-        .mapNotNull { readSensorInfo() }
-        .stateIn(
-            viewModelScope,
-            SharingStarted.Eagerly,
-            SensorInfo()
-        )
-
-    /**
-     * Reads the sensor data now, for the sensor info sheet. The sheet calls this every time it opens,
-     * so it shows fresh data even if [sensorInfo] has not reached the screen yet. Returns null if the
-     * data cannot be read; the sheet then keeps what [sensorInfo] gives.
-     */
-    suspend fun loadSensorInfo(): SensorInfo? {
-        config.initProgressFlow.first { it.done }
-        return readSensorInfo()
-    }
-
-    private suspend fun readSensorInfo(): SensorInfo? =
-        try {
-            val source = activePlugin.activeBgSource
-            SensorInfo(
-                sourceName = (source as? PluginBase)?.name.orEmpty(),
-                startedAt = persistenceLayer.getLastTherapyRecordUpToNow(TE.Type.SENSOR_CHANGE)?.timestamp,
-                batteryLevel = source.sensorBatteryLevel
-            ).also { aapsLogger.debug(LTag.BGSOURCE, "MainViewModel: Sensor info read: $it") }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            aapsLogger.error(LTag.UI, "MainViewModel: Failed to read sensor info", e)
-            null
-        }
+    private val trioOverviewData = TrioOverviewData(
+        activePlugin, config, persistenceLayer, rxBus, preferences, profileUtil, dateUtil, aapsLogger, viewModelScope
+    )
+    val sensorInfo: StateFlow<SensorInfo> get() = trioOverviewData.sensorInfo
+    suspend fun loadSensorInfo(): SensorInfo? = trioOverviewData.loadSensorInfo()
 
     // Event-driven state (drawer, dialogs, simple-mode preference). Imperative .update{} calls
     // from user actions and preference observers land here.
@@ -321,12 +253,9 @@ class MainViewModel(
 
     val versionName: String get() = config.VERSION_NAME
     val appTitle: String get() = rh.gs(config.appName)
-    val isTrio: Boolean get() = config.TRIO
     val showAdvancedMenuItems: Boolean get() = !config.TRIO
     val calcProgressFlow: StateFlow<Int> = overviewDataCache.calcProgressFlow
-    private val _timeInRangeToday = MutableStateFlow<TimeInRangeToday?>(null)
-    val timeInRangeToday: StateFlow<TimeInRangeToday?> = _timeInRangeToday.asStateFlow()
-    private var timeInRangeTodayJob: Job? = null
+    val timeInRangeToday: StateFlow<TimeInRangeToday?> get() = trioOverviewData.timeInRangeToday
     private var overviewRefreshJob: Job? = null
     private val runtimeRefresh = MutableStateFlow(0)
     private val overviewHydrated = MutableStateFlow(false)
@@ -492,10 +421,10 @@ class MainViewModel(
         preferences.observe(BooleanKey.ApsUseSmb)
             .onEach { smb -> _eventState.update { it.copy(smbEnabled = smb) } }
             .launchIn(viewModelScope)
-        refreshTimeInRangeToday()
+        trioOverviewData.refreshTimeInRangeToday()
         calcProgressFlow
             .onEach { progress ->
-                if (progress == 100) refreshTimeInRangeToday()
+                if (progress == 100) trioOverviewData.refreshTimeInRangeToday()
             }
             .launchIn(viewModelScope)
         merge(
@@ -540,60 +469,9 @@ class MainViewModel(
     private fun currentLoopStoppedReason(): String? =
         if (config.AAPSCLIENT) null else loop.lastRunStatus
 
-    private fun refreshTimeInRangeToday() {
-        timeInRangeTodayJob?.cancel()
-        timeInRangeTodayJob = viewModelScope.launch {
-            updateTimeInRangeToday()
-        }
-    }
-
-    /**
-     * Splits today's readings over the five glucose ranges.
-     *
-     * The low mark and the high mark are the user preferences, so the middle range is the one
-     * the user sees everywhere else in the app. The very low and very high limits are the fixed
-     * statistics limits, the same ones the Dexcom time in range report uses.
-     */
-    private suspend fun updateTimeInRangeToday() {
-        val start = MidnightTime.calc(dateUtil.now())
-        val end = dateUtil.now()
-        val lowMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewLowMark))
-        val highMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewHighMark))
-        val veryLowMgdl = minOf(Constants.STATS_RANGE_VERY_LOW_MMOL * Constants.MMOLL_TO_MGDL, lowMgdl)
-        val veryHighMgdl = maxOf(Constants.STATS_RANGE_VERY_HIGH_MMOL * Constants.MMOLL_TO_MGDL, highMgdl)
-        val readings = persistenceLayer.getBgReadingsDataFromTimeToTime(start, end, true)
-            .filter { it.value >= 39.0 }
-        _timeInRangeToday.value = if (readings.isEmpty()) null
-        else {
-            var veryLow = 0
-            var low = 0
-            var inRange = 0
-            var high = 0
-            var veryHigh = 0
-            readings.forEach {
-                when {
-                    it.value < veryLowMgdl  -> veryLow++
-                    it.value < lowMgdl      -> low++
-                    it.value <= highMgdl    -> inRange++
-                    it.value <= veryHighMgdl -> high++
-                    else                    -> veryHigh++
-                }
-            }
-            val total = readings.size.toDouble()
-            fun share(count: Int) = count * 100.0 / total
-            TimeInRangeToday(
-                veryLowPercent = share(veryLow),
-                lowPercent = share(low),
-                inRangePercent = share(inRange),
-                highPercent = share(high),
-                veryHighPercent = share(veryHigh)
-            )
-        }
-    }
-
     /** Asks [sensorInfo] to read the sensor data again. */
     fun refreshSensorInfo() {
-        sensorInfoRefresh.update { it + 1 }
+        trioOverviewData.refreshSensorInfo()
     }
 
     fun refreshOverviewState() {
@@ -612,8 +490,7 @@ class MainViewModel(
                     ?.let(::cacheLastLoopTimestamp)
             }
             refreshOverviewPart("time in range") {
-                timeInRangeTodayJob?.cancel()
-                updateTimeInRangeToday()
+                trioOverviewData.refreshTimeInRangeTodayNow()
             }
             if (overviewHydrated.value) {
                 runtimeRefresh.update { it + 1 }

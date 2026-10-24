@@ -61,13 +61,6 @@ data class MainUiState(
 )
 
 @Immutable
-data class SensorInfo(
-    val sourceName: String = "",
-    val startedAt: Long? = null,
-    val batteryLevel: Int = -1
-)
-
-@Immutable
 data class TempTargetUiState(
     val text: String = "",
     val rangeText: String = "",

@@ -13,24 +13,17 @@ import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.pump.BolusProgressData
 import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.interfaces.rx.bus.RxBus
-import app.aaps.core.interfaces.rx.events.EventAutosensCalculationFinished
-import app.aaps.core.interfaces.rx.events.EventLoopUpdateGui
 import app.aaps.core.interfaces.rx.events.EventShowDialog
 import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.objects.extensions.round
 import app.aaps.core.ui.CoreUiStrings
 import app.aaps.core.ui.extensions.displayText
-import app.aaps.ui.UiStrings
 import dev.zacsweers.metro.Assisted
 import dev.zacsweers.metro.AssistedFactory
 import dev.zacsweers.metro.AssistedInject
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -44,7 +37,7 @@ class ChipsViewModel(
     private val config: Config,
     private val persistenceLayer: PersistenceLayer,
     private val sensitivityOverview: SensitivityOverview,
-    private val bolusProgressData: BolusProgressData,
+    bolusProgressData: BolusProgressData,
     private val rh: TextResolver,
     private val decimalFormatter: DecimalFormatter,
     private val rxBus: RxBus
@@ -56,19 +49,10 @@ class ChipsViewModel(
         fun create(cache: OverviewDataCache): ChipsViewModel
     }
 
-    private val iobCobRefresh = merge(
-        flow {
-            while (true) {
-                emit(Unit)
-                delay(150_000L) // 2.5 minutes
-            }
-        },
-        bolusProgressData.state.map { Unit },
-        rxBus.toFlow(EventAutosensCalculationFinished::class).map { Unit },
-        rxBus.toFlow(EventLoopUpdateGui::class).map { Unit }
-    ).shareIn(viewModelScope, SharingStarted.Eagerly, replay = 1)
+    private val iobCobTicker = overviewChipRefresh(bolusProgressData, rxBus)
+        .shareIn(viewModelScope, SharingStarted.Eagerly, replay = 1)
 
-    val iobUiState: StateFlow<IobUiState> = iobCobRefresh.combine(cache.iobGraphFlow) { _, _ ->
+    val iobUiState: StateFlow<IobUiState> = iobCobTicker.combine(cache.iobGraphFlow) { _, _ ->
         val bolusIob = iobCobCalculator.calculateIobFromBolus().round()
         val basalIob = iobCobCalculator.calculateIobFromTempBasalsIncludingConvertedExtended().round()
         val total = bolusIob.iob + basalIob.basaliob
@@ -82,11 +66,11 @@ class ChipsViewModel(
         initialValue = IobUiState()
     )
 
-    val cobUiState: StateFlow<CobUiState> = iobCobRefresh.combine(cache.cobGraphFlow) { _, _ ->
+    val cobUiState: StateFlow<CobUiState> = iobCobTicker.combine(cache.cobGraphFlow) { _, _ ->
         val cobInfo = iobCobCalculator.getCobInfo("ChipsViewModel COB")
-        val baseText = cobInfo.displayText(rh, decimalFormatter)
+        var cobText = cobInfo.displayText(rh, decimalFormatter)
             ?: rh.gs(CoreUiStrings.value_unavailable_short)
-        var cobText = baseText
+        val baseText = cobText
         var carbsReq = 0
 
         val constraintsProcessed = loop.lastRun?.constraintsProcessed
@@ -95,22 +79,13 @@ class ChipsViewModel(
             if (constraintsProcessed.carbsReq > 0) {
                 val lastCarbsTime = persistenceLayer.getNewestCarbs()?.timestamp ?: 0L
                 if (lastCarbsTime < lastRun.lastAPSRun) {
-                    cobText = rh.gs(
-                        UiStrings.cob_with_carbs_required,
-                        cobText,
-                        rh.gs(InterfacesStrings.format_carbs, constraintsProcessed.carbsReq)
-                    )
+                    cobText = rh.cobWithRequiredCarbs(cobText, constraintsProcessed.carbsReq)
                 }
                 carbsReq = constraintsProcessed.carbsReq
             }
         }
 
-        CobUiState(
-            text = cobText,
-            baseText = baseText,
-            carbsReq = carbsReq,
-            cobValue = cobInfo.displayCob ?: 0.0
-        )
+        CobUiState(text = cobText, baseText = baseText, carbsReq = carbsReq, cobValue = cobInfo.displayCob ?: 0.0)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -121,7 +96,7 @@ class ChipsViewModel(
     // own it would show the previous loop's ratio and variable ISF. Predictions are published
     // right after the loop ran on the master, and right after a device status came in on a
     // client, so they carry the fresh values on both sides.
-    val sensitivityUiState: StateFlow<SensitivityUiState> = combine(iobCobRefresh, cache.iobGraphFlow, cache.predictionsFlow) { _, _, _ ->
+    val sensitivityUiState: StateFlow<SensitivityUiState> = combine(iobCobTicker, cache.iobGraphFlow, cache.predictionsFlow) { _, _, _ ->
         buildSensitivityUiState()
     }.stateIn(
         scope = viewModelScope,

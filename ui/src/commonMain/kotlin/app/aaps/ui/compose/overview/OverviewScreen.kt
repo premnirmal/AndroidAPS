@@ -36,9 +36,7 @@ import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
 import app.aaps.core.ui.compose.pump.PumpActivityDialog
 import app.aaps.core.ui.compose.pump.PumpActivityFab
 import app.aaps.core.ui.compose.smallestScreenWidthDp
-import app.aaps.ui.compose.main.TempTargetChipState
 import app.aaps.ui.compose.main.TempTargetUiState
-import app.aaps.ui.compose.main.SensorInfo
 import app.aaps.ui.compose.manageSheet.ManageViewModel
 import app.aaps.ui.compose.notificationsSheet.NotificationBottomSheet
 import app.aaps.ui.compose.notificationsSheet.NotificationFab
@@ -56,23 +54,16 @@ fun OverviewScreen(
     profilePsId: Long = 0,
     isProfileModified: Boolean,
     profileProgress: Float,
-    profilePercentage: Int = 100,
-    profileTargetRangeText: String = "",
     profileCardTempTargetStateFlow: StateFlow<TempTargetUiState>,
     runningMode: RM.Mode?,
     runningModeText: String,
     runningModeRemaining: String,
     runningModeProgress: Float,
     runningModeRecordId: Long = 0,
-    lastLoopAgeMillis: Long? = null,
-    isLooping: Boolean = false,
-    algorithmReasoning: String? = null,
-    loopStoppedReason: String? = null,
     tbrState: TbrState,
     smbEnabled: Boolean,
     isSimpleMode: Boolean,
     calcProgress: Int,
-    calcProgressFlow: StateFlow<Int>,
     graphViewModel: GraphViewModel,
     chipsViewModel: ChipsViewModel,
     manageViewModel: ManageViewModel,
@@ -103,21 +94,11 @@ fun OverviewScreen(
      * space at their end, so their last row can be scrolled clear of the bars and the toolbar while these show.
      */
     overlaidBarsHeight: Dp = 0.dp,
-    bolusState: BolusProgressState? = null,
     pumpStatusText: String = "",
     queueStatusText: AnnotatedString? = null,
     isPumpCommunicating: Boolean = false,
     onStopBolus: () -> Unit = {},
-    isTrio: Boolean = false,
-    trioOverview: @Composable (TrioOverviewModel) -> Unit = {},
-    pumpNeedsSetup: Boolean = false,
-    pumpSuspended: Boolean = false,
-    pumpEndTimeMillis: Long? = null,
-    reservoirUnits: Double? = null,
     onBgSourceClick: () -> Unit = {},
-    timeInRangeTodayFlow: StateFlow<TimeInRangeToday?>,
-    sensorInfo: SensorInfo = SensorInfo(),
-    loadSensorInfo: suspend () -> SensorInfo? = { null },
     modifier: Modifier = Modifier
 ) {
     val notifications by notificationsFlow.collectAsStateWithLifecycle()
@@ -145,8 +126,8 @@ fun OverviewScreen(
         }
     }
 
-    LaunchedEffect(autoShowNotificationSheet, isTrio) {
-        if (autoShowNotificationSheet && !isTrio) {
+    LaunchedEffect(autoShowNotificationSheet) {
+        if (autoShowNotificationSheet) {
             showNotificationSheet = true
             onAutoShowConsumed()
         }
@@ -163,59 +144,7 @@ fun OverviewScreen(
     val isTablet = smallestScreenWidthDp() >= TABLET_MIN_SW_DP
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (isTrio) {
-            trioOverview(
-                TrioOverviewModel(
-                    profileName = profileName,
-                    isProfileModified = isProfileModified,
-                    profileProgress = profileProgress,
-                    profileSceneManaged = profileSceneManaged,
-                    profilePercentage = profilePercentage,
-                    profileTargetRangeText = profileTargetRangeText,
-                    runningMode = runningMode,
-                    runningModeText = runningModeText,
-                    runningModeRemaining = runningModeRemaining,
-                    runningModeProgress = runningModeProgress,
-                    runningModeSceneManaged = runningModeSceneManaged,
-                    lastLoopAgeMillis = lastLoopAgeMillis,
-                    isLooping = isLooping,
-                    algorithmReasoning = algorithmReasoning,
-                    loopStoppedReason = loopStoppedReason,
-                    smbEnabled = smbEnabled,
-                    tbrState = tbrState,
-                    profileCardTempTargetStateFlow = profileCardTempTargetStateFlow,
-                    calcProgressFlow = calcProgressFlow,
-                    graphViewModel = graphViewModel,
-                    chipsViewModel = chipsViewModel,
-                    onNavigate = onNavigate,
-                    onTbrChipClick = onTbrChipClick,
-                    onIobChipClick = onIobChipClick,
-                    paddingValues = paddingValues,
-                    activeSceneState = activeSceneState,
-                    sceneExpired = sceneExpired,
-                    onEndScene = onEndScene,
-                    onDismissScene = onDismissScene,
-                    endSceneEnabled = endSceneEnabled,
-                    commandsAllowed = commandsAllowed,
-                    pumpNeedsSetup = pumpNeedsSetup,
-                    pumpSuspended = pumpSuspended,
-                    pumpEndTimeMillis = pumpEndTimeMillis,
-                    reservoirUnits = reservoirUnits,
-                    onBgSourceClick = onBgSourceClick,
-                    notificationsFlow = notificationsFlow,
-                    onDismissNotification = onDismissNotification,
-                    onNotificationActionClick = onNotificationActionClick,
-                    autoShowNotificationSheet = autoShowNotificationSheet,
-                    onAutoShowConsumed = onAutoShowConsumed,
-                    bolusStateFlow = bolusStateFlow,
-                    onStopBolus = onStopBolus,
-                    timeInRangeTodayFlow = timeInRangeTodayFlow,
-                    formatDuration = formatDuration,
-                    sensorInfo = sensorInfo,
-                    loadSensorInfo = loadSensorInfo
-                )
-            )
-        } else BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val twoColumns = isLandscape && maxWidth >= SPLIT_LAYOUT_MIN_WIDTH
             if (twoColumns && isTablet) {
                 OverviewScreenTablet(
@@ -340,7 +269,7 @@ fun OverviewScreen(
         // Calculation progress (IOB / graph data). Overlaid on top of content so it never reflows
         // the layout — previously a flow child of the content Column which caused the screen to jump.
         AnimatedVisibility(
-            visible = calcProgress < 100 && !isTrio,
+            visible = calcProgress < 100,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
@@ -357,7 +286,7 @@ fun OverviewScreen(
         }
 
         PumpActivityFab(
-            visible = showPumpFab && !isTrio,
+            visible = showPumpFab,
             bolusState = bolusState,
             onClick = { showPumpActivityDialog = true },
             modifier = Modifier
@@ -366,20 +295,18 @@ fun OverviewScreen(
                 .padding(end = 16.dp, bottom = 128.dp + fabBottomOffset)
         )
 
-        if (!isTrio) {
-            NotificationFab(
-                notificationCount = visibleNotifications.size,
-                highestLevel = visibleNotifications.minByOrNull { it.level.ordinal }?.level,
-                onClick = { showNotificationSheet = true },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(paddingValues)
-                    .padding(end = 16.dp, bottom = 72.dp + fabBottomOffset)
-            )
-        }
+        NotificationFab(
+            notificationCount = visibleNotifications.size,
+            highestLevel = visibleNotifications.minByOrNull { it.level.ordinal }?.level,
+            onClick = { showNotificationSheet = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(paddingValues)
+                .padding(end = 16.dp, bottom = 72.dp + fabBottomOffset)
+        )
     }
 
-    if (showPumpActivityDialog && !isTrio) {
+    if (showPumpActivityDialog) {
         PumpActivityDialog(
             bolusState = bolusState,
             pumpStatus = pumpStatusText,
@@ -390,7 +317,7 @@ fun OverviewScreen(
         )
     }
 
-    if (!isTrio && showNotificationSheet && visibleNotifications.isNotEmpty()) {
+    if (showNotificationSheet && visibleNotifications.isNotEmpty()) {
         NotificationBottomSheet(
             notifications = visibleNotifications,
             onDismissSheet = { showNotificationSheet = false },

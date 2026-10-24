@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.Test
+
 plugins {
     id("kmp-test-defaults")
     kotlin("multiplatform")
@@ -7,6 +9,15 @@ plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.metro)
+}
+
+tasks.withType<Test>().configureEach {
+    inputs.files(
+        "src/commonMain/kotlin/app/aaps/ui/compose/main/MainScreen.kt",
+        "src/commonMain/kotlin/app/aaps/ui/compose/overview/OverviewScreen.kt",
+        "src/commonMain/kotlin/app/aaps/ui/compose/overview/chips/ChipsViewModel.kt",
+        rootProject.file("appshell/src/commonMain/kotlin/app/aaps/appshell/navigation/AppNavGraph.kt")
+    ).withPropertyName("trioUiBoundaries")
 }
 
 // Generates UiStrings (commonMain) and UiStringIds (androidMain) from this module's strings.xml, the

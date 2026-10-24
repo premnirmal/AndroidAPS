@@ -30,7 +30,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,7 +44,6 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.navigation.ElementType
 import app.aaps.core.interfaces.notifications.AapsNotification
 import app.aaps.core.interfaces.plugin.PluginBase
@@ -63,11 +61,11 @@ import app.aaps.ui.compose.aboutDialog.AboutDialogData
 import app.aaps.ui.compose.maintenance.ImportSource
 import app.aaps.ui.compose.maintenance.MaintenanceDialogs
 import app.aaps.ui.compose.maintenance.MaintenanceViewModel
+import app.aaps.ui.compose.loopSheet.LoopActionBottomSheet
 import app.aaps.ui.compose.loopSheet.LoopActionViewModel
 import app.aaps.ui.compose.manageSheet.ManageSheetState
 import app.aaps.ui.compose.manageSheet.ManageViewModel
 import app.aaps.ui.compose.overview.OverviewScreen
-import app.aaps.ui.compose.overview.TrioOverviewModel
 import app.aaps.ui.compose.overview.chips.ChipsViewModel
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import app.aaps.ui.compose.overview.statusLights.StatusViewModel
@@ -84,9 +82,6 @@ import app.aaps.ui.search.SearchUiState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
-
-private val PREVIEW_MODE_MIN_HEIGHT: Dp = 500.dp
-private const val AUTO_HIDE_DELAY_MS = 3000L
 
 @Composable
 fun MainScreen(
@@ -114,22 +109,6 @@ fun MainScreen(
     // Menu/navigation
     onMenuClick: () -> Unit,
     onNavigate: (NavigationRequest) -> Unit,
-    onTrioTabSelected: (TrioNavTab) -> Unit = {},
-    trioSelectedTab: TrioNavTab = TrioNavTab.Overview,
-    trioBottomBar: @Composable (
-        selectedTab: TrioNavTab,
-        carbsRequired: Int,
-        onTabSelected: (TrioNavTab) -> Unit,
-        onAddClick: () -> Unit,
-        modifier: Modifier
-    ) -> Unit = { _, _, _, _, _ -> },
-    trioAddActionsSheet: @Composable (
-        onDismiss: () -> Unit,
-        onBolusClick: () -> Unit,
-        onCarbsClick: () -> Unit,
-        onWizardClick: () -> Unit
-    ) -> Unit = { _, _, _, _ -> },
-    trioOverview: @Composable (TrioOverviewModel) -> Unit = {},
     onDrawerClosed: () -> Unit,
     onAboutDialogDismiss: () -> Unit,
     /** Null hides the button - only Android has the problem it links to. */
@@ -174,6 +153,8 @@ fun MainScreen(
     queueStatusText: AnnotatedString? = null,
     isPumpCommunicating: Boolean = false,
     onStopBolus: () -> Unit = {},
+    // Replaces the drawer and overview, but keeps the shared dialogs below.
+    content: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     LocalDateUtil.current
@@ -182,12 +163,8 @@ fun MainScreen(
     var showTreatmentSheet by remember { mutableStateOf(false) }
     var showAutomationSheet by remember { mutableStateOf(false) }
     var showLoopActionSheet by remember { mutableStateOf(false) }
-    var showTrioAddSheet by rememberSaveable { mutableStateOf(false) }
     val automationState by scenesViewModel.uiState.collectAsStateWithLifecycle()
-    val cobUiState by chipsViewModel.cobUiState.collectAsStateWithLifecycle()
-    val sensorInfo by mainViewModel.sensorInfo.collectAsStateWithLifecycle()
     val snackbarHostState = LocalSnackbarHostState.current
-    val isTrio = mainViewModel.isTrio
 
     LaunchedEffect(Unit) {
         mainViewModel.refreshOverviewState()
@@ -208,7 +185,31 @@ fun MainScreen(
         }
     }
 
-    val mainContent: @Composable () -> Unit = {
+    if (content != null) {
+        Box(modifier = modifier.fillMaxSize()) { content() }
+    } else ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            MainDrawer(
+                drawerState = drawerState,
+                versionName = mainViewModel.versionName,
+                onNavigate = { request ->
+                    // Close the drawer first, then open the screen. Opened while the drawer was still
+                    // sliding in (a fast tap, as the e2e test makes), one Back from that screen left
+                    // the app instead of coming back to the overview.
+                    scope.launch {
+                        drawerState.close()
+                        onDrawerClosed()
+                        onNavigate(request)
+                    }
+                },
+                isTreatmentsEnabled = uiState.isProfileLoaded,
+                showExit = mainViewModel.showExit
+            )
+        },
+        gesturesEnabled = true,
+        modifier = modifier
+    ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val density = LocalDensity.current
             val previewMode = maxHeight < PREVIEW_MODE_MIN_HEIGHT
@@ -235,43 +236,19 @@ fun MainScreen(
                 }
             }
 
-            Scaffold(
-                contentWindowInsets = if (isTrio) WindowInsets(0) else WindowInsets.safeDrawing,
-                bottomBar = {
-                    if (isTrio) {
-                        AnimatedVisibility(
-                            visible = showChrome,
-                            enter = slideInVertically { it },
-                            exit = slideOutVertically { it }
-                        ) {
-                            trioBottomBar(
-                                trioSelectedTab,
-                                cobUiState.carbsReq,
-                                { tab -> onTrioTabSelected(tab) },
-                                { showTrioAddSheet = true },
-                                Modifier
-                            )
-                        }
-                    }
-                }
-            ) { scaffoldPadding ->
+            Scaffold(contentWindowInsets = WindowInsets.safeDrawing) { scaffoldPadding ->
                 val hasToolbar = quickLaunchItems.isNotEmpty()
-                val topScaffoldPadding = if (isTrio) 0.dp else scaffoldPadding.calculateTopPadding()
-                val bottomScaffoldPadding = if (isTrio) 0.dp else scaffoldPadding.calculateBottomPadding()
 
                 // Content padding: in preview mode use only system bars;
                 // in normal mode add measured bar heights
-                val contentPadding = when {
-                    isTrio     -> PaddingValues(bottom = scaffoldPadding.calculateBottomPadding())
-                    previewMode -> scaffoldPadding
-                    else        -> {
-                        val topBarHeight = with(density) { topBarHeightPx.toDp() }
-                        val bottomBarHeight = with(density) { bottomBarHeightPx.toDp() }
-                        PaddingValues(
-                            top = topScaffoldPadding + topBarHeight,
-                            bottom = bottomScaffoldPadding + bottomBarHeight
-                        )
-                    }
+                val contentPadding = if (previewMode) scaffoldPadding
+                else {
+                    val topBarHeight = with(density) { topBarHeightPx.toDp() }
+                    val bottomBarHeight = with(density) { bottomBarHeightPx.toDp() }
+                    PaddingValues(
+                        top = scaffoldPadding.calculateTopPadding() + topBarHeight,
+                        bottom = scaffoldPadding.calculateBottomPadding() + bottomBarHeight
+                    )
                 }
 
                 val activeSceneState by mainViewModel.activeSceneState.collectAsStateWithLifecycle()
@@ -289,23 +266,16 @@ fun MainScreen(
                         profilePsId = uiState.profilePsId,
                         isProfileModified = uiState.isProfileModified,
                         profileProgress = uiState.profileProgress,
-                        profilePercentage = uiState.profilePercentage,
-                        profileTargetRangeText = uiState.profileTargetRangeText,
                         runningMode = uiState.runningMode,
                         runningModeText = uiState.runningModeText,
                         runningModeRemaining = uiState.runningModeRemaining,
                         runningModeProgress = uiState.runningModeProgress,
                         runningModeRecordId = uiState.runningModeRecordId,
-                        lastLoopAgeMillis = uiState.lastLoopAgeMillis,
-                        isLooping = uiState.isLooping,
-                        algorithmReasoning = uiState.algorithmReasoning,
-                        loopStoppedReason = uiState.loopStoppedReason,
                         tbrState = uiState.tbrState,
                         smbEnabled = uiState.smbEnabled,
                         profileCardTempTargetStateFlow = mainViewModel.profileCardTempTargetStateFlow,
                         isSimpleMode = uiState.isSimpleMode,
                         calcProgress = calcProgress,
-                        calcProgressFlow = mainViewModel.calcProgressFlow,
                         graphViewModel = graphViewModel,
                         chipsViewModel = chipsViewModel,
                         manageViewModel = manageViewModel,
@@ -338,15 +308,6 @@ fun MainScreen(
                         queueStatusText = queueStatusText,
                         isPumpCommunicating = isPumpCommunicating,
                         onStopBolus = onStopBolus,
-                        timeInRangeTodayFlow = mainViewModel.timeInRangeToday,
-                        isTrio = isTrio,
-                        trioOverview = trioOverview,
-                        pumpNeedsSetup = pumpSetupPlugin != null && !uiState.pumpSuspended,
-                        pumpSuspended = uiState.pumpSuspended,
-                        pumpEndTimeMillis = uiState.pumpEndTimeMillis,
-                        reservoirUnits = uiState.reservoirUnits,
-                        sensorInfo = sensorInfo,
-                        loadSensorInfo = mainViewModel::loadSensorInfo,
                         onBgSourceClick = {
                             onNavigate(mainViewModel.bgSourceNavigationRequest())
                         }
@@ -392,26 +353,21 @@ fun MainScreen(
                     }
 
                     // Version overlay
-                    if (!isTrio) {
-                        VersionOverlay(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(contentPadding)
-                        )
-                    }
+                    VersionOverlay(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(contentPadding)
+                    )
 
-                    // Trio draws its overview background behind the status bar. Other layouts keep
-                    // an opaque surface here so graph and floating toolbar content cannot reduce
-                    // system-icon contrast.
-                    if (!isTrio) {
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .fillMaxWidth()
-                                .windowInsetsTopHeight(WindowInsets.statusBars)
-                                .background(MaterialTheme.colorScheme.surface)
-                        )
-                    }
+                    // Status bar protection scrim — keeps system icons legible
+                    // against the floating search bar / graph content
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .fillMaxWidth()
+                            .windowInsetsTopHeight(WindowInsets.statusBars)
+                            .background(MaterialTheme.colorScheme.surface)
+                    )
 
                     // Navigation bar protection scrim
                     Box(
@@ -424,12 +380,12 @@ fun MainScreen(
 
                     // Top bar overlay
                     AnimatedVisibility(
-                        visible = showChrome && !isTrio,
+                        visible = showChrome,
                         enter = slideInVertically { -it },
                         exit = slideOutVertically { -it },
                         modifier = Modifier
                             .align(Alignment.TopCenter)
-                            .padding(top = topScaffoldPadding)
+                            .padding(top = scaffoldPadding.calculateTopPadding())
                     ) {
                         MainTopBar(
                             searchUiState = searchUiState,
@@ -455,12 +411,12 @@ fun MainScreen(
 
                     // Bottom bar overlay
                     AnimatedVisibility(
-                        visible = showChrome && !isTrio,
+                        visible = showChrome,
                         enter = slideInVertically { it },
                         exit = slideOutVertically { it },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .padding(bottom = bottomScaffoldPadding)
+                            .padding(bottom = scaffoldPadding.calculateBottomPadding())
                     ) {
                         val loopActionState = loopActionViewModel.uiState.collectAsStateWithLifecycle().value
                         MainNavigationBar(
@@ -502,13 +458,13 @@ fun MainScreen(
 
                     // Quick launch toolbar overlay
                     AnimatedVisibility(
-                        visible = hasToolbar && showChrome && !isTrio,
+                        visible = hasToolbar && showChrome,
                         enter = slideInVertically { it },
                         exit = slideOutVertically { it },
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .padding(
-                                bottom = bottomScaffoldPadding +
+                                bottom = scaffoldPadding.calculateBottomPadding() +
                                     with(density) { bottomBarHeightPx.toDp() } + 8.dp
                             )
                     ) {
@@ -534,37 +490,7 @@ fun MainScreen(
                         )
                     }
                 }
-                }
             }
-    }
-
-    if (isTrio) {
-        Box(modifier = modifier.fillMaxSize()) { mainContent() }
-    } else {
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            drawerContent = {
-                MainDrawer(
-                    drawerState = drawerState,
-                    versionName = mainViewModel.versionName,
-                    onNavigate = { request ->
-                        // Close the drawer first, then open the screen. Opened while the drawer was still
-                        // sliding in (a fast tap, as the e2e test makes), one Back from that screen left
-                        // the app instead of coming back to the overview.
-                        scope.launch {
-                            drawerState.close()
-                            onDrawerClosed()
-                            onNavigate(request)
-                        }
-                    },
-                    isTreatmentsEnabled = uiState.isProfileLoaded,
-                    showExit = mainViewModel.showExit
-                )
-            },
-            gesturesEnabled = true,
-            modifier = modifier
-        ) {
-            mainContent()
         }
     }
 
@@ -587,24 +513,6 @@ fun MainScreen(
         )
     }
 
-    if (showTrioAddSheet) {
-        trioAddActionsSheet(
-            { showTrioAddSheet = false },
-            {
-                showTrioAddSheet = false
-                onNavigate(NavigationRequest.Element(ElementType.INSULIN))
-            },
-            {
-                showTrioAddSheet = false
-                onNavigate(NavigationRequest.Element(ElementType.CARBS))
-            },
-            {
-                showTrioAddSheet = false
-                onNavigate(NavigationRequest.Element(ElementType.BOLUS_WIZARD))
-            }
-        )
-    }
-
     // Automation bottom sheet
     if (showAutomationSheet) {
         ScenesBottomSheet(
@@ -620,7 +528,7 @@ fun MainScreen(
     // Loop accept action bottom sheet
     if (showLoopActionSheet) {
         val loopState by loopActionViewModel.uiState.collectAsStateWithLifecycle()
-        app.aaps.ui.compose.loopSheet.LoopActionBottomSheet(
+        LoopActionBottomSheet(
             state = loopState,
             onPerform = { mainViewModel.performLoopAccept() },
             onDismiss = { showLoopActionSheet = false }
@@ -658,3 +566,6 @@ fun MainScreen(
         )
     }
 }
+
+private val PREVIEW_MODE_MIN_HEIGHT: Dp = 500.dp
+private const val AUTO_HIDE_DELAY_MS = 3000L
