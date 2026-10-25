@@ -94,7 +94,6 @@ import app.aaps.core.interfaces.utils.DecimalFormatter
 import app.aaps.core.interfaces.utils.fabric.FabricPrivacy
 import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.StringKey
-import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.keys.interfaces.VisibilityContext
 import app.aaps.core.utils.isRunningRealPumpTest
@@ -117,8 +116,6 @@ import app.aaps.plugins.source.activities.RequestDexcomPermissionActivity
 import app.aaps.trio.TrioUi
 import app.aaps.trio.ui.compose.main.TrioMainScreen
 import app.aaps.ui.compose.aboutDialog.AboutBottomSheet
-import app.aaps.ui.compose.careDialog.CareportalEventType
-import app.aaps.ui.compose.clientcontrol.ClientControlPendingDialog
 import app.aaps.ui.compose.configuration.ConfigurationViewModel
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
 import app.aaps.ui.compose.main.MainScreen
