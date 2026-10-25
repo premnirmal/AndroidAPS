@@ -24,9 +24,8 @@ import app.aaps.core.interfaces.queue.CustomCommand
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.ui.compose.ScreenAction
 import app.aaps.core.ui.compose.StatusLevel
-import app.aaps.core.ui.compose.pump.ActionCategory
-import app.aaps.core.ui.compose.pump.PumpAction
 import app.aaps.core.ui.compose.pump.PumpCommunicationStatus
 import app.aaps.core.ui.compose.pump.PumpInfoRow
 import app.aaps.core.ui.compose.pump.PumpOverviewUiState
@@ -34,6 +33,7 @@ import app.aaps.core.ui.compose.pump.tickerFlow
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.ActivationProgress
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.AlertType
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.PodConstants
+import app.aaps.pump.omnipod.common.ui.compose.podExpiryRows
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.O5PodStateManager
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.expiry
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.time
@@ -62,7 +62,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.Duration
-import java.time.ZonedDateTime
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -200,22 +199,13 @@ class O5OverviewViewModel @Inject constructor(
             }
 
             val expiresAt = podStateManager.expiry
-            val expiryValue = expiresAt?.let { dateUtil.dateAndTimeString(it.toEpochSecond() * 1000) } ?: PLACEHOLDER
-            val expiryLevel = when {
-                expiresAt != null && ZonedDateTime.now().isAfter(expiresAt)               -> StatusLevel.CRITICAL
-                expiresAt != null && ZonedDateTime.now().isAfter(expiresAt.minusHours(4)) -> StatusLevel.WARNING
-                else                                                                      -> StatusLevel.NORMAL
-            }
-            add(PumpInfoRow(label = rh.gs(CommonR.string.omnipod_common_overview_pod_expiry_date), value = expiryValue, level = expiryLevel))
-
-            val hardEndAt = expiresAt?.plusHours(POD_GRACE_PERIOD_HOURS)
-            val hardEndValue = hardEndAt?.let { dateUtil.dateAndTimeString(it.toEpochSecond() * 1000) } ?: PLACEHOLDER
-            val hardEndLevel = when {
-                hardEndAt != null && ZonedDateTime.now().isAfter(hardEndAt)               -> StatusLevel.CRITICAL
-                hardEndAt != null && ZonedDateTime.now().isAfter(hardEndAt.minusHours(4)) -> StatusLevel.WARNING
-                else                                                                      -> StatusLevel.NORMAL
-            }
-            add(PumpInfoRow(label = rh.gs(CommonR.string.omnipod_common_overview_pod_hard_end_date), value = hardEndValue, level = hardEndLevel))
+            addAll(
+                podExpiryRows(
+                    rh, dateUtil, dateUtil.now(),
+                    expiresAt = expiresAt?.toInstant()?.toEpochMilli(),
+                    hardEndAt = expiresAt?.plusHours(POD_GRACE_PERIOD_HOURS)?.toInstant()?.toEpochMilli()
+                ) { dateUtil.dateAndTimeString(it) }
+            )
 
             add(PumpInfoRow(label = rh.gs(CommonR.string.omnipod_common_overview_pod_status), value = buildPodStatusText(), level = buildPodStatusLevel()))
 
@@ -269,33 +259,33 @@ class O5OverviewViewModel @Inject constructor(
 
 
 
-    private fun buildPrimaryActions(): List<PumpAction> {
+    private fun buildPrimaryActions(): List<ScreenAction> {
         val queueEmpty = isQueueEmpty()
         val activated = podStateManager.activationProgress == ActivationProgress.COMPLETED
         val podRunning = activated && podStateManager.podStatus?.isRunning() == true
 
         return listOf(
-            PumpAction(
+            ScreenAction(
                 label = rh.gs(CoreUiR.string.refresh),
                 icon = Icons.Filled.Refresh,
                 enabled = podStateManager.activationProgress.isAtLeast(ActivationProgress.SET_UNIQUE_ID) && queueEmpty,
                 onClick = { viewModelScope.launch { commandQueue.readStatus(rh.gs(CoreUiR.string.refresh)) } }
             ),
-            PumpAction(
+            ScreenAction(
                 label = rh.gs(CommonR.string.omnipod_common_overview_button_silence_alerts),
                 icon = Icons.Filled.NotificationsOff,
                 enabled = queueEmpty,
                 visible = podRunning && (podStateManager.activeAlerts?.isNotEmpty() == true || commandQueue.isCustomCommandInQueue(CommandSilenceAlerts::class)),
                 onClick = { runCustomCommandWithErrorDialog(CommandSilenceAlerts(), rh.gs(CommonR.string.omnipod_common_error_failed_to_silence_alerts)) }
             ),
-            PumpAction(
+            ScreenAction(
                 label = rh.gs(CommonR.string.omnipod_common_overview_button_resume_delivery),
                 icon = Icons.Filled.PlayArrow,
                 enabled = queueEmpty,
                 visible = podRunning && (podStateManager.deliverySuspended || commandQueue.isCustomCommandInQueue(CommandResumeDelivery::class)),
                 onClick = { runCustomCommandWithErrorDialog(CommandResumeDelivery(), rh.gs(CommonR.string.omnipod_common_error_failed_to_resume_delivery)) }
             ),
-            PumpAction(
+            ScreenAction(
                 label = rh.gs(CommonR.string.omnipod_common_overview_button_set_time),
                 icon = Icons.Filled.Schedule,
                 enabled = !podStateManager.deliverySuspended && queueEmpty,
@@ -305,44 +295,39 @@ class O5OverviewViewModel @Inject constructor(
         )
     }
 
-    private fun buildManagementActions(): List<PumpAction> {
+    private fun buildManagementActions(): List<ScreenAction> {
         isQueueEmpty()
         val activated = podStateManager.activationProgress == ActivationProgress.COMPLETED
 
         return listOf(
-            PumpAction(
+            ScreenAction(
                 label = rh.gs(CommonR.string.omnipod_common_pod_management_button_activate_pod),
                 icon = Icons.Filled.PlayArrow,
-                category = ActionCategory.MANAGEMENT,
                 visible = !activated,
                 onClick = { onActivatePodClicked() }
             ),
-            PumpAction(
+            ScreenAction(
                 label = rh.gs(CommonR.string.omnipod_common_pod_management_button_deactivate_pod),
                 icon = Icons.Filled.Pause,
-                category = ActionCategory.MANAGEMENT,
                 visible = activated,
                 enabled = podStateManager.bluetoothAddress != null || podStateManager.ltk != null,
                 onClick = { _events.tryEmit(OmnipodOverviewEvent.StartDeactivation) }
             ),
-            PumpAction(
+            ScreenAction(
                 label = rh.gs(CommonR.string.omnipod_common_pod_management_button_play_test_beep),
                 icon = Icons.AutoMirrored.Filled.VolumeUp,
-                category = ActionCategory.MANAGEMENT,
                 enabled = podStateManager.activationProgress.isAtLeast(ActivationProgress.PHASE_1_COMPLETED) && !commandQueue.isCustomCommandInQueue(CommandPlayTestBeep::class),
                 visible = podStateManager.activationProgress.isAtLeast(ActivationProgress.PHASE_1_COMPLETED),
                 onClick = { runCustomCommandWithErrorDialog(CommandPlayTestBeep(), rh.gs(CommonR.string.omnipod_common_error_failed_to_play_test_beep)) }
             ),
-            PumpAction(
+            ScreenAction(
                 label = rh.gs(CommonR.string.omnipod_common_pod_management_button_pod_history),
                 icon = Icons.Filled.History,
-                category = ActionCategory.MANAGEMENT,
                 onClick = { _events.tryEmit(OmnipodOverviewEvent.ShowHistory) }
             ),
-            PumpAction(
+            ScreenAction(
                 label = rh.gs(CommonR.string.omnipod_common_pod_management_button_discard_pod),
                 icon = Icons.Filled.Delete,
-                category = ActionCategory.MANAGEMENT,
                 visible = podStateManager.podId != null && podStateManager.activationProgress.isBefore(ActivationProgress.SET_UNIQUE_ID),
                 onClick = { onDiscardPodClicked() }
             )

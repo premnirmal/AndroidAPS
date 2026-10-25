@@ -77,7 +77,7 @@ internal class MedtronicOverviewViewModelTest {
         Dispatchers.setMain(UnconfinedTestDispatcher())
 
         // Catch-all so every info-row / action label resolves to a non-null String (PumpInfoRow.label
-        // and PumpAction.label are non-null; an unstubbed rh.gs() would return null and NPE at build).
+        // and ScreenAction.label are non-null; an unstubbed rh.gs() would return null and NPE at build).
         whenever(rh.gs(anyInt())).thenReturn("txt")
         whenever(rh.gs(anyInt(), anyVararg())).thenReturn("txt") // texts with values, such as the battery
 

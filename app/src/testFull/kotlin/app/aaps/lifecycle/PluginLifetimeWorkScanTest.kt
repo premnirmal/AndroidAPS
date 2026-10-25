@@ -282,7 +282,7 @@ class PluginLifetimeWorkScanTest {
         ),
         "O5PumpPlugin.kt#refreshStatusOnUnacknowledgedCommands" to Site(
             1,
-            "readStatus(unconfirmed_command) checks a pending dose. A read. Cancelling the caller only " +
+            "readStatus(omnipod_5_unconfirmed_command) checks a pending dose. A read. Cancelling the caller only " +
                 "abandons the result; the queued read still runs and records the dose outcome."
         ),
         "O5PumpPlugin.kt#queueBasalCorrectionIfNeeded" to Site(

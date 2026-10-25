@@ -3,6 +3,7 @@ import app.aaps.pump.omnipod.common.R
 
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.StringRes
 import androidx.annotation.VisibleForTesting
 import app.aaps.core.data.model.BS
 import app.aaps.core.data.plugin.PluginType
@@ -480,9 +481,13 @@ class O5PumpPlugin @Inject constructor(
         }
         try {
             doseMutex.withLock {
-                fetchStatus().blockingAwait()
-                reconcilePendingDoseLocked()
-                checkPodKaput()
+                try {
+                    fetchStatus().blockingAwait()
+                    reconcilePendingDoseLocked()
+                } finally {
+                    // Alarm responses update pod state before the command reports an error.
+                    checkPodKaput()
+                }
                 updateAlertConfiguration()
             }
         } catch (e: Exception) {
@@ -497,8 +502,8 @@ class O5PumpPlugin @Inject constructor(
      * is seen non-null, mirroring Dash's `OmnipodDashPumpPlugin.checkPodKaput()` handling -
      * without this, a faulted O5 pod only shows CRITICAL status on
      * the Omnipod overview screen with no system notification/sound, so a fault could go
-     * unnoticed if the user isn't actively looking at that screen. [O5PodStateManager
-     * .alarmSynced] makes this idempotent across repeated status polls of the same fault.
+     * unnoticed if the user isn't actively looking at that screen.
+     * [O5PodStateManager.alarmSynced] makes this idempotent across repeated status polls of the same fault.
      * If the fault code cannot be read, the notification still warns the user, but the
      * announcement stays pending until a later status read provides the fault details.
      * Activation timeout can be recorded directly from the pod status.
@@ -522,17 +527,7 @@ class O5PumpPlugin @Inject constructor(
             }
         }
 
-        val description = podStateManager.alarmType?.let { alarm ->
-            listOfNotNull(
-                rh.gs(R.string.omnipod_common_pod_status_pod_fault_description, alarm.code, alarm.toString()),
-                podStateManager.pdmRef?.let { rh.gs(R.string.omnipod_common_pdm_ref, it) }
-            ).joinToString("\n")
-        }
-            ?: if (podStateManager.isPodActivationTimeExceeded) {
-                rh.gs(R.string.omnipod_common_error_pod_fault_activation_time_exceeded)
-            } else {
-                null
-            }
+        val description = podFaultDescription()
             ?: podStateManager.podStatus?.toString()
             ?: return
 
@@ -551,6 +546,34 @@ class O5PumpPlugin @Inject constructor(
             pumpSerial = serialNumber()
         )
         podStateManager.alarmSynced = true
+    }
+
+    private fun podFaultDescription(): String? =
+        podStateManager.alarmType?.let { alarm ->
+            listOfNotNull(
+                rh.gs(R.string.omnipod_common_pod_status_pod_fault_description, alarm.code, alarm.toString()),
+                podStateManager.pdmRef?.let { rh.gs(R.string.omnipod_common_pdm_ref, it) }
+            ).joinToString("\n")
+        } ?: if (podStateManager.isPodActivationTimeExceeded) {
+            rh.gs(R.string.omnipod_common_error_pod_fault_activation_time_exceeded)
+        } else {
+            null
+        }
+
+    /** Keeps a failed command failed even if saving its fault announcement also fails. */
+    private fun reportPodFault(): String? {
+        try {
+            runBlocking { checkPodFault() }
+        } catch (e: Exception) {
+            aapsLogger.error(LTag.PUMP, "O5 could not save the pod fault announcement; it remains pending", e)
+        }
+        return podFaultDescription()
+    }
+
+    private fun handleCommandFailure(@StringRes fallbackMessage: Int): PumpEnactResult {
+        val faultDescription = reportPodFault()
+        return pumpEnactResultProvider.get().success(false).enacted(false)
+            .comment(faultDescription ?: rh.gs(fallbackMessage))
     }
 
     /**
@@ -807,13 +830,14 @@ class O5PumpPlugin @Inject constructor(
             resolved
         } catch (e: Exception) {
             aapsLogger.warn(LTag.PUMP, "O5 refusing new dose command: could not read status to resolve the pending dose: ${e.message}")
+            reportPodFault()
             false
         }
     }
 
     private fun unresolvedDoseResult(): PumpEnactResult =
         pumpEnactResultProvider.get().success(false).enacted(false)
-            .comment(rh.gs(R.string.omnipod_5_error_unresolved_dose_pending))
+            .comment(podFaultDescription() ?: rh.gs(R.string.omnipod_5_error_unresolved_dose_pending))
 
     /**
      * Whether the pod's delivery status positively shows [pending] took effect - the fallback
@@ -913,7 +937,7 @@ class O5PumpPlugin @Inject constructor(
             history.markSendingFailure(historyId).andThen(history.markFailure(historyId)).blockingAwait()
             aapsLogger.error(LTag.PUMP, "Error in O5 setNewBasalProfile", e)
             notifyUncertain(NotificationId.FAILED_UPDATE_PROFILE, rh.gs(R.string.omnipod_5_error_setting_basal_profile_might_have_failed))
-            pumpEnactResultProvider.get().success(false).enacted(false)
+            handleCommandFailure(R.string.omnipod_5_error_setting_basal_profile_might_have_failed)
         }
     }
 
@@ -1065,12 +1089,14 @@ class O5PumpPlugin @Inject constructor(
                     }
                     armStatusChecker()
                 }
+                val faultDescription = reportPodFault()
                 pumpEnactResultProvider.get().success(bolusCanceled).enacted(false)
+                    .comment(faultDescription ?: rh.gs(R.string.omnipod_5_error_bolus_delivery_status_uncertain))
             }
 
             if (detailedBolusInfo.bolusType == BS.Type.SMB && podStateManager.pendingDoseCommand != null) {
                 notifyUncertain(NotificationId.OMNIPOD_UNCERTAIN_SMB, rh.gs(R.string.omnipod_5_error_uncertain_smb, requestedUnits))
-            } else if (podStateManager.pendingDoseCommand != null) {
+            } else if (podStateManager.pendingDoseCommand != null && podFaultDescription() == null) {
                 notifyUncertain(NotificationId.OMNIPOD_POD_FAULT, rh.gs(R.string.omnipod_5_error_bolus_delivery_status_uncertain))
             }
             return ret
@@ -1104,6 +1130,7 @@ class O5PumpPlugin @Inject constructor(
                 cmd.andThen(rxCompletable(Dispatchers.IO) { checkPodKaput() }).blockingAwait()
             } catch (e: Exception) {
                 aapsLogger.debug(LTag.PUMP, "waitForBolusDeliveryToComplete errorGettingStatus=$e")
+                reportPodFault()
                 Thread.sleep(BOLUS_RETRY_INTERVAL_MS)
                 return@repeat
             }
@@ -1291,7 +1318,7 @@ class O5PumpPlugin @Inject constructor(
             historyId?.let { history.markSendingFailure(it).andThen(history.markFailure(it)).blockingAwait() }
             aapsLogger.error(LTag.PUMP, "Error in O5 setTempBasalAbsolute", e)
             notifyUncertain(NotificationId.OMNIPOD_TBR_ALERTS, rh.gs(R.string.omnipod_5_error_setting_temp_basal_might_have_failed))
-            pumpEnactResultProvider.get().success(false).enacted(false)
+            handleCommandFailure(R.string.omnipod_5_error_setting_temp_basal_might_have_failed)
         }
     }
 
@@ -1313,7 +1340,7 @@ class O5PumpPlugin @Inject constructor(
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "Error in O5 cancelTempBasal", e)
             notifyUncertain(NotificationId.OMNIPOD_TBR_ALERTS, rh.gs(R.string.omnipod_5_error_cancel_temp_basal_result_is_uncertain))
-            pumpEnactResultProvider.get().success(false).enacted(false)
+            handleCommandFailure(R.string.omnipod_5_error_cancel_temp_basal_result_is_uncertain)
         }
     }
 
@@ -1398,7 +1425,7 @@ class O5PumpPlugin @Inject constructor(
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "Error pairing new O5 pod", e)
             history.recordFailure(OmnipodCommandType.INITIALIZE_POD)
-            pumpEnactResultProvider.get().success(false).enacted(false)
+            handleCommandFailure(R.string.omnipod_common_error_failed_to_initialize_pod)
         }
 
     private fun deactivatePod(): PumpEnactResult =
@@ -1410,6 +1437,7 @@ class O5PumpPlugin @Inject constructor(
                 .build()
             bleManager.sendCommand(cmd, DefaultStatusResponse::class).ignoreElements().blockingAwait()
             val podSerial = serialNumber()
+            reportPodFault()
             bleManager.removeBond()
             podStateManager.reset()
             history.recordSuccess(OmnipodCommandType.DEACTIVATE_POD)
@@ -1422,7 +1450,7 @@ class O5PumpPlugin @Inject constructor(
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "Error deactivating O5 pod", e)
-            pumpEnactResultProvider.get().success(false).enacted(false)
+            handleCommandFailure(R.string.omnipod_common_error_failed_to_deactivate_pod)
         }
 
     private fun silenceAlerts(): PumpEnactResult =
@@ -1439,7 +1467,7 @@ class O5PumpPlugin @Inject constructor(
                 pumpEnactResultProvider.get().success(true).enacted(true)
             } catch (e: Exception) {
                 aapsLogger.error(LTag.PUMP, "Error silencing O5 alerts", e)
-                pumpEnactResultProvider.get().success(false).enacted(false)
+                handleCommandFailure(R.string.omnipod_common_error_failed_to_silence_alerts)
             }
         } ?: pumpEnactResultProvider.get().success(false).enacted(false).comment(rh.gs(R.string.omnipod_5_error_no_active_alerts))
 
@@ -1464,7 +1492,7 @@ class O5PumpPlugin @Inject constructor(
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "Error suspending O5 delivery", e)
-            pumpEnactResultProvider.get().success(false).enacted(false)
+            handleCommandFailure(R.string.omnipod_common_error_failed_to_suspend_delivery)
         }
 
     private fun playTestBeep(): PumpEnactResult =
@@ -1483,7 +1511,7 @@ class O5PumpPlugin @Inject constructor(
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "Error playing O5 test beep", e)
-            pumpEnactResultProvider.get().success(false).enacted(false)
+            handleCommandFailure(R.string.omnipod_common_error_failed_to_play_test_beep)
         }
 
     /** Resume Delivery and Handle Time Change are both just "(re)program the current
@@ -1547,7 +1575,7 @@ class O5PumpPlugin @Inject constructor(
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "Error updating O5 alert configuration", e)
-            pumpEnactResultProvider.get().success(false).enacted(false)
+            handleCommandFailure(R.string.omnipod_5_error_failed_to_update_alert_configuration)
         }
     }
 
@@ -1577,7 +1605,7 @@ class O5PumpPlugin @Inject constructor(
             pumpEnactResultProvider.get().success(true).enacted(true)
         } catch (e: Exception) {
             aapsLogger.error(LTag.PUMP, "Error disabling O5 suspend alerts", e)
-            pumpEnactResultProvider.get().success(false).enacted(false)
+            handleCommandFailure(R.string.omnipod_5_error_failed_to_update_alert_configuration)
         }
     }
 
@@ -1720,7 +1748,7 @@ class O5PumpPlugin @Inject constructor(
             } else {
                 armStatusChecker()
             }
-            pumpEnactResultProvider.get().success(false).enacted(false)
+            handleCommandFailure(R.string.omnipod_5_error_bolus_delivery_status_uncertain)
         } finally {
             bolusDeliveryInProgress = false
             podStateManager.basalCorrectionInProgress = false
