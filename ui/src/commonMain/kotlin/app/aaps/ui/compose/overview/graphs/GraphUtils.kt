@@ -28,7 +28,6 @@ import app.aaps.core.data.ui.MarkerTier
 import app.aaps.core.interfaces.overview.graph.CobGraphData
 import app.aaps.core.interfaces.overview.graph.GraphDataPoint
 import app.aaps.core.interfaces.overview.graph.IobGraphData
-import app.aaps.core.interfaces.overview.graph.SeriesType
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.CartesianMeasuringContext
 import com.patrykandpatrick.vico.compose.cartesian.Scroll
@@ -774,19 +773,11 @@ fun niceScaleAroundPivot(min: Double, max: Double, pivot: Double, minDeviation: 
 }
 
 /**
- * Series that are 0-floored by default (see [zeroFloorNiceRange]): mostly-positive, allowing a
- * disparity-aware negative excursion without ever centering zero. IOB follows the same rule but
- * isn't included here — its basal-overlay combo graph has its own dedicated range computation
- * (SecondaryGraphCompose's `primaryDataNiceRange`) that calls [zeroFloorNiceRange] directly.
- */
-val ZERO_FLOOR_SERIES_TYPES = setOf(SeriesType.BGI, SeriesType.DEVIATIONS, SeriesType.ACTIVITY, SeriesType.STEPS, SeriesType.ABS_IOB)
-
-/**
  * Zero-floor axis range, disparity-aware. When the negative excursion is tiny next to the
  * positive side (ratio >= [disparityRatio]), the two sides are rounded each on its own, so the
  * negative part stays a thin sliver instead of being rounded out to the grid of the whole range.
  * When the two sides are comparable, both are rounded on one grid.
- * Used for IOB and [ZERO_FLOOR_SERIES_TYPES].
+ * Used by [AxisRule.ZeroFloor].
  */
 fun zeroFloorNiceRange(dataMin: Double, dataMax: Double, disparityRatio: Double = 10.0): NiceScale {
     if (dataMin >= 0.0) return niceScale(0.0, dataMax)
@@ -849,7 +840,7 @@ internal fun niceAxisLabelValues(
  * from Vico's own step placer.
  *
  * [labelMin] and [labelMax] keep labels off a part of the axis the series does not reach: the IOB
- * axis goes on above IOB to leave room for basal (see `iobBasalScale`), and a zero-aligned axis can
+ * axis goes on above IOB to leave room for basal (see [graphAxes]), and a zero-aligned axis can
  * reach below the series' own floor, where a label would suggest a value it never has.
  *
  * A data class, so two placers with the same limits are equal and the graph does not redraw
@@ -870,6 +861,21 @@ internal data class NiceVerticalAxisItemPlacer(
         val range = context.ranges.getYRange(position)
         return niceAxisLabelValues(range.minY, range.maxY, axisHeight, maxLabelHeight, labelMin, labelMax)
     }
+}
+
+/**
+ * The labels of an axis whose series has no values: none, so an empty frame does not show a scale
+ * it does not have (next to a series on the other axis it was read as that one's scale). The axis
+ * is still measured with one label, so it keeps its width and the hour lines stay under those of
+ * the other graphs.
+ */
+internal object NoLabelsAxisItemPlacer : VerticalAxis.ItemPlacer by VerticalAxis.ItemPlacer.step() {
+
+    override fun getLabelValues(context: CartesianDrawingContext, axisHeight: Float, maxLabelHeight: Float, position: Axis.Position.Vertical): List<Double> =
+        emptyList()
+
+    override fun getWidthMeasurementLabelValues(context: CartesianMeasuringContext, axisHeight: Float, maxLabelHeight: Float, position: Axis.Position.Vertical): List<Double> =
+        listOf(0.0)
 }
 
 // =========================================================================
