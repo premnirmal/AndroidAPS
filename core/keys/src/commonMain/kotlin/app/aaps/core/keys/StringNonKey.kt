@@ -59,6 +59,11 @@ enum class StringNonKey(
     LastOverviewProfileName("last_overview_profile_name", "", exportable = false),
     LastOverviewProfileTargetRange("last_overview_profile_target_range", "", exportable = false),
     LastOverviewRunningMode("last_overview_running_mode", "", exportable = false),
+    /**
+     * The running "time to eat" timer (`EatReminder`), as JSON, or empty. Runtime state like [ActiveScene]: kept
+     * so the timer survives a restart, published on the hot channel so clients show it, never exported.
+     */
+    EatReminder(key = "eat_reminder", defaultValue = "", exportable = false),
 
     // Whole local profile list as one JSON document: {"lastChange": <ms>, "profiles": [ … ]}.
     // One key means one atomic apply and one last-writer-wins unit, which is what makes the profile

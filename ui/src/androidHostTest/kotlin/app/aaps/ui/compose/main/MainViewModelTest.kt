@@ -12,12 +12,16 @@ import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.data.model.Scene
 import app.aaps.core.data.model.SceneEndAction
 import app.aaps.core.interfaces.InterfacesStrings
+import app.aaps.core.interfaces.alerts.EatReminder
+import app.aaps.core.interfaces.alerts.EatReminderAction
+import app.aaps.core.interfaces.alerts.EatReminderState
 import app.aaps.core.interfaces.aps.Loop
 import app.aaps.core.interfaces.aps.APSResult
 import app.aaps.core.interfaces.automation.Automation
 import app.aaps.core.interfaces.bolus.BatchExecutor
 import app.aaps.core.interfaces.bolus.WizardExecutor
 import app.aaps.core.interfaces.clientcontrol.ActionProgress
+import app.aaps.core.interfaces.clientcontrol.ClientControlActionDispatcher
 import app.aaps.core.interfaces.clientcontrol.FailureReason
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.configuration.InitProgress
@@ -88,7 +92,9 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -141,6 +147,8 @@ internal class MainViewModelTest {
     @Mock private lateinit var rxBus: RxBus
     @Mock private lateinit var nsClient: NsClient
     @Mock private lateinit var visibilityContext: VisibilityContext
+    @Mock private lateinit var eatReminder: EatReminder
+    @Mock private lateinit var clientControlDispatcher: ClientControlActionDispatcher
 
     private lateinit var sut: MainViewModel
     private lateinit var mainDispatcher: TestDispatcher
@@ -178,6 +186,7 @@ internal class MainViewModelTest {
         // activeSceneChainTargetName's combine).
         whenever(activeSceneManager.activeSceneState).thenReturn(MutableStateFlow<ActiveSceneState?>(null))
         whenever(sceneStore.scenesFlow).thenReturn(MutableStateFlow(""))
+        whenever(eatReminder.state).thenReturn(MutableStateFlow<EatReminderState?>(null))
 
         // Preference observers created (launchIn deferred) in init.
         whenever(preferences.observe(BooleanKey.GeneralSimpleMode)).thenReturn(MutableStateFlow(true))
@@ -209,8 +218,30 @@ internal class MainViewModelTest {
         automation, persistenceLayer, aapsLogger, quickLaunchResolver, wizardExecutor,
         batchExecutor, uel, loop, processedDeviceStatusData, protectionCheck, sceneActions, sceneChainTargetResolver,
         sceneStore, activeSceneManager, rxBus, nsClient, visibilityContext,
-        CoroutineScope(UnconfinedTestDispatcher())
+        CoroutineScope(UnconfinedTestDispatcher()), eatReminder, clientControlDispatcher
     )
+
+    @Test
+    fun `eat reminder buttons go through the dispatcher and change the timer on the master`() = runTest(mainDispatcher) {
+        // execute() runs the local action on a master; the round trip on a client is the dispatcher's business.
+        whenever(rh.gs(any<TextRef>())).thenReturn("Change eat reminder")
+        whenever(clientControlDispatcher.execute(any(), any(), any())).doSuspendableAnswer {
+            it.getArgument<suspend () -> ActionProgress>(2).invoke()
+        }
+
+        sut.extendEatReminder()
+        sut.stopEatReminder()
+        advanceUntilIdle()
+
+        val commands = argumentCaptor<ClientControlActionDispatcher.Command>()
+        verify(clientControlDispatcher, times(2)).execute(commands.capture(), any(), any())
+        assertThat(commands.allValues).containsExactly(
+            ClientControlActionDispatcher.Command.EatReminderControl(EatReminderAction.EXTEND),
+            ClientControlActionDispatcher.Command.EatReminderControl(EatReminderAction.STOP)
+        ).inOrder()
+        verify(eatReminder).extend()
+        verify(eatReminder).stop()
+    }
 
     @AfterEach
     fun tearDown() {
