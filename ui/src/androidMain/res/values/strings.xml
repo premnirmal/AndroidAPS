@@ -20,6 +20,7 @@
     <string name="trio_time_in_range_percent" comment="%1$d=time in range percent. Example: 100%">%1$d%%</string>
     <string name="trio_time_in_range_today">Time in Range today</string>
     <string name="trio_graph_prediction_info">Prediction lines</string>
+    <string name="trio_graph_clock_change">Clock change</string>
     <string name="trio_graph_prediction_iob_title">IOB prediction</string>
     <string name="trio_graph_prediction_iob_description">Expected glucose based on insulin on board.</string>
     <string name="trio_graph_prediction_cob_title">COB prediction</string>

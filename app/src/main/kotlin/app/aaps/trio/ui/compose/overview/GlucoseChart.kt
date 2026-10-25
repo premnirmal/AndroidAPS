@@ -42,11 +42,14 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -54,6 +57,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.tooling.preview.Preview
@@ -88,6 +93,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
+import java.time.ZoneId
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -403,6 +409,13 @@ private fun GlucoseChartContent(
     var flingJob by remember { mutableStateOf<Job?>(null) }
     var zoomCycleIndex by remember { mutableIntStateOf(-1) }
     var lastFollowedEndMillis by remember { mutableLongStateOf(viewportEndMillis) }
+    val timeZone = ZoneId.systemDefault()
+    val clockChanges = remember(viewportEndMillis, viewportDurationMillis, timeZone) {
+        clockChangeTimestamps(viewportEndMillis - viewportDurationMillis, viewportEndMillis, timeZone)
+    }
+    val clockPainter = rememberVectorPainter(GlobalClockIcon)
+    val clockChangeDescription = stringResource(R.string.trio_graph_clock_change)
+    val clockMarkerBackground = MaterialTheme.colorScheme.surface
     var inspectX by remember { mutableStateOf<Float?>(null) }
     // A tap picks the nearest reading or bolus and keeps it selected until the user taps elsewhere.
     var tapSelection by remember { mutableStateOf<ChartTapSelection?>(null) }
@@ -601,7 +614,13 @@ private fun GlucoseChartContent(
                 )
             },
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .semantics {
+                    if (clockChanges.isNotEmpty()) contentDescription = clockChangeDescription
+                },
+        ) {
             val viewportStartMillis = viewportEndMillis - viewportDurationMillis
             val sorted = readingsAsc.sliceByMillis(viewportStartMillis, viewportEndMillis) { it.timestamp }
             val rawSorted = rawReadingsAsc.sliceByMillis(viewportStartMillis, viewportEndMillis) { it.timestamp }
@@ -684,12 +703,14 @@ private fun GlucoseChartContent(
             if (tick < viewportStartMillis) tick += tickIntervalMillis
             while (tick <= viewportEndMillis) {
                 val x = xFor(tick)
-                drawLine(
-                    color = gridColor.copy(alpha = 0.2f),
-                    start = Offset(x, 0f),
-                    end = Offset(x, iobBottom),
-                    strokeWidth = 1.dp.toPx(),
-                )
+                if (tick !in clockChanges) {
+                    drawLine(
+                        color = gridColor.copy(alpha = 0.2f),
+                        start = Offset(x, 0f),
+                        end = Offset(x, iobBottom),
+                        strokeWidth = 1.dp.toPx(),
+                    )
+                }
                 val label = textMeasurer.measure(dateUtil.timeString(tick), style = TextStyle(fontSize = 10.sp, color = labelColor))
                 drawText(label, topLeft = Offset(x - label.size.width / 2f, iobBottom + BOTTOM_LABEL_GAP.toPx()))
                 tick += tickIntervalMillis
@@ -928,6 +949,31 @@ private fun GlucoseChartContent(
                 val (pastLine, futureLine) = splitPastFuture(iobOffsets, xFor(nowTimestamp))
                 drawPath(pastLine, color = iobColor, style = Stroke(width = 1.5.dp.toPx()))
                 drawPath(futureLine, color = iobColor, style = Stroke(width = 1.5.dp.toPx(), pathEffect = predictionDash))
+            }
+
+            clockChanges.forEach { timestamp ->
+                val x = xFor(timestamp)
+                val iconSize = AapsSpacing.extraLarge.toPx()
+                val badgeRadius = iconSize / 2 + AapsSpacing.extraSmall.toPx()
+                val badgeY = iobBottom - badgeRadius
+                drawLine(
+                    color = labelColor.copy(alpha = 0.45f),
+                    start = Offset(x, 0f),
+                    end = Offset(x, badgeY),
+                    strokeWidth = AapsSpacing.extraSmall.toPx() / 2,
+                    pathEffect = PathEffect.dashPathEffect(
+                        floatArrayOf(AapsSpacing.small.toPx(), AapsSpacing.small.toPx()),
+                    ),
+                )
+                // Keep the icon visible when the change is at either edge of the viewport.
+                val badgeInset = badgeRadius.coerceAtMost(chartWidth / 2)
+                val badgeX = x.coerceIn(leftGutter + badgeInset, size.width - badgeInset)
+                drawCircle(clockMarkerBackground, radius = badgeRadius, center = Offset(badgeX, badgeY))
+                translate(left = badgeX - iconSize / 2, top = badgeY - iconSize / 2) {
+                    with(clockPainter) {
+                        draw(Size(iconSize, iconSize), colorFilter = ColorFilter.tint(labelColor))
+                    }
+                }
             }
 
             // Inspected point: a line through all bands and a highlighted dot on the reading.
