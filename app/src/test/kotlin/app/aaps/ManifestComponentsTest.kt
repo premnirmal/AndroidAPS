@@ -26,6 +26,42 @@ class ManifestComponentsTest {
     private val componentTags = setOf("activity", "activity-alias", "service", "receiver", "provider")
 
     @Test
+    fun launcherAliasesKeepSeparateNamesAndIcons() {
+        val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(findManifest())
+        val aliases = document.getElementsByTagName("activity-alias")
+        val byName = (0 until aliases.length).associate { index ->
+            val alias = aliases.item(index) as Element
+            alias.getAttribute("android:name") to alias
+        }
+        val aaps = byName.getValue("app.aaps.AndroidApsLauncher")
+        val trio = byName.getValue("app.aaps.TrioLauncher")
+
+        assertThat(aaps.getAttribute("android:enabled")).isEqualTo("true")
+        assertThat(aaps.getAttribute("android:icon")).isEqualTo("\${appIcon}")
+        assertThat(aaps.getAttribute("android:label")).isEqualTo("@string/app_name")
+        assertThat(trio.getAttribute("android:enabled")).isEqualTo("false")
+        assertThat(trio.getAttribute("android:icon")).isEqualTo("@drawable/ic_trio_launcher")
+        assertThat(trio.getAttribute("android:label")).isEqualTo("@string/app_name_trio")
+
+        for (alias in listOf(aaps, trio)) {
+            assertThat(alias.getAttribute("android:exported")).isEqualTo("true")
+            assertThat(alias.getAttribute("android:targetActivity")).isEqualTo("app.aaps.ComposeMainActivity")
+            assertThat(alias.getElementsByTagName("action").item(0).attributes.getNamedItem("android:name").nodeValue)
+                .isEqualTo("android.intent.action.MAIN")
+            assertThat(alias.getElementsByTagName("category").item(0).attributes.getNamedItem("android:name").nodeValue)
+                .isEqualTo("android.intent.category.LAUNCHER")
+        }
+        val activities = document.getElementsByTagName("activity")
+        for (index in 0 until activities.length) {
+            val categories = (activities.item(index) as Element).getElementsByTagName("category")
+            for (category in 0 until categories.length) {
+                assertThat((categories.item(category) as Element).getAttribute("android:name"))
+                    .isNotEqualTo("android.intent.category.LAUNCHER")
+            }
+        }
+    }
+
+    @Test
     fun everyDeclaredComponentClassExists() {
         val manifest = findManifest()
         val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(manifest)

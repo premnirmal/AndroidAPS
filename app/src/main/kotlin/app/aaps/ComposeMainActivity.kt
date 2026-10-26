@@ -3,8 +3,10 @@ package app.aaps
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -269,6 +271,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         // so a plain enableEdgeToEdge() here is enough.
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        updateLauncherComponents()
         // Other apps may not draw over AAPS: an overlay could hide what a tap really does, for example on a bolus
         // confirmation. It also covers the dialogs, because this window stays visible under them. System and
         // accessibility overlays still show. Needs HIDE_OVERLAY_WINDOWS.
@@ -868,6 +871,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         }
         lifecycleScope.launch {
             preferences.observe(BooleanKey.GeneralTrioMode).drop(1).collect {
+                updateLauncherComponents()
                 rxBus.send(EventRefreshOverview("Trio UI changed"))
                 recreate()
             }
@@ -878,6 +882,25 @@ class ComposeMainActivity : MetroAppCompatActivity() {
         // `Resources` resolve against.
         lifecycleScope.launch {
             uiRestart.signal.drop(1).collect { recreate() }
+        }
+    }
+
+    private fun updateLauncherComponents() {
+        if (!config.APS) return
+
+        val trioLauncher = ComponentName(this, "app.aaps.TrioLauncher")
+        val aapsLauncher = ComponentName(this, "app.aaps.AndroidApsLauncher")
+        val enabledLauncher = if (config.TRIO) trioLauncher else aapsLauncher
+        val disabledLauncher = if (config.TRIO) aapsLauncher else trioLauncher
+
+        // Enable the new launcher first so the app always has a launcher entry.
+        for ((component, state) in listOf(
+            enabledLauncher to PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            disabledLauncher to PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        )) {
+            if (packageManager.getComponentEnabledSetting(component) != state) {
+                packageManager.setComponentEnabledSetting(component, state, PackageManager.DONT_KILL_APP)
+            }
         }
     }
 
