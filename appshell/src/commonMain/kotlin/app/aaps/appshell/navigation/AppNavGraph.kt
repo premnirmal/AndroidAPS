@@ -189,6 +189,7 @@ fun NavGraphBuilder.appNavGraph(
         content: @Composable (PaddingValues) -> Unit
     ) -> Unit,
     aboutDialog: (@Composable (onDismiss: () -> Unit) -> Unit)? = null,
+    onManageClick: (() -> Unit)? = null,
     maintenanceViewModel: MaintenanceViewModel? = null,
     onMaintenanceDirectoryClick: () -> Unit = {},
     onMaintenanceRecreateActivity: () -> Unit = {},
@@ -548,6 +549,7 @@ fun NavGraphBuilder.appNavGraph(
             onNavigateToTrioTab = onNavigateToTrioTab,
             trioTabScaffold = trioTabScaffold,
             aboutDialog = aboutDialog,
+            onManageClick = onManageClick,
             onMaintenanceClick = maintenanceViewModel?.let { { navController.navigate(AppRoute.Maintenance.route) } }
         )
     }
@@ -581,6 +583,7 @@ fun NavGraphBuilder.appNavGraph(
             builtInSearchables = builtInSearchables,
             configBuilder = configBuilder,
             onBackClick = { navController.safePopBackStack() },
+            onManageClick = onManageClick,
             onMaintenanceClick = maintenanceViewModel?.let { { navController.navigate(AppRoute.Maintenance.route) } }
         )
     }

@@ -29,4 +29,20 @@ class TrioUiIsolationTest {
         assertThat(graph).contains("trioNavGraph(")
         assertThat(Regex("""composable\s*\(\s*AppRoute\.Trio""").containsMatchIn(graph)).isFalse()
     }
+
+    @Test
+    fun `Trio preferences open Manage instead of insulin settings`() {
+        val preferences = File(root, "ui/src/commonMain/kotlin/app/aaps/ui/compose/preferences/AllPreferencesScreen.kt").readText()
+        val manageEntry = preferences.substringAfter("if (trioMode) {").substringBefore("// The extra maintenance entrypoint")
+        assertThat(manageEntry).contains("onManageClick?.let")
+        assertThat(manageEntry).contains("CoreUiStrings.manage")
+        assertThat(preferences).doesNotContain("onInsulinSettingsClick")
+        assertThat(preferences).doesNotContain("CoreUiStrings.insulin_management")
+
+        val trioGraph = File(root, "appshell/src/commonMain/kotlin/app/aaps/appshell/navigation/TrioNavGraph.kt").readText()
+        assertThat(trioGraph).contains("onManageClick = onManageClick")
+        val graph = File(root, "appshell/src/commonMain/kotlin/app/aaps/appshell/navigation/AppNavGraph.kt").readText()
+        val allPreferencesRoute = graph.substringAfter("composable(AppRoute.Preferences.route)").substringBefore("maintenanceViewModel?.let")
+        assertThat(allPreferencesRoute).contains("onManageClick = onManageClick")
+    }
 }

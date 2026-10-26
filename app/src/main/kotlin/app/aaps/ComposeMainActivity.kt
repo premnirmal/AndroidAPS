@@ -480,6 +480,15 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             scenesViewModel.refreshState()
             showTrioScenesSheet = true
         }
+        val mainState by mainViewModel.uiState.collectAsStateWithLifecycle()
+        val manageSheetState = ManageSheetHost(
+            manageViewModel = manageViewModel,
+            isSimpleMode = mainState.isSimpleMode,
+            onNavigate = { request -> handleNavigationRequest(request, navController) },
+            onActionsError = { comment, title ->
+                uiInteraction.runAlarm(comment, title)
+            },
+        )
 
         NavHost(
             navController = navController,
@@ -517,15 +526,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     else                                                    -> Color.Unspecified
                 }
                 val bgQualityBadgeDescription = if (showBgSetup) bgQualityCheck.stateDescription() else null
-
-                val manageSheetState = ManageSheetHost(
-                    manageViewModel = manageViewModel,
-                    isSimpleMode = state.isSimpleMode,
-                    onNavigate = { request -> handleNavigationRequest(request, navController) },
-                    onActionsError = { comment, title ->
-                        uiInteraction.runAlarm(comment, title)
-                    },
-                )
 
                 // Authorization failed dialog
                 if (state.showAuthFailedDialog) {
@@ -720,6 +720,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 },
                 onRequestPermission = { group -> permissionsViewModel.requestPermission(group) },
                 isTrio = config.TRIO,
+                onManageClick = manageSheetState.show,
                 onNavigateToTrioTab = { tab -> navigateToTrioTab(tab, navController) },
                 aboutDialog = { onDismiss ->
                     AboutBottomSheet(

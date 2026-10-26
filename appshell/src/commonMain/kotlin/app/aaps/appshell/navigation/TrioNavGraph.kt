@@ -53,6 +53,7 @@ internal fun NavGraphBuilder.trioNavGraph(
         @Composable (PaddingValues) -> Unit
     ) -> Unit,
     aboutDialog: (@Composable (() -> Unit) -> Unit)?,
+    onManageClick: (() -> Unit)?,
     onMaintenanceClick: (() -> Unit)?
 ) {
     composable(AppRoute.TrioTreatmentList.route) {
@@ -130,7 +131,7 @@ internal fun NavGraphBuilder.trioNavGraph(
                 showTopBar = false,
                 showSimpleModeHiddenPreferences = true,
                 onConfigurationClick = { navController.navigate(AppRoute.Configuration.route) },
-                onInsulinSettingsClick = { navController.navigate(AppRoute.InsulinManagement.createRoute()) },
+                onManageClick = onManageClick,
                 onMaintenanceClick = onMaintenanceClick,
                 onAboutClick = aboutDialog?.let { { showAboutDialog = true } }
             )

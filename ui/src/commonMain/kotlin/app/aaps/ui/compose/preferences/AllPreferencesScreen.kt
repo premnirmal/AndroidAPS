@@ -77,7 +77,7 @@ fun AllPreferencesScreen(
     showTopBar: Boolean = true,
     showSimpleModeHiddenPreferences: Boolean = false,
     onConfigurationClick: (() -> Unit)? = null,
-    onInsulinSettingsClick: (() -> Unit)? = null,
+    onManageClick: (() -> Unit)? = null,
     onMaintenanceClick: (() -> Unit)? = null,
     onAboutClick: (() -> Unit)? = null
 ) {
@@ -209,11 +209,10 @@ fun AllPreferencesScreen(
                     addPreferenceContent(maintenancePreferences, onShowMessage, sectionState)
 
                     if (trioMode) {
-                        onInsulinSettingsClick?.let { onClick ->
+                        onManageClick?.let { onClick ->
                             item {
                                 Preference(
-                                    title = { Text(stringResource(CoreUiStrings.insulin_management)) },
-                                    summary = { Text(stringResource(CoreUiStrings.manage_insulin_desc)) },
+                                    title = { Text(stringResource(CoreUiStrings.manage)) },
                                     onClick = onClick
                                 )
                             }

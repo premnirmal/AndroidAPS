@@ -16,7 +16,9 @@ tasks.withType<Test>().configureEach {
         "src/commonMain/kotlin/app/aaps/ui/compose/main/MainScreen.kt",
         "src/commonMain/kotlin/app/aaps/ui/compose/overview/OverviewScreen.kt",
         "src/commonMain/kotlin/app/aaps/ui/compose/overview/chips/ChipsViewModel.kt",
-        rootProject.file("appshell/src/commonMain/kotlin/app/aaps/appshell/navigation/AppNavGraph.kt")
+        "src/commonMain/kotlin/app/aaps/ui/compose/preferences/AllPreferencesScreen.kt",
+        rootProject.file("appshell/src/commonMain/kotlin/app/aaps/appshell/navigation/AppNavGraph.kt"),
+        rootProject.file("appshell/src/commonMain/kotlin/app/aaps/appshell/navigation/TrioNavGraph.kt")
     ).withPropertyName("trioUiBoundaries")
 }
 
