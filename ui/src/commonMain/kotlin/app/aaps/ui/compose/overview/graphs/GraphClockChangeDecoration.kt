@@ -75,7 +75,7 @@ internal fun rememberClockChangeDecoration(
 
 private const val HOUR_MS = 3_600_000L
 
-internal data class GraphClockChange(
+data class GraphClockChange(
     val timestamp: Long,
     val before: UtcOffset,
     val after: UtcOffset
@@ -84,7 +84,7 @@ internal data class GraphClockChange(
 }
 
 /** Merges stored reading offsets with exact axis-zone DST changes, keeping elapsed-time coordinates. */
-internal fun graphClockChanges(
+fun graphClockChanges(
     start: Long,
     end: Long,
     timeZone: TimeZone,

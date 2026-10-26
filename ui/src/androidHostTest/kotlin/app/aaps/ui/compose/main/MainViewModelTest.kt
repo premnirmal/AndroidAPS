@@ -92,9 +92,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -222,7 +220,7 @@ internal class MainViewModelTest {
     )
 
     @Test
-    fun `eat reminder buttons go through the dispatcher and change the timer on the master`() = runTest(mainDispatcher) {
+    fun `eat reminder buttons go through the dispatcher and change the timer on the master`() = runBlocking {
         // execute() runs the local action on a master; the round trip on a client is the dispatcher's business.
         whenever(rh.gs(any<TextRef>())).thenReturn("Change eat reminder")
         whenever(clientControlDispatcher.execute(any(), any(), any())).doSuspendableAnswer {
@@ -231,7 +229,7 @@ internal class MainViewModelTest {
 
         sut.extendEatReminder()
         sut.stopEatReminder()
-        advanceUntilIdle()
+        mainDispatcher.scheduler.runCurrent()
 
         val commands = argumentCaptor<ClientControlActionDispatcher.Command>()
         verify(clientControlDispatcher, times(2)).execute(commands.capture(), any(), any())

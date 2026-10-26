@@ -42,14 +42,11 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -88,12 +85,13 @@ import app.aaps.core.ui.R as CoreUiR
 import app.aaps.ui.compose.overview.graphs.GraphViewModel
 import app.aaps.ui.compose.overview.graphs.ChartConfig
 import app.aaps.ui.compose.overview.graphs.allPoints
+import app.aaps.ui.compose.overview.graphs.graphClockChanges
 import app.aaps.ui.R
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
 import java.text.NumberFormat
-import java.time.ZoneId
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.roundToInt
@@ -409,13 +407,12 @@ private fun GlucoseChartContent(
     var flingJob by remember { mutableStateOf<Job?>(null) }
     var zoomCycleIndex by remember { mutableIntStateOf(-1) }
     var lastFollowedEndMillis by remember { mutableLongStateOf(viewportEndMillis) }
-    val timeZone = ZoneId.systemDefault()
-    val clockChanges = remember(viewportEndMillis, viewportDurationMillis, timeZone) {
-        clockChangeTimestamps(viewportEndMillis - viewportDurationMillis, viewportEndMillis, timeZone)
+    val timeZone = TimeZone.currentSystemDefault()
+    val clockChanges = remember(viewportEndMillis, viewportDurationMillis, timeZone, readings) {
+        graphClockChanges(viewportEndMillis - viewportDurationMillis, viewportEndMillis, timeZone, readings)
+            .map { it.timestamp }
     }
-    val clockPainter = rememberVectorPainter(GlobalClockIcon)
     val clockChangeDescription = stringResource(R.string.trio_graph_clock_change)
-    val clockMarkerBackground = MaterialTheme.colorScheme.surface
     var inspectX by remember { mutableStateOf<Float?>(null) }
     // A tap picks the nearest reading or bolus and keeps it selected until the user taps elsewhere.
     var tapSelection by remember { mutableStateOf<ChartTapSelection?>(null) }
@@ -953,27 +950,15 @@ private fun GlucoseChartContent(
 
             clockChanges.forEach { timestamp ->
                 val x = xFor(timestamp)
-                val iconSize = AapsSpacing.extraLarge.toPx()
-                val badgeRadius = iconSize / 2 + AapsSpacing.extraSmall.toPx()
-                val badgeY = iobBottom - badgeRadius
                 drawLine(
-                    color = labelColor.copy(alpha = 0.45f),
+                    color = labelColor,
                     start = Offset(x, 0f),
-                    end = Offset(x, badgeY),
-                    strokeWidth = AapsSpacing.extraSmall.toPx() / 2,
+                    end = Offset(x, iobBottom),
+                    strokeWidth = 1.dp.toPx(),
                     pathEffect = PathEffect.dashPathEffect(
                         floatArrayOf(AapsSpacing.small.toPx(), AapsSpacing.small.toPx()),
                     ),
                 )
-                // Keep the icon visible when the change is at either edge of the viewport.
-                val badgeInset = badgeRadius.coerceAtMost(chartWidth / 2)
-                val badgeX = x.coerceIn(leftGutter + badgeInset, size.width - badgeInset)
-                drawCircle(clockMarkerBackground, radius = badgeRadius, center = Offset(badgeX, badgeY))
-                translate(left = badgeX - iconSize / 2, top = badgeY - iconSize / 2) {
-                    with(clockPainter) {
-                        draw(Size(iconSize, iconSize), colorFilter = ColorFilter.tint(labelColor))
-                    }
-                }
             }
 
             // Inspected point: a line through all bands and a highlighted dot on the reading.
