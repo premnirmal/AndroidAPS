@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.layout.windowInsetsTopHeight
@@ -238,7 +237,8 @@ fun MainScreen(
                 }
             }
 
-            Scaffold(contentWindowInsets = WindowInsets.safeDrawing) { scaffoldPadding ->
+            // Keep keyboard insets out of the padding used by the bottom navigation.
+            Scaffold { scaffoldPadding ->
                 val hasToolbar = quickLaunchItems.isNotEmpty()
 
                 // Content padding: in preview mode use only system bars;
