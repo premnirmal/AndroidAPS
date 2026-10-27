@@ -113,6 +113,8 @@ import app.aaps.plugins.automation.AutomationRuntime
 import app.aaps.plugins.configuration.setupwizard.SWDefinition
 import app.aaps.plugins.source.DexcomPlugin
 import app.aaps.plugins.source.activities.RequestDexcomPermissionActivity
+import app.aaps.settingsstore.AndroidStorage
+import app.aaps.settingsstore.SettingsUnreadableActivity
 import app.aaps.trio.TrioUi
 import app.aaps.trio.ui.compose.main.TrioMainScreen
 import app.aaps.ui.compose.aboutDialog.AboutBottomSheet
@@ -254,11 +256,23 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        if (AndroidStorage.failure != null) {
+            // The settings cannot be opened, and AAPS is not started. This activity is not injected then (see
+            // MainApp.injectMembers): it only hands over. finish() here skips onStart and onResume.
+            super.onCreate(savedInstanceState)
+            startActivity(Intent(this, SettingsUnreadableActivity::class.java))
+            finish()
+            return
+        }
         // Bar icon color is kept in sync with the AAPS-effective theme reactively
         // from inside AapsTheme via a SideEffect on WindowInsetsControllerCompat,
         // so a plain enableEdgeToEdge() here is enough.
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // Other apps may not draw over AAPS: an overlay could hide what a tap really does, for example on a bolus
+        // confirmation. It also covers the dialogs, because this window stays visible under them. System and
+        // accessibility overlays still show. Needs HIDE_OVERLAY_WINDOWS.
+        window.setHideOverlayWindows(true)
 
         // Activity result launchers (from base class)
         accessTree = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->

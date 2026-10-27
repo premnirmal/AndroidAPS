@@ -41,7 +41,7 @@ import app.aaps.core.interfaces.rx.events.EventDiaconnG8PumpLogReset
 import app.aaps.core.interfaces.rx.events.EventShowSnackbar
 import app.aaps.core.interfaces.rx.weardata.CwfData
 import app.aaps.core.interfaces.rx.weardata.CwfMetadataKey
-import app.aaps.core.interfaces.sharedPreferences.SP
+import app.aaps.core.interfaces.sharedPreferences.KeyValueStore
 import app.aaps.core.interfaces.storage.Storage
 import app.aaps.core.interfaces.ui.UiInteraction
 import app.aaps.core.interfaces.userEntry.UserEntryPresentationHelper
@@ -105,7 +105,7 @@ private val BACKUP_TIMESTAMP_REGEX = Regex("^\\d{4}-\\d{2}-\\d{2}_\\d{6}")
 class ImportExportPrefsImpl(
     private var aapsLogger: AAPSLogger,
     private val rh: ResourceHelper,
-    private val sp: SP,
+    private val sp: KeyValueStore,
     private val preferences: Preferences,
     private val config: Config,
     private val persistenceLayer: PersistenceLayer,

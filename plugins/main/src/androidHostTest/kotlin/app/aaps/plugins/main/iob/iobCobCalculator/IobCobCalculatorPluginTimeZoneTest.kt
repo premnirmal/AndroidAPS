@@ -76,7 +76,9 @@ class IobCobCalculatorPluginTimeZoneTest {
         sut.timeZoneResetDebounce = DEBOUNCE
         runBlocking {
             sut.onStart()
-            // Debounce subscribes upstream in a child coroutine, even with an undispatched collector.
+            // `debounce` collects its source in a coroutine of its own, which starts a moment after onStart
+            // returns. An event sent before that is dropped - the flow keeps nothing for a late listener -
+            // and the reset never comes. That failed on a slow CI runner.
             withTimeout(WAIT_MS) { timeZoneEvents.subscriptionCount.first { it > 0 } }
         }
     }
