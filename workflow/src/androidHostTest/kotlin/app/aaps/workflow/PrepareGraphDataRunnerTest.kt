@@ -10,7 +10,6 @@ import app.aaps.core.interfaces.aps.Sensitivity
 import app.aaps.core.interfaces.concurrent.AapsLock
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.iob.IobCobCalculator
-import app.aaps.core.interfaces.nsclient.ProcessedDeviceStatusData
 import app.aaps.core.interfaces.overview.OverviewData
 import app.aaps.core.interfaces.overview.graph.GraphDataPoint
 import app.aaps.core.interfaces.overview.graph.ActivityGraphData
@@ -47,7 +46,6 @@ class PrepareGraphDataRunnerTest : TestBaseWithProfile() {
     @Mock lateinit var workflowChainData: WorkflowChainData
     @Mock lateinit var persistenceLayer: PersistenceLayer
     @Mock lateinit var profiler: Profiler
-    @Mock lateinit var processedDeviceStatusData: ProcessedDeviceStatusData
     @Mock lateinit var mockedRxBus: RxBus
     @Mock lateinit var sensitivity: Sensitivity
     @Mock lateinit var dataAds: AutosensDataStore
@@ -61,8 +59,8 @@ class PrepareGraphDataRunnerTest : TestBaseWithProfile() {
     private fun runner() =
         PrepareGraphDataRunner(
             aapsLogger, workflowChainData, dateUtil, mockedRxBus, persistenceLayer,
-            activePlugin, profileFunction, profileUtil, preferences, config, profiler, decimalFormatter,
-            processedDeviceStatusData, TestScope(), autosensDataProvider
+            activePlugin, profileFunction, profileUtil, preferences, profiler, decimalFormatter,
+            TestScope(), autosensDataProvider
         )
 
     // The runner asks this between phases; nothing in these tests stops a run part way.
