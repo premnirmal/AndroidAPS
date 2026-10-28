@@ -158,14 +158,16 @@ private fun TrioGlucoseStatsContent(
     state: StatsUiState,
     viewModel: StatsViewModel
 ) {
-    AGPStats(
-        selectedRange = state.agpRange,
-        onSelectRange = viewModel::loadAgpStats,
-        data = state.agpStatsData,
-        isLoading = state.agpLoading,
-        hasError = state.agpError,
-        modifier = Modifier.padding(horizontal = AapsSpacing.extraLarge)
-    )
+    TrioStatsCard(modifier = modifier.fillMaxWidth()) {
+        AGPStats(
+            selectedRange = state.agpRange,
+            onSelectRange = viewModel::loadAgpStats,
+            data = state.agpStatsData,
+            isLoading = state.agpLoading,
+            hasError = state.agpError,
+            modifier = Modifier.padding(horizontal = AapsSpacing.extraLarge)
+        )
+    }
 }
 
 @Composable
