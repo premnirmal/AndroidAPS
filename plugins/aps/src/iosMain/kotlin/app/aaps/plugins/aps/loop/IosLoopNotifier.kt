@@ -1,6 +1,7 @@
 package app.aaps.plugins.aps.loop
 
 import app.aaps.core.interfaces.aps.Loop
+import app.aaps.core.interfaces.configuration.BranchPolicy
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.IosNotificationDelegate
@@ -11,11 +12,13 @@ import dev.zacsweers.metro.ContributesBinding
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import platform.UserNotifications.UNAuthorizationOptionAlert
+import platform.UserNotifications.UNAuthorizationOptionSound
 import platform.UserNotifications.UNMutableNotificationContent
 import platform.UserNotifications.UNNotificationAction
 import platform.UserNotifications.UNNotificationCategory
 import platform.UserNotifications.UNNotificationInterruptionLevel.UNNotificationInterruptionLevelTimeSensitive
 import platform.UserNotifications.UNNotificationRequest
+import platform.UserNotifications.UNNotificationSound
 import platform.UserNotifications.UNUserNotificationCenter
 
 /**
@@ -69,7 +72,7 @@ class IosLoopNotifier(
             loop().disableCarbSuggestions(minutes)
             true
         }
-        center.requestAuthorizationWithOptions(UNAuthorizationOptionAlert) { _, _ -> }
+        center.requestAuthorizationWithOptions(UNAuthorizationOptionAlert or UNAuthorizationOptionSound) { _, _ -> }
     }
 
     override fun carbsRequired(text: String) {
@@ -93,9 +96,8 @@ class IosLoopNotifier(
      * One identifier for both, so a new notification replaces the old rather than stacking - the
      * same behaviour the Android side gets from reusing one notification id.
      *
-     * These notifications use a time-sensitive interruption level so they remain visible without
-     * playing a sound on iOS. `AndroidLoopNotifier` posts both of these on an `IMPORTANCE_HIGH`
-     * channel that vibrates, so on Android they alert. This implementation posts silently, which
+     * The sound is not decoration. `AndroidLoopNotifier` posts both of these on an `IMPORTANCE_HIGH`
+     * channel that vibrates, so on Android they alert. This posted silently, which
      * made "the loop wants carbs" and "there is a suggestion waiting" easy to miss entirely - and
      * unlike `IosSystemNotificationPlatform` there is no separate `AlarmSoundPlayer` path here to
      * carry the audio instead. The interface says a silent implementation of this is a safety
@@ -105,6 +107,7 @@ class IosLoopNotifier(
         val content = UNMutableNotificationContent().apply {
             setTitle(title)
             setBody(text)
+            if (BranchPolicy.alarmSoundsEnabled) setSound(UNNotificationSound.defaultSound())
             setInterruptionLevel(UNNotificationInterruptionLevelTimeSensitive)
             category?.let { setCategoryIdentifier(it) }
         }

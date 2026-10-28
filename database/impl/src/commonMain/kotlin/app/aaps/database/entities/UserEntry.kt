@@ -176,7 +176,7 @@ data class UserEntry(
         Maintenance,        //From Maintenance plugin
         NSClient,           //From NSClient plugin
         NSProfile,          //From NSProfile plugin
-        Objectives,         //From the removed Objectives plugin - kept so old rows still read
+        Objectives,         //From Objectives plugin
         Pump,               //To update with one Source per pump
         Dana,               //Only one UserEntry in Common module Dana
         DanaR,

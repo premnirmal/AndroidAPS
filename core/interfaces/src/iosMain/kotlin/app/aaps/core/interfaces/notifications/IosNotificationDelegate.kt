@@ -1,5 +1,6 @@
 package app.aaps.core.interfaces.notifications
 
+import app.aaps.core.interfaces.configuration.BranchPolicy
 import app.aaps.core.interfaces.notifications.IosNotificationDelegate.PRESENTATION_OPTIONS
 import app.aaps.core.interfaces.notifications.IosNotificationDelegate.install
 import app.aaps.core.interfaces.notifications.IosNotificationDelegate.register
@@ -7,6 +8,7 @@ import platform.UserNotifications.UNNotification
 import platform.UserNotifications.UNNotificationCategory
 import platform.UserNotifications.UNNotificationPresentationOptionBanner
 import platform.UserNotifications.UNNotificationPresentationOptionList
+import platform.UserNotifications.UNNotificationPresentationOptionSound
 import platform.UserNotifications.UNNotificationPresentationOptions
 import platform.UserNotifications.UNNotificationResponse
 import platform.UserNotifications.UNUserNotificationCenter
@@ -119,7 +121,9 @@ object IosNotificationDelegate {
      * `Banner` shows it now and `List` keeps it in Notification Centre afterwards.
      */
     internal val PRESENTATION_OPTIONS: UNNotificationPresentationOptions =
-        UNNotificationPresentationOptionBanner or UNNotificationPresentationOptionList
+        if (BranchPolicy.alarmSoundsEnabled)
+            UNNotificationPresentationOptionBanner or UNNotificationPresentationOptionList or UNNotificationPresentationOptionSound
+        else UNNotificationPresentationOptionBanner or UNNotificationPresentationOptionList
 
     private class RoutingDelegate : NSObject(), UNUserNotificationCenterDelegateProtocol {
 

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mock
 import org.mockito.MockitoAnnotations
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 internal class LoopViewModelTest {
@@ -44,7 +45,7 @@ internal class LoopViewModelTest {
     // synchronously, so the default state settles in-line. The never-completing toFlow
     // subscriptions just park; a standalone scope has no leaked-coroutine check.
     private fun viewModel() =
-        LoopViewModel(loop, rxBus, rh, dateUtil, aapsLogger, CoroutineScope(Dispatchers.Unconfined))
+        LoopViewModel(loop, rxBus, rh, dateUtil, aapsLogger, mock(), CoroutineScope(Dispatchers.Unconfined))
 
     @Test
     fun uiState_showsNotAvailable_whenNoLastRun() {

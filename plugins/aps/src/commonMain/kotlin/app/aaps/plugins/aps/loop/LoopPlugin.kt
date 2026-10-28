@@ -80,6 +80,7 @@ import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import dev.zacsweers.metro.binding
+import app.aaps.plugins.aps.loop.compose.LoopComposeContent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -138,12 +139,13 @@ class LoopPlugin(
     PluginDescription()
         .mainType(PluginType.LOOP)
         .composeContent { plugin ->
-            app.aaps.plugins.aps.loop.compose.LoopComposeContent(
+            LoopComposeContent(
                 loop = plugin as Loop,
                 rxBus = rxBus,
                 rh = rh,
                 dateUtil = dateUtil,
-                aapsLogger = aapsLogger
+                aapsLogger = aapsLogger,
+                preferences = preferences
             )
         }
         .icon(IcLoopClosed)

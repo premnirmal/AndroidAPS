@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import app.aaps.core.interfaces.plugin.PermissionGroup
 import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventPumpStatusChanged
 import app.aaps.core.interfaces.rx.events.EventSWRLStatus
@@ -63,9 +64,10 @@ fun SetupWizardScreen(
     onPairWithMaster: () -> Unit,
     onScanMasterQr: () -> Unit,
     onOpenNsReceiveSettings: () -> Unit,
+    onRunObjectives: () -> Unit,
     onRequestDirectoryAccess: () -> Unit,
-    onRequestPermission: (app.aaps.core.interfaces.plugin.PermissionGroup) -> Unit,
-    permissionItems: () -> List<Pair<app.aaps.core.interfaces.plugin.PermissionGroup, Boolean>>,
+    onRequestPermission: (PermissionGroup) -> Unit,
+    permissionItems: () -> List<Pair<PermissionGroup, Boolean>>,
     isDirectoryAccessGranted: () -> Boolean,
     rxBus: RxBus,
     startPage: Int = 0
@@ -82,6 +84,7 @@ fun SetupWizardScreen(
         swDefinition.onPairWithMaster = onPairWithMaster
         swDefinition.onScanMasterQr = onScanMasterQr
         swDefinition.onOpenNsReceiveSettings = onOpenNsReceiveSettings
+        swDefinition.onRunObjectives = onRunObjectives
         swDefinition.onRequestDirectoryAccess = onRequestDirectoryAccess
         swDefinition.onRequestPermission = onRequestPermission
         swDefinition.permissionItems = permissionItems
@@ -98,6 +101,7 @@ fun SetupWizardScreen(
             swDefinition.onPairWithMaster = null
             swDefinition.onScanMasterQr = null
             swDefinition.onOpenNsReceiveSettings = null
+            swDefinition.onRunObjectives = null
             swDefinition.onRequestDirectoryAccess = null
             swDefinition.onRequestPermission = null
             swDefinition.permissionItems = null

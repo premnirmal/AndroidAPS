@@ -158,7 +158,7 @@ private fun TrioGlucoseStatsContent(
     state: StatsUiState,
     viewModel: StatsViewModel
 ) {
-    TrioStatsCard(modifier = modifier.fillMaxWidth()) {
+    TrioStatsCard(modifier = Modifier.fillMaxWidth()) {
         AGPStats(
             selectedRange = state.agpRange,
             onSelectRange = viewModel::loadAgpStats,

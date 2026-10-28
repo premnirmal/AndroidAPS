@@ -11,6 +11,7 @@ import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.constraints.ConstraintsChecker
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationAction
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
@@ -60,7 +61,6 @@ import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.atLeast
 import org.mockito.kotlin.eq
-import org.mockito.kotlin.isNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
@@ -663,7 +663,7 @@ class CommandQueueImplementationTest : TestBaseWithProfile() {
     private fun verifyFailurePosted(text: String) =
         verify(notificationManager).post(
             eq(NotificationId.FAILED_UPDATE_PROFILE), eq(text), any<NotificationLevel>(), any<Int>(),
-            isNull(), any<List<NotificationAction>>(), anyOrNull()
+            eq(AlarmSound.BOLUS_ERROR), any<List<NotificationAction>>(), anyOrNull()
         )
 
     private fun verifyNothingPosted() =
@@ -712,7 +712,7 @@ class CommandQueueImplementationTest : TestBaseWithProfile() {
     }
 
     @Test
-    fun postProfileWriteResult_timeout_postsFailureWithFallbackText() {
+    fun postProfileWriteResult_timeout_ringsFailureAlarmWithFallbackText() {
         // timeout: result == null (the command was never completed) → treated as failure, generic fallback text.
         whenever(rh.gs(app.aaps.core.ui.R.string.failed_update_basal_profile)).thenReturn("Failed to update basal profile")
 

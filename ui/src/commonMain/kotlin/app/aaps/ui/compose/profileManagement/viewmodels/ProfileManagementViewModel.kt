@@ -681,6 +681,7 @@ class ProfileManagementViewModel(
                             appScope.launch {
                                 when (val result = batchExecutor.commit(prepared.id, Sources.ProfileSwitchDialog, label)) {
                                     is ActionProgress.Applied  -> {
+                                        if (percentage == 90 && durationMinutes == 10) preferences.put(BooleanNonKey.ObjectivesProfileSwitchUsed, true)
                                         withContext(Dispatchers.Main) { onSuccess() }
                                     }
 

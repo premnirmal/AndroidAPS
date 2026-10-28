@@ -6,6 +6,7 @@ import app.aaps.core.data.ue.Sources
 import app.aaps.core.data.ue.ValueWithUnit
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
+import app.aaps.core.interfaces.notifications.AlarmSound
 import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.resources.TextResolver
@@ -95,7 +96,7 @@ class HardLimitsImpl(
                 )
             }
             rxBus.send(EventShowSnackbar(msg, EventShowSnackbar.Type.Warning))
-            notificationManager.post(NotificationId.TOAST_ALARM, msg)
+            notificationManager.post(NotificationId.TOAST_ALARM, msg, sound = AlarmSound.ERROR)
         }
         return newValue
     }

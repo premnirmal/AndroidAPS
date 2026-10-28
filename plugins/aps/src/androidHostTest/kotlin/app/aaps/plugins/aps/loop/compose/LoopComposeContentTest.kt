@@ -51,7 +51,8 @@ class LoopComposeContentTest {
             rxBus = rxBus,
             rh = rh,
             dateUtil = mock<DateUtil>(),
-            aapsLogger = mock<AAPSLogger>()
+            aapsLogger = mock<AAPSLogger>(),
+            preferences = mock()
         )
 
         compose.setContent {

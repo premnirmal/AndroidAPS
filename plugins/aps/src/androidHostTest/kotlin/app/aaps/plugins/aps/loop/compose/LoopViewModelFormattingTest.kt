@@ -59,7 +59,7 @@ internal class LoopViewModelFormattingTest {
     }
 
     private fun viewModel() =
-        LoopViewModel(loop, rxBus, rh, dateUtil, aapsLogger, CoroutineScope(Dispatchers.Unconfined))
+        LoopViewModel(loop, rxBus, rh, dateUtil, aapsLogger, mock(), CoroutineScope(Dispatchers.Unconfined))
 
     private fun lastRunWith(tbr: PumpEnactResult? = null, smb: PumpEnactResult? = null): Loop.LastRun =
         Loop.LastRun().apply {

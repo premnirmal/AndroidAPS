@@ -35,8 +35,10 @@ CARELEVO_LOW_INSULIN_EXPIRATION_REMINDER_HOURS|CarelevoIntPreferenceKey|true
 CARELEVO_PATCH_EXPIRATION_REMINDER_HOURS|CarelevoIntPreferenceKey|true
 ConfigBuilder_Enabled_%s|BooleanComposedKey|true
 Diaconn G8|DiaconnStringNonKey|true
+DisabledTo_%s|ObjectivesLongComposedKey|true
 DynISFAdjust|IntKey|true
 Enable alternative activation of SMB always|BooleanKey|true
+ExamTask_%s|ObjectivesBooleanComposedKey|true
 I_understand|BooleanNonKey|true
 LocalProfile_basal_%d|ProfileComposedStringKey|true
 LocalProfile_ic_%d|ProfileComposedStringKey|true
@@ -46,9 +48,20 @@ LocalProfile_name_%d|ProfileComposedStringKey|true
 LocalProfile_profiles|ProfileIntKey|true
 LocalProfile_targethigh_%d|ProfileComposedStringKey|true
 LocalProfile_targetlow_%d|ProfileComposedStringKey|true
+ObjectivesDisconnectUsed|BooleanNonKey|true
+ObjectivesLoopUsed|BooleanNonKey|true
+ObjectivesProfileSwitchUsed|BooleanNonKey|true
+ObjectivesReconnectUsed|BooleanNonKey|true
+ObjectivesScaleUsed|BooleanNonKey|true
+ObjectivesTempTargetUsed|BooleanNonKey|true
+Objectives_accomplished_%s|ObjectivesLongComposedKey|true
+Objectives_started_%s|ObjectivesLongComposedKey|true
+ObjectivesbgIsAvailableInNS|BooleanNonKey|true
 ObjectivesmanualEnacts|IntNonKey|true
+ObjectivespumpStatusIsAvailableInNS|BooleanNonKey|true
 QuickWizard|StringNonKey|true
 TBB|StringNonKey|true
+UITask_%s|ObjectivesBooleanComposedKey|true
 aaps_directory|StringKey|true
 absorption_cutoff|DoubleKey|true
 absorption_maxtime|DoubleKey|true

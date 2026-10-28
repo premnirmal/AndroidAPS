@@ -13,6 +13,8 @@ import app.aaps.core.interfaces.rx.bus.RxBus
 import app.aaps.core.interfaces.rx.events.EventNsClientStatusUpdated
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.interfaces.workflow.CalculationWorkflow
+import app.aaps.core.keys.BooleanNonKey
+import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.nssdk.localmodel.devicestatus.NSDeviceStatus
 import app.aaps.core.utils.safeGetString
 import app.aaps.core.utils.safeGetStringAllowNull
@@ -83,6 +85,7 @@ import kotlin.math.min
 @SingleIn(AppScope::class)
 @Inject
 class NSDeviceStatusHandler(
+    private val preferences: Preferences,
     private val config: Config,
     private val dateUtil: DateUtil,
     private val processedDeviceStatusData: ProcessedDeviceStatusData,
@@ -115,6 +118,9 @@ class NSDeviceStatusHandler(
                 updateDeviceData(nsDeviceStatus)
                 updateOpenApsData(nsDeviceStatus, apsResults)
                 updateUploaderData(nsDeviceStatus)
+            }
+            if (config.APS) {
+                nsDeviceStatus.pump?.let { preferences.put(BooleanNonKey.ObjectivesPumpStatusIsAvailableInNS, true) }  // Objective 0
             }
         }
         if (config.AAPSCLIENT && deviceStatuses.isNotEmpty()) {

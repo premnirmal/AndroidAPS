@@ -28,6 +28,7 @@ import app.aaps.core.interfaces.rx.events.EventShowSnackbar
 import app.aaps.core.interfaces.tempTargets.toJson
 import app.aaps.core.interfaces.utils.DateUtil
 import app.aaps.core.keys.BooleanKey
+import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.StringNonKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.core.ui.CoreUiStrings
@@ -778,6 +779,7 @@ class TempTargetManagementViewModel(
                                 appScope.launch {
                                     closing = true
                                     if (batchExecutor.commit(prepared.id, Sources.TTDialog, label) is ActionProgress.Applied) {
+                                        if (durationMinutes == 10) preferences.put(BooleanNonKey.ObjectivesTempTargetUsed, true)
                                         withContext(Dispatchers.Main) { onSuccess() }
                                     } else closing = false
                                 }

@@ -1,5 +1,6 @@
 package app.aaps.implementation.alerts
 
+import app.aaps.core.interfaces.configuration.BranchPolicy
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.resources.TextResolver
@@ -50,7 +51,7 @@ class IosEatReminderAlarm(
         requestAuthorizationOnce()
         val content = UNMutableNotificationContent().apply {
             setBody(rh.gs(CoreUiStrings.eat_reminder_title))
-            setSound(UNNotificationSound.defaultSound())
+            if (BranchPolicy.alarmSoundsEnabled) setSound(UNNotificationSound.defaultSound())
             // Breaks through Focus, which is what an alarm the user set is for.
             setInterruptionLevel(UNNotificationInterruptionLevelTimeSensitive)
         }

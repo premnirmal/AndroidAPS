@@ -10,6 +10,7 @@ import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
+import app.aaps.core.interfaces.configuration.BranchPolicy
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.NotificationAction
@@ -216,6 +217,7 @@ class CarelevoAlarmNotifier @Inject constructor(
         contentIntent: PendingIntent
     ): Notification {
         return NotificationCompat.Builder(context, channelId)
+            .setSilent(!BranchPolicy.alarmSoundsEnabled)
             .setSmallIcon(app.aaps.core.ui.R.drawable.notif_icon)
             .setContentTitle(title)
             .setContentText(description)

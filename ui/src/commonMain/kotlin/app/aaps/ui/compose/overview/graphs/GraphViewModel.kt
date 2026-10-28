@@ -13,6 +13,7 @@ import app.aaps.core.interfaces.overview.graph.OverviewDataCache
 import app.aaps.core.interfaces.overview.graph.SeriesType
 import app.aaps.core.interfaces.resources.TextResolver
 import app.aaps.core.interfaces.utils.DateUtil
+import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.UnitDoubleKey
 import app.aaps.core.keys.interfaces.Preferences
 import dev.zacsweers.metro.Assisted
@@ -235,6 +236,7 @@ class GraphViewModel(
         private set
 
     fun onGraphInteraction() {
+        preferences.put(BooleanNonKey.ObjectivesScaleUsed, true)
         lastInteractionMs = dateUtil.now()
     }
 

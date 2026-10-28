@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import app.aaps.R
+import app.aaps.core.interfaces.configuration.BranchPolicy
 import app.aaps.core.interfaces.notifications.NotificationManager
 import android.app.NotificationManager as AndroidNotificationManager
 import app.aaps.implementation.R as ImplementationR
@@ -32,6 +33,7 @@ object SettingsUnreadableNotification {
         )
         val text = context.getString(R.string.settings_unreadable_notification)
         val notification = NotificationCompat.Builder(context, NotificationManager.CHANNEL_ID)
+            .setSilent(!BranchPolicy.alarmSoundsEnabled)
             .setSmallIcon(smallIcon)
             .setContentTitle(context.getString(R.string.settings_unreadable_title))
             .setContentText(text)

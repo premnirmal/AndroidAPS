@@ -35,6 +35,7 @@ import androidx.savedstate.read
 import app.aaps.core.data.model.TE
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.configuration.ConfigBuilder
+import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.maintenance.PrefsFileInfo
 import app.aaps.core.interfaces.navigation.ElementType
@@ -869,6 +870,10 @@ fun NavGraphBuilder.appNavGraph(
                 onPairWithMaster = { navController.navigate(AppRoute.PairWithMaster.createRoute(fromSetupWizard = true)) },
                 onScanMasterQr = { navController.navigate(AppRoute.ScanMasterQr.createRoute(fromSetupWizard = true)) },
                 onOpenNsReceiveSettings = { navController.navigate(AppRoute.PreferenceScreen.createRoute("ns_client_synchronization")) },
+                onRunObjectives = {
+                    val index = activePlugin.getPluginsList().indexOfFirst { it is Objectives && it.isEnabled() }
+                    if (index >= 0) navController.navigate(AppRoute.PluginContent.createRoute(index))
+                },
                 onRequestDirectoryAccess = onRequestDirectoryAccess,
                 onRequestPermission = onRequestPermission,
                 permissionItems = {

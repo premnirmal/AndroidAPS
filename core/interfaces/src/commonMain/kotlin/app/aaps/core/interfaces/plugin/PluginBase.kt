@@ -172,24 +172,22 @@ abstract class PluginBase(
     /**
      * What this build forces, or `null` when the user's stored choice decides. See [Enforcement].
      *
-     * A CONSTRAINTS plugin is enabled by virtue of being registered: which constraint plugins exist is a
-     * property of the build, and one that is present must always be consulted. That is why the rule lives
-     * here rather than being declared on each of them - a new constraint plugin cannot forget it.
+     * A CONSTRAINTS plugin is enabled by registration unless the build explicitly forces it off.
+     * User preferences cannot disable a constraint plugin.
      *
      * Disabled wins a disagreement, so a wrong declaration fails closed.
      */
     fun enforcedState(): EnforcedState? {
-        if (pluginDescription.mainType == PluginType.CONSTRAINTS) return EnforcedState.Enabled
         val applying = pluginDescription.enforcements.filter { it.applies() }
         return when {
             applying.any { it.state == EnforcedState.Disabled } -> EnforcedState.Disabled
+            pluginDescription.mainType == PluginType.CONSTRAINTS -> EnforcedState.Enabled
             applying.any { it.state == EnforcedState.Enabled }  -> EnforcedState.Enabled
             else                                               -> null
         }
     }
 
     fun isEnabled(type: PluginType): Boolean {
-        if (pluginDescription.mainType == PluginType.CONSTRAINTS && type == PluginType.CONSTRAINTS) return true
         if (type == pluginDescription.mainType) return when (enforcedState()) {
             EnforcedState.Enabled  -> true
             EnforcedState.Disabled -> false

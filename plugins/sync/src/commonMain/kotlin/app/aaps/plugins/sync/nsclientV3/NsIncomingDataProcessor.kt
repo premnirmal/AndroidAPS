@@ -111,6 +111,9 @@ class NsIncomingDataProcessor(
      * @return true if there was an accepted SGV
      */
     fun processSgvs(sgvs: Any, doFullSync: Boolean, advanceInitialLoadCursor: Boolean = false): Boolean {
+        // Objective0
+        preferences.put(BooleanNonKey.ObjectivesBgIsAvailableInNs, true)
+
         if (!acceptsGlucose(doFullSync)) return false
 
         var latestDateInReceivedData: Long = 0

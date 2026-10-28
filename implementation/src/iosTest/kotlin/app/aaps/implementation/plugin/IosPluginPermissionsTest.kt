@@ -4,6 +4,7 @@ import app.aaps.core.data.plugin.PluginType
 import app.aaps.core.interfaces.aps.APS
 import app.aaps.core.interfaces.aps.Sensitivity
 import app.aaps.core.interfaces.calibration.Calibration
+import app.aaps.core.interfaces.constraints.Objectives
 import app.aaps.core.interfaces.constraints.Safety
 import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
@@ -115,6 +116,7 @@ class IosPluginPermissionsTest {
         override val activeSensitivity: Sensitivity get() = unused()
         override val activeSafety: Safety get() = unused()
         override val activeIobCobCalculator: IobCobCalculator get() = unused()
+        override val activeObjectives: Objectives? get() = unused()
         override val activeSmoothing: Smoothing get() = unused()
         override val activeCalibration: Calibration get() = unused()
         override val firstActiveSync: Sync? get() = unused()
