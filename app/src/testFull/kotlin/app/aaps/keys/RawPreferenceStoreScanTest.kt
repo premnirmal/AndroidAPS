@@ -91,7 +91,6 @@ class RawPreferenceStoreScanTest {
 
         // --- Runs before DI exists ---
         "implementation/src/iosMain/kotlin/app/aaps/implementation/utils/fabric/FabricPrivacyImpl.kt" to "reads before the graph is built (DI cycle), on iOS",
-        "core/ui/src/androidMain/kotlin/app/aaps/core/ui/locale/LocaleHelper.kt" to "reads the language before DI exists",
         "app/src/main/kotlin/app/aaps/MainApp.kt" to "reads the pending database restore flag after opening the settings store, before the graph is built",
 
         // --- Wiring, which hands the store to the things above ---
