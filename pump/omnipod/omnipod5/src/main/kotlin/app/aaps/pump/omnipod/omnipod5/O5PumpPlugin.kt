@@ -19,8 +19,10 @@ import app.aaps.core.interfaces.notifications.NotificationId
 import app.aaps.core.interfaces.notifications.NotificationLevel
 import app.aaps.core.interfaces.notifications.NotificationManager
 import app.aaps.core.interfaces.di.PumpDriver
+import app.aaps.core.interfaces.plugin.OwnDatabasePlugin
 import app.aaps.core.interfaces.plugin.PluginBase
 import app.aaps.core.interfaces.plugin.PluginDescription
+import app.aaps.core.interfaces.profile.Profile
 import app.aaps.core.interfaces.pump.BlePreCheck
 import app.aaps.core.interfaces.pump.BolusProgressData
 import app.aaps.core.interfaces.pump.DetailedBolusInfo
@@ -43,7 +45,6 @@ import app.aaps.core.keys.interfaces.TextRef
 import app.aaps.core.keys.interfaces.withCompose
 import app.aaps.core.ui.compose.ComposeScreenContent
 import app.aaps.core.ui.compose.icons.IcPluginOmnipod
-import app.aaps.core.ui.compose.metroViewModel
 import app.aaps.core.ui.compose.preference.PreferenceSubScreenDef
 import app.aaps.pump.omnipod.omnipod5.bledriver.comm.O5BleManager
 import app.aaps.pump.omnipod.common.bledriver.pod.command.DeactivateCommand
@@ -78,6 +79,7 @@ import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.expiry
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.state.withPodAcceptance
 import app.aaps.pump.omnipod.omnipod5.bledriver.pod.util.buildO5ExpirationAlerts
 import app.aaps.pump.omnipod.omnipod5.history.O5History
+import app.aaps.pump.omnipod.omnipod5.history.database.O5HistoryDatabase
 import app.aaps.pump.omnipod.common.history.data.BasalValuesRecord
 import app.aaps.pump.omnipod.common.history.data.BolusRecord
 import app.aaps.pump.omnipod.common.bledriver.pod.definition.BolusType
@@ -180,7 +182,8 @@ class O5PumpPlugin @Inject constructor(
     private val bolusProgressData: BolusProgressData,
     private val protectionCheck: ProtectionCheck,
     private val blePreCheck: BlePreCheck,
-    private val config: Config
+    private val config: Config,
+    private val o5HistoryDatabase: O5HistoryDatabase
 ) : PumpPluginBase(
     pluginDescription = PluginDescription()
         .mainType(PluginType.PUMP)
@@ -198,7 +201,7 @@ class O5PumpPlugin @Inject constructor(
     ownPreferences = OmnipodBooleanPreferenceKey.entries + OmnipodIntPreferenceKey.entries +
         DashBooleanPreferenceKey.entries + O5IntentKey.ConfigEnabledEntries(config),
     aapsLogger, rh, preferences, commandQueue, notificationManager
-), Pump, PumpTimeRemaining {
+), Pump, OwnDatabasePlugin, PumpTimeRemaining {
 
     @Volatile private var bolusCanceled = false
     @Volatile private var bolusDeliveryInProgress = false
@@ -956,6 +959,13 @@ class O5PumpPlugin @Inject constructor(
         return mapProfileToBasalProgram(profile, PumpType.OMNIPOD_5) == podStateManager.basalProgram
     }
 
+    /** The confirmed basal program as hourly rates, including the pod's 0.05 U/h rounding. */
+    override fun deliveredBasal(): List<Profile.ProfileValue>? =
+        if (!podStateManager.isActivationCompleted) null
+        else podStateManager.basalProgram?.hourlyRates()?.mapIndexed { hour, rate -> Profile.ProfileValue(T.hours(hour.toLong()).secs().toInt(), rate) }
+
+    override fun clearAllTables() = o5HistoryDatabase.clearAllTables()
+
 
     private val _lastDataTime = MutableStateFlow(0L)
     override val lastDataTime: StateFlow<Long> = _lastDataTime
@@ -987,7 +997,6 @@ class O5PumpPlugin @Inject constructor(
                 ?: RESERVOIR_OVER_50_UNITS_DEFAULT
         )
     }
-
 
     override suspend fun deliverTreatment(detailedBolusInfo: DetailedBolusInfo): PumpEnactResult =
         doseMutex.withLock { deliverTreatmentLocked(detailedBolusInfo) }
