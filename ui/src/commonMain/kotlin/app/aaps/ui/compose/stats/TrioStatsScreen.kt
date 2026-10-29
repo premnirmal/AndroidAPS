@@ -4,7 +4,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,8 +39,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -158,16 +154,14 @@ private fun TrioGlucoseStatsContent(
     state: StatsUiState,
     viewModel: StatsViewModel
 ) {
-    TrioStatsCard(modifier = Modifier.padding(horizontal = AapsSpacing.extraLarge)) {
-        AGPStats(
-            selectedRange = state.agpRange,
-            onSelectRange = viewModel::loadAgpStats,
-            data = state.agpStatsData,
-            isLoading = state.agpLoading,
-            hasError = state.agpError,
-            modifier = Modifier.padding(horizontal = AapsSpacing.extraLarge)
-        )
-    }
+    AGPStats(
+        selectedRange = state.agpRange,
+        onSelectRange = viewModel::loadAgpStats,
+        data = state.agpStatsData,
+        isLoading = state.agpLoading,
+        hasError = state.agpError,
+        modifier = Modifier.padding(horizontal = AapsSpacing.extraLarge)
+    )
 }
 
 @Composable
@@ -290,7 +284,10 @@ private fun TrioInsulinCard(
         TrioInsulinChart.TOTAL_DAILY_DOSE  -> data.tddPoints
         TrioInsulinChart.BOLUS_DISTRIBUTION -> data.bolusPoints
     }
-    TrioStatsCard(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(AapsSpacing.large),
+    ) {
         Text(
             text = chart.label(),
             style = MaterialTheme.typography.titleLarge,
@@ -495,7 +492,10 @@ private fun TrioCarbCard(
     modifier: Modifier = Modifier
 ) {
     val carbColor = AapsTheme.generalColors.trioCarbs
-    TrioStatsCard(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(AapsSpacing.large),
+    ) {
         Text(
             text = stringResource(UiStrings.trio_stats_total_meals),
             style = MaterialTheme.typography.titleLarge,
@@ -655,20 +655,4 @@ private fun TrioStatsRange.label(): String = when (this) {
     TrioStatsRange.DAYS_7   -> stringResource(UiStrings.trio_stats_short_days, 7)
     TrioStatsRange.DAYS_30  -> stringResource(UiStrings.trio_stats_short_days, 30)
     TrioStatsRange.DAYS_90  -> stringResource(UiStrings.trio_stats_short_days, 90)
-}
-
-@Composable
-private fun TrioStatsCard(
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    ElevatedCard(
-        modifier = modifier,
-    ) {
-        Column(
-            modifier = Modifier.padding(AapsSpacing.extraLarge),
-            verticalArrangement = Arrangement.spacedBy(AapsSpacing.large),
-            content = content
-        )
-    }
 }
