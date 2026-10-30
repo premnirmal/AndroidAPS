@@ -18,7 +18,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -194,7 +193,7 @@ private fun TrioInsulinStatsContent(
     LaunchedEffect(Unit) {
         viewModel.loadTrioInsulinStats(state.trioInsulinRange)
     }
-    TrioInsulinRangeSelector(
+    TrioStatsRangeSelector(
         selectedRange = state.trioInsulinRange,
         onSelect = viewModel::loadTrioInsulinStats
     )
@@ -221,28 +220,6 @@ private fun TrioInsulinStatsContent(
                 state = state,
                 chart = selectedChart
             )
-        }
-    }
-}
-
-@Composable
-private fun TrioInsulinRangeSelector(
-    selectedRange: TrioStatsRange,
-    onSelect: (TrioStatsRange) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small)
-        ) {
-            trioStatsRanges.forEach { range ->
-                FilterChip(
-                    selected = selectedRange == range,
-                    onClick = { onSelect(range) },
-                    label = { Text(range.label()) }
-                )
-            }
         }
     }
 }
@@ -632,16 +609,15 @@ private fun TrioStatsRangeSelector(
     onSelect: (TrioStatsRange) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.align(Alignment.Center),
-            horizontalArrangement = Arrangement.spacedBy(AapsSpacing.small)
-        ) {
-            trioStatsRanges.forEach { range ->
-                FilterChip(
+    Box(modifier = modifier.fillMaxWidth().padding(horizontal = AapsSpacing.extraLarge)) {
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.align(Alignment.Center)) {
+            trioStatsRanges.forEachIndexed { index, range ->
+                SegmentedButton(
                     selected = selectedRange == range,
                     onClick = { onSelect(range) },
-                    label = { Text(range.label()) }
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = trioStatsRanges.size),
+                    icon = {},
+                    label = { Text(text = range.label(), maxLines = 1) }
                 )
             }
         }
