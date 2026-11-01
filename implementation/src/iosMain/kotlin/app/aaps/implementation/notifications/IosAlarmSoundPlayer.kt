@@ -1,6 +1,5 @@
 package app.aaps.implementation.notifications
 
-import app.aaps.core.interfaces.configuration.BranchPolicy
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.AlarmSound
@@ -75,10 +74,6 @@ class IosAlarmSoundPlayer(
      * `IosSystemNotificationPlatform` deliberately carries no sound.
      */
     override fun play(sound: AlarmSound, ownerTag: String, postedAtElapsedRealtime: Long) {
-        if (!BranchPolicy.alarmSoundsEnabled) {
-            aapsLogger.debug(LTag.NOTIFICATION, "Alarm sound blocked by branch policy: $sound ($ownerTag)")
-            return
-        }
         scope.launch { doPlay(sound, ownerTag) }
     }
 

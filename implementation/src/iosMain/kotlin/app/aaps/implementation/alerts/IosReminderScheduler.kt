@@ -1,7 +1,6 @@
 package app.aaps.implementation.alerts
 
 import app.aaps.core.interfaces.alerts.ReminderScheduler
-import app.aaps.core.interfaces.configuration.BranchPolicy
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import dev.zacsweers.metro.AppScope
@@ -60,7 +59,7 @@ class IosReminderScheduler(
 
         val content = UNMutableNotificationContent().apply {
             setBody(text)
-            if (BranchPolicy.alarmSoundsEnabled) setSound(UNNotificationSound.defaultSound())
+            setSound(UNNotificationSound.defaultSound())
             // Breaks through Focus, which is what an alarm the user set is for.
             setInterruptionLevel(UNNotificationInterruptionLevelTimeSensitive)
         }

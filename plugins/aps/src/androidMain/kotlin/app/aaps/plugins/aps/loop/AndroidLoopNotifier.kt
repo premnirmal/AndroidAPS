@@ -5,7 +5,6 @@ import android.app.NotificationChannel
 import android.content.Context
 import androidx.core.app.NotificationCompat
 import app.aaps.core.data.configuration.Constants
-import app.aaps.core.interfaces.configuration.BranchPolicy
 import app.aaps.core.interfaces.notifications.DoNotDisturbRule
 import app.aaps.core.interfaces.notifications.NotificationHolder
 import app.aaps.core.interfaces.resources.ResourceHelper
@@ -101,12 +100,9 @@ class AndroidLoopNotifier(
     private fun baseBuilder(title: String, text: String): NotificationCompat.Builder =
         NotificationCompat.Builder(
             context,
-            if (!BranchPolicy.alarmSoundsEnabled ||
-                DoNotDisturbRule.staysQuiet(preferences.get(BooleanKey.AlertOverrideDoNotDisturb), notificationManager.currentInterruptionFilter)
-            ) SILENT_CHANNEL_ID
+            if (DoNotDisturbRule.staysQuiet(preferences.get(BooleanKey.AlertOverrideDoNotDisturb), notificationManager.currentInterruptionFilter)) SILENT_CHANNEL_ID
             else CHANNEL_ID
         )
-            .setSilent(!BranchPolicy.alarmSoundsEnabled)
             .setSmallIcon(iconsProvider.getNotificationIcon())
             .setContentTitle(title)
             .setContentText(text)

@@ -10,7 +10,6 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import androidx.annotation.RawRes
-import app.aaps.core.interfaces.configuration.BranchPolicy
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.AlarmSound
@@ -63,10 +62,6 @@ class AlarmSoundPlayerImpl(
     private val startRunnable = Runnable { startMediaPlayer() }
 
     override fun play(sound: AlarmSound, ownerTag: String, postedAtElapsedRealtime: Long) {
-        if (!BranchPolicy.alarmSoundsEnabled) {
-            aapsLogger.debug(LTag.NOTIFICATION, "Alarm sound blocked by branch policy: $sound ($ownerTag)")
-            return
-        }
         handler.post { doPlay(sound, ownerTag, postedAtElapsedRealtime) }
     }
 

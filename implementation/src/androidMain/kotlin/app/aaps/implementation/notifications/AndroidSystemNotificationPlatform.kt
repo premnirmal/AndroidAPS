@@ -10,7 +10,6 @@ import android.content.IntentFilter
 import android.graphics.BitmapFactory
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import app.aaps.core.interfaces.configuration.BranchPolicy
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.AapsNotification
@@ -161,7 +160,6 @@ class AndroidSystemNotificationPlatform(
     private fun raiseSystemNotification(n: AapsNotification, title: String) {
         val largeIcon = BitmapFactory.decodeResource(context.resources, iconsProvider.getIcon())
         val builder = NotificationCompat.Builder(context, NotificationManager.CHANNEL_ID)
-            .setSilent(!BranchPolicy.alarmSoundsEnabled)
             .setSmallIcon(iconsProvider.getNotificationIcon())
             .setLargeIcon(largeIcon)
             .setContentTitle(title)

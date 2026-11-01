@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
+import android.media.AudioAttributes
 import androidx.test.core.app.ApplicationProvider
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.notifications.AlarmIntent
@@ -13,6 +14,7 @@ import app.aaps.core.interfaces.notifications.NotificationHolder
 import app.aaps.core.interfaces.resources.ResourceHelper
 import app.aaps.core.interfaces.ui.IconsProvider
 import app.aaps.core.interfaces.ui.UiInteraction
+import app.aaps.core.keys.BooleanKey
 import app.aaps.core.keys.interfaces.Preferences
 import app.aaps.implementation.alerts.EatReminderReceiver
 import com.google.common.truth.Truth.assertThat
@@ -39,7 +41,7 @@ class AlarmNotificationManagerFullScreenTest {
 
     private val context = ApplicationProvider.getApplicationContext<Context>()
 
-    private fun sut(): AlarmNotificationManager {
+    private fun sut(preferences: Preferences = mock()): AlarmNotificationManager {
         val uiInteraction: UiInteraction = mock()
         whenever(uiInteraction.errorHelperActivity).thenReturn(Activity::class)
         whenever(uiInteraction.mainActivity).thenReturn(Activity::class)
@@ -50,7 +52,7 @@ class AlarmNotificationManagerFullScreenTest {
         return AlarmNotificationManager(
             context = context,
             aapsLogger = mock<AAPSLogger>(),
-            preferences = mock<Preferences>(),
+            preferences = preferences,
             iconsProvider = iconsProvider,
             uiInteractionProvider = { uiInteraction },
             notificationHolderProvider = { mock<NotificationHolder>() },
@@ -64,6 +66,48 @@ class AlarmNotificationManagerFullScreenTest {
             shadowOf(context.getSystemService(NotificationManager::class.java))
                 .getNotification(AlarmNotificationManager.NOTIFICATION_ID_FULL_SCREEN)
         )
+
+    private fun setInterruptionFilter(filter: Int) {
+        val manager = context.getSystemService(NotificationManager::class.java)
+        shadowOf(manager).setNotificationPolicyAccessGranted(true)
+        manager.setInterruptionFilter(filter)
+    }
+
+    @Test
+    fun theAlarmNotificationHasSoundWhenDoNotDisturbIsOff() {
+        setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_ALL)
+
+        sut().postFullScreenAlarm(status = "Check BG", title = "AAPS", sound = AlarmSound.ALARM)
+
+        val manager = context.getSystemService(NotificationManager::class.java)
+        assertThat(manager.getNotificationChannel(postedNotification().channelId).sound).isNotNull()
+    }
+
+    @Test
+    fun theAlarmNotificationStaysQuietWhenDoNotDisturbIsOnAndOverrideIsOff() {
+        setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+
+        sut().postFullScreenAlarm(status = "Check BG", title = "AAPS", sound = AlarmSound.ALARM)
+
+        val manager = context.getSystemService(NotificationManager::class.java)
+        val channel = manager.getNotificationChannel(postedNotification().channelId)
+        assertThat(channel.sound).isNull()
+        assertThat(channel.shouldVibrate()).isTrue()
+    }
+
+    @Test
+    fun theAlarmNotificationUsesAlarmSoundWhenDoNotDisturbOverrideIsOn() {
+        setInterruptionFilter(NotificationManager.INTERRUPTION_FILTER_PRIORITY)
+        val preferences: Preferences = mock()
+        whenever(preferences.get(BooleanKey.AlertOverrideDoNotDisturb)).thenReturn(true)
+
+        sut(preferences).postFullScreenAlarm(status = "Check BG", title = "AAPS", sound = AlarmSound.ALARM)
+
+        val manager = context.getSystemService(NotificationManager::class.java)
+        val channel = manager.getNotificationChannel(postedNotification().channelId)
+        assertThat(channel.sound).isNotNull()
+        assertThat(channel.audioAttributes.usage).isEqualTo(AudioAttributes.USAGE_ALARM)
+    }
 
     @Test
     fun swipingTheNotificationAwayMutesTheAlarm() {

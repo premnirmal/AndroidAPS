@@ -6,5 +6,4 @@ package app.aaps.core.interfaces.configuration
  */
 object BranchPolicy {
     const val objectivesEnabled = false
-    const val alarmSoundsEnabled = false
 }

@@ -13,7 +13,6 @@ import android.net.Uri
 import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import app.aaps.core.interfaces.alerts.EatReminder
-import app.aaps.core.interfaces.configuration.BranchPolicy
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.AlarmIntent
@@ -311,8 +310,9 @@ class AlarmNotificationManager(
         )
 
         val overrideDnd = preferences.get(BooleanKey.AlertOverrideDoNotDisturb)
+        // With Do Not Disturb on and the override off, only vibration is allowed.
         val channelId =
-            if (!BranchPolicy.alarmSoundsEnabled || DoNotDisturbRule.staysQuiet(overrideDnd, mgr.currentInterruptionFilter)) CHANNEL_SILENT_URGENT
+            if (DoNotDisturbRule.staysQuiet(overrideDnd, mgr.currentInterruptionFilter)) CHANNEL_SILENT_URGENT
             else channelIdForSound(sound ?: AlarmSound.ERROR, overrideDnd)
 
         // Mute action so the user can silence the looping alarm straight from the lock-screen
@@ -332,7 +332,6 @@ class AlarmNotificationManager(
         )
 
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSilent(!BranchPolicy.alarmSoundsEnabled)
             .setSmallIcon(iconsProvider.getNotificationIcon())
             .setContentTitle(title)
             .setContentText(status)
@@ -452,7 +451,6 @@ class AlarmNotificationManager(
     ) {
         channels // created on first post, see the field
         val builder = NotificationCompat.Builder(context, if (urgent) CHANNEL_SILENT_URGENT else CHANNEL_SILENT)
-            .setSilent(!BranchPolicy.alarmSoundsEnabled)
             .setSmallIcon(iconsProvider.getNotificationIcon())
             .setLargeIcon(BitmapFactory.decodeResource(context.resources, iconsProvider.getIcon()))
             .setContentTitle(title)

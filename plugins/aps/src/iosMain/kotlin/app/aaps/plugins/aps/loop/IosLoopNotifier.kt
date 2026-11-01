@@ -1,7 +1,6 @@
 package app.aaps.plugins.aps.loop
 
 import app.aaps.core.interfaces.aps.Loop
-import app.aaps.core.interfaces.configuration.BranchPolicy
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.IosNotificationDelegate
@@ -107,7 +106,7 @@ class IosLoopNotifier(
         val content = UNMutableNotificationContent().apply {
             setTitle(title)
             setBody(text)
-            if (BranchPolicy.alarmSoundsEnabled) setSound(UNNotificationSound.defaultSound())
+            setSound(UNNotificationSound.defaultSound())
             setInterruptionLevel(UNNotificationInterruptionLevelTimeSensitive)
             category?.let { setCategoryIdentifier(it) }
         }
