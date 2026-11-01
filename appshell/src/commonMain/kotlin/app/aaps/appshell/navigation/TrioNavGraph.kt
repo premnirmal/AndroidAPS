@@ -1,5 +1,6 @@
 package app.aaps.appshell.navigation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -10,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.composable
@@ -119,7 +121,13 @@ internal fun NavGraphBuilder.trioNavGraph(
             TrioNavTab.Settings,
             stringResource(CoreUiStrings.settings),
             true,
-            { VersionOverlay() }
+            {
+                VersionOverlay(
+                    modifier = Modifier.clickable(enabled = aboutDialog != null, role = Role.Button) {
+                        showAboutDialog = true
+                    }
+                )
+            }
         ) { paddingValues ->
             AllPreferencesScreen(
                 activePlugin = activePlugin,
@@ -132,8 +140,7 @@ internal fun NavGraphBuilder.trioNavGraph(
                 showSimpleModeHiddenPreferences = true,
                 onConfigurationClick = { navController.navigate(AppRoute.Configuration.route) },
                 onManageClick = onManageClick,
-                onMaintenanceClick = onMaintenanceClick,
-                onAboutClick = aboutDialog?.let { { showAboutDialog = true } }
+                onMaintenanceClick = onMaintenanceClick
             )
         }
         if (showAboutDialog) {

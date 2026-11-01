@@ -45,4 +45,20 @@ class TrioUiIsolationTest {
         val allPreferencesRoute = graph.substringAfter("composable(AppRoute.Preferences.route)").substringBefore("maintenanceViewModel?.let")
         assertThat(allPreferencesRoute).contains("onManageClick = onManageClick")
     }
+
+    @Test
+    fun `Trio version info opens from the top bar instead of a preference row`() {
+        val preferences = File(root, "ui/src/commonMain/kotlin/app/aaps/ui/compose/preferences/AllPreferencesScreen.kt").readText()
+        val aboutEntry = preferences.substringAfter("if (!trioMode) {").substringBefore("if (showTopBar)")
+        assertThat(aboutEntry).contains("onAboutClick?.let")
+        assertThat(aboutEntry).contains("CoreUiStrings.nav_about")
+
+        val trioGraph = File(root, "appshell/src/commonMain/kotlin/app/aaps/appshell/navigation/TrioNavGraph.kt").readText()
+        val settingsRoute = trioGraph.substringAfter("composable(AppRoute.TrioSettings.route)").substringBefore("@Composable")
+        val versionAction = settingsRoute.substringAfter("VersionOverlay(").substringBefore("AllPreferencesScreen(")
+        assertThat(versionAction).contains("Modifier.clickable(enabled = aboutDialog != null, role = Role.Button)")
+        assertThat(versionAction).contains("showAboutDialog = true")
+        assertThat(settingsRoute).doesNotContain("onAboutClick =")
+        assertThat(settingsRoute).contains("aboutDialog?.invoke { showAboutDialog = false }")
+    }
 }

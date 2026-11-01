@@ -251,16 +251,18 @@ fun AllPreferencesScreen(
                         }
                     }
 
-                    onAboutClick?.let { onClick ->
-                        item {
-                            Preference(
-                                title = { Text(stringResource(CoreUiStrings.nav_about)) },
-                                summary = { Text(stringResource(CoreUiStrings.nav_about_desc)) },
-                                onClick = onClick
-                            )
-                        }
-                        item {
-                            HorizontalDivider()
+                    if (!trioMode) {
+                        onAboutClick?.let { onClick ->
+                            item {
+                                Preference(
+                                    title = { Text(stringResource(CoreUiStrings.nav_about)) },
+                                    summary = { Text(stringResource(CoreUiStrings.nav_about_desc)) },
+                                    onClick = onClick
+                                )
+                            }
+                            item {
+                                HorizontalDivider()
+                            }
                         }
                     }
                 }
