@@ -4,7 +4,7 @@
     <string name="dst_in_24h_warning">Cambio al horario de verano en menos de 24 horas</string>
     <string name="dst_loop_disabled_warning">Cambio al horario de verano hace menos de 3 horas - Bucle cerrado deshabilitado</string>
     <!-- Storage constraint -->
-    <string name="disk_full">Debe liberar al menos %1$d MB de almacenamiento interno. ¡El lazo se encuentra desactivado!</string>
+    <string name="disk_full">Debes liberar al menos %1$d MB de almacenamiento interno. ¡El lazo se encuentra desactivado!</string>
     <!-- Version Checker -->
     <string name="application_expired">Aplicación caducada</string>
     <string name="running_invalid_version">Hemos detectado que está ejecutando una versión no válida. ¡Lazo desactivado!</string>
