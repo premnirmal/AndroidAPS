@@ -951,6 +951,13 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 accessTree?.launch(null)
             } catch (_: Exception) {
             }
+        },
+        onOpenUrl = { url ->
+            // No usable browser (none installed, or blocked by Family Link): do nothing rather than crash
+            try {
+                openBrowser(url)
+            } catch (_: ActivityNotFoundException) {
+            }
         }
     )
 
@@ -963,7 +970,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
     }
 
     private fun handleSearchResultClick(entry: SearchIndexEntry, navController: NavController) {
-        navigator(navController).handleSearchResultClick(entry, ::openBrowser)
+        navigator(navController).handleSearchResultClick(entry)
     }
 
     private fun openBrowser(url: String) {

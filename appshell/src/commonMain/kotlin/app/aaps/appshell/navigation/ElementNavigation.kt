@@ -46,7 +46,8 @@ class ElementNavigator(
     private val dexcomBoyda: DexcomBoyda,
     private val onOpenCgmApp: (packageName: String) -> Unit,
     private val onExit: () -> Unit,
-    val onRequestDirectoryAccess: () -> Unit
+    val onRequestDirectoryAccess: () -> Unit,
+    val onOpenUrl: (url: String) -> Unit
 ) {
 
     /** Where a tap in the drawer or a quick launch tile goes. */
@@ -262,7 +263,7 @@ fun ElementNavigator.handleNotificationAction(notificationId: NotificationId) {
     }
 }
 
-fun ElementNavigator.handleSearchResultClick(entry: SearchIndexEntry, onOpenUrl: (String) -> Unit) {
+fun ElementNavigator.handleSearchResultClick(entry: SearchIndexEntry) {
     when (val item = entry.item) {
         is SearchableItem.Category -> guarded(ProtectionCheck.Protection.PREFERENCES) {
             navController.navigate(AppRoute.PreferenceScreen.createRoute(item.screenDef.key))

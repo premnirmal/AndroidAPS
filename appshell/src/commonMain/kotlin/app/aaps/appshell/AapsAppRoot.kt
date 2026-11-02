@@ -27,6 +27,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -75,6 +76,7 @@ import app.aaps.core.ui.compose.preference.LocalClearExportPasswordStore
 import app.aaps.core.ui.compose.preference.LocalHashPassword
 import app.aaps.core.ui.compose.preference.LocalVisibilityContext
 import app.aaps.core.ui.compose.pump.PumpCommunicationStatus
+import app.aaps.core.ui.compose.rememberSafeUriHandler
 import app.aaps.core.ui.compose.stringResource
 import app.aaps.ui.compose.clientcontrol.ClientControlPendingDialog
 import kotlinx.coroutines.flow.first
@@ -179,6 +181,9 @@ fun AapsAppRoot(
         LocalProfileUtil provides profileUtil,
         LocalCheckPassword provides passwordHasher::checkPassword,
         LocalHashPassword provides passwordHasher::hashPassword,
+        // Every link in the app (openUri calls and clickable text links) goes through this, so a
+        // phone with no usable browser - e.g. blocked by Family Link - does not crash AAPS.
+        LocalUriHandler provides rememberSafeUriHandler(),
         LocalClearExportPasswordStore provides { exportPasswordDataStore.clearPasswordDataStore() },
         LocalVisibilityContext provides visibilityContext
     ) {
