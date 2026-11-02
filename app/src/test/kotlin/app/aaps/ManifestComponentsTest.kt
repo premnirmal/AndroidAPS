@@ -26,36 +26,45 @@ class ManifestComponentsTest {
     private val componentTags = setOf("activity", "activity-alias", "service", "receiver", "provider")
 
     @Test
-    fun mainActivityIsTheOnlyLauncher() {
+    fun launcherAliasesKeepSeparateNamesAndIcons() {
         val document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(findManifest())
-        assertThat(document.getElementsByTagName("activity-alias").length).isEqualTo(0)
+        val aliases = document.getElementsByTagName("activity-alias")
+        val byName = (0 until aliases.length).associate { index ->
+            val alias = aliases.item(index) as Element
+            alias.getAttribute("android:name") to alias
+        }
+        assertThat(byName.keys).containsExactly("app.aaps.AndroidApsLauncher", "app.aaps.TrioLauncher")
+        val aaps = byName.getValue("app.aaps.AndroidApsLauncher")
+        val trio = byName.getValue("app.aaps.TrioLauncher")
+
+        assertThat(aaps.getAttribute("android:enabled")).isEqualTo("true")
+        assertThat(aaps.getAttribute("android:icon")).isEqualTo("\${appIcon}")
+        assertThat(aaps.getAttribute("android:label")).isEqualTo("@string/app_name")
+        assertThat(trio.getAttribute("android:enabled")).isEqualTo("false")
+        assertThat(trio.getAttribute("android:icon")).isEqualTo("@drawable/ic_trio_launcher")
+        assertThat(trio.getAttribute("android:label")).isEqualTo("@string/app_name_trio")
 
         val application = document.getElementsByTagName("application").item(0) as Element
         assertThat(application.getAttribute("android:icon")).isEqualTo("\${appIcon}")
         assertThat(application.getAttribute("android:roundIcon")).isEqualTo("\${appIconRound}")
         assertThat(application.getAttribute("android:label")).isEqualTo("@string/app_name")
 
-        val launchers = mutableListOf<String>()
+        for (alias in listOf(aaps, trio)) {
+            assertThat(alias.getAttribute("android:exported")).isEqualTo("true")
+            assertThat(alias.getAttribute("android:targetActivity")).isEqualTo("app.aaps.ComposeMainActivity")
+            assertThat(alias.getElementsByTagName("action").item(0).attributes.getNamedItem("android:name").nodeValue)
+                .isEqualTo("android.intent.action.MAIN")
+            assertThat(alias.getElementsByTagName("category").item(0).attributes.getNamedItem("android:name").nodeValue)
+                .isEqualTo("android.intent.category.LAUNCHER")
+        }
         val activities = document.getElementsByTagName("activity")
         for (index in 0 until activities.length) {
-            val activity = activities.item(index) as Element
-            val filters = activity.getElementsByTagName("intent-filter")
-            for (filterIndex in 0 until filters.length) {
-                val filter = filters.item(filterIndex) as Element
-                val categories = filter.getElementsByTagName("category")
-                for (category in 0 until categories.length) {
-                    if ((categories.item(category) as Element).getAttribute("android:name") != "android.intent.category.LAUNCHER") continue
-                    launchers.add(activity.getAttribute("android:name"))
-                    assertThat(activity.getAttribute("android:exported")).isEqualTo("true")
-                    val actions = filter.getElementsByTagName("action")
-                    val actionNames = (0 until actions.length).map {
-                        (actions.item(it) as Element).getAttribute("android:name")
-                    }
-                    assertThat(actionNames).contains("android.intent.action.MAIN")
-                }
+            val categories = (activities.item(index) as Element).getElementsByTagName("category")
+            for (category in 0 until categories.length) {
+                assertThat((categories.item(category) as Element).getAttribute("android:name"))
+                    .isNotEqualTo("android.intent.category.LAUNCHER")
             }
         }
-        assertThat(launchers).containsExactly("app.aaps.ComposeMainActivity")
     }
 
     @Test
