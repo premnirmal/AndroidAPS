@@ -487,7 +487,7 @@ class DataHandlerMobileWearBolusTest : TestBaseWithProfile() {
         // Delivery itself is not racy: the collector subscribes UNDISPATCHED, so it is registered
         // before send() is reached.
         rxBus.send(EventData.SnoozeAlert(0L))
-        verify(uiInteraction, timeout(2000)).stopAlarm("Dismissed from wear")
+        verify(uiInteraction, timeout(2000)).stopAlarm("Muted from wear")
     }
     @Test fun `onEventSync dispatches a posted DismissAlert to its handler`() {
         // Silence on the watch's notification of the alarm: stop and close the screen, where the quick snooze leaves it
@@ -529,7 +529,7 @@ class DataHandlerMobileWearBolusTest : TestBaseWithProfile() {
         // Status, resend, snooze and the like are not control: the watch keeps showing data with the switch off.
         whenever(preferences.get(BooleanKey.WearControl)).thenReturn(false)
         rxBus.send(EventData.SnoozeAlert(0L))
-        verify(uiInteraction, timeout(2000)).stopAlarm("Dismissed from wear")
+        verify(uiInteraction, timeout(2000)).stopAlarm("Muted from wear")
     }
     @Test fun `rejectIfWearControlOff refuses with an Error reply when off and passes when on`() {
         whenever(preferences.get(BooleanKey.WearControl)).thenReturn(false)

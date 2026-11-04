@@ -417,7 +417,8 @@ private fun AapsDesktopApp(graph: DesktopAppGraph, appIcon: Painter) {
                 dexcomBoyda = graph.dexcomBoyda,
                 onOpenCgmApp = { pkg -> logger.error(LTag.CORE, "No CGM app to open on desktop: $pkg") },
                 onExit = { logger.debug(LTag.CORE, "Exit requested from the menu") },
-                onRequestDirectoryAccess = { logger.debug(LTag.CORE, "Desktop reads its own folder; nothing to grant") }
+                onRequestDirectoryAccess = { logger.debug(LTag.CORE, "Desktop reads its own folder; nothing to grant") },
+                onOpenUrl = graph.urlOpener::open
             )
             val insulinManagement = metroViewModel<InsulinManagementViewModel>()
             val profileManagement = metroViewModel<ProfileManagementViewModel>()

@@ -105,7 +105,6 @@ import app.aaps.core.ui.compose.AapsTheme
 import app.aaps.core.ui.compose.MetroAppCompatActivity
 import app.aaps.core.ui.compose.MetroViewModelFactoryOwner
 import app.aaps.core.ui.compose.LocalSnackbarHostState
-import app.aaps.core.ui.compose.dialogs.OkDialog
 import app.aaps.core.ui.compose.navigation.NavigationRequest
 import app.aaps.core.ui.compose.pump.PumpCommunicationStatus
 import app.aaps.implementation.plugin.PluginPermissionsImpl
@@ -121,8 +120,10 @@ import app.aaps.trio.ui.compose.main.TrioMainScreen
 import app.aaps.ui.compose.aboutDialog.AboutBottomSheet
 import app.aaps.ui.compose.configuration.ConfigurationViewModel
 import app.aaps.ui.compose.insulinManagement.InsulinManagementViewModel
-import app.aaps.ui.compose.main.MainScreen
+import app.aaps.ui.compose.main.AppLockGate
+import app.aaps.ui.compose.main.AppLockState
 import app.aaps.ui.compose.main.MainActionConfirmationDialog
+import app.aaps.ui.compose.main.MainScreen
 import app.aaps.ui.compose.main.MainViewModel
 import app.aaps.ui.compose.main.TrioNavTab
 import app.aaps.ui.compose.manageSheet.ManageSheetHost
@@ -346,10 +347,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             // The biometric prompt is the only platform-specific part of protection. The host used
             // to be handed the activity; it captures it here instead, which is what let the host
             // itself move to commonMain.
-            showBiometric = { title, onGranted, onCancelled, onDenied ->
-                if (activity != null) BiometricCheck.biometricPrompt(activity, title, rxBus, onGranted, onCancelled, onDenied, passwordCheck)
-                else onCancelled()
-            },
             showBiometricSimple = { title, onSuccess, onFallback, onCancel ->
                 if (activity != null) BiometricCheck.biometricPromptSimple(activity, title, rxBus, onSuccess, onFallback, onCancel)
                 else onFallback()
@@ -485,7 +482,8 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             }
         }
 
-        if (permState.showSheet) {
+        // A sheet is a window of its own, so the lock cover cannot hide it
+        if (permState.showSheet && appLock.value == AppLockState.OPEN) {
             PermissionsSheet(
                 items = permState.items,
                 snackbarHostState = permissionsSnackbarHostState,
@@ -494,6 +492,18 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             )
         }
 
+        AppLockGate(
+            state = appLock.value,
+            refusedMessage = stringResource(R.string.authorizationfailed),
+            onRefused = { finish() }
+        ) {
+            AppNavHost(navController)
+        }
+    }
+
+    @Composable
+    private fun AppNavHost(navController: NavHostController) {
+        val permState by permissionsViewModel.uiState.collectAsStateWithLifecycle()
         val cobUiState by chipsViewModel.cobUiState.collectAsStateWithLifecycle()
         val appSnackbarHostState = LocalSnackbarHostState.current
         val activeSceneState by mainViewModel.activeSceneState.collectAsStateWithLifecycle()
@@ -513,7 +523,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                 uiInteraction.runAlarm(comment, title)
             },
         )
-
         NavHost(
             navController = navController,
             startDestination = AppRoute.Main.route
@@ -550,19 +559,6 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     else                                                    -> Color.Unspecified
                 }
                 val bgQualityBadgeDescription = if (showBgSetup) bgQualityCheck.stateDescription() else null
-
-                // Authorization failed dialog
-                if (state.showAuthFailedDialog) {
-                    OkDialog(
-                        title = "",
-                        message = stringResource(R.string.authorizationfailed),
-                        onDismiss = {
-                            mainViewModel.setShowAuthFailedDialog(false)
-                            finish()
-                        }
-                    )
-                }
-
 
                 val onStopBolus = {
                     if (config.AAPSCLIENT) {
@@ -643,7 +639,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                     onNotificationActionClick = { notification ->
                         handleNotificationAction(notification.id, navController)
                     },
-                    autoShowNotificationSheet = _autoShowNotifications.value,
+                    autoShowNotificationSheet = _autoShowNotifications.value && appLock.value == AppLockState.OPEN,
                     onAutoShowConsumed = { _autoShowNotifications.value = false },
                     pumpSetupPlugin = pumpSetupPlugin,
                     bgSetupPlugin = bgSetupPlugin,
@@ -686,7 +682,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                                 onNotificationActionClick = { notification ->
                                     handleNotificationAction(notification.id, navController)
                                 },
-                                autoShowNotificationSheet = _autoShowNotifications.value,
+                                autoShowNotificationSheet = _autoShowNotifications.value && appLock.value == AppLockState.OPEN,
                                 onAutoShowConsumed = { _autoShowNotifications.value = false },
                                 bolusStateFlow = bolusProgressData.state,
                                 onStopBolus = onStopBolus
@@ -802,7 +798,7 @@ class ComposeMainActivity : MetroAppCompatActivity() {
             )
         }
 
-        if (config.TRIO) {
+        if (config.TRIO && appLock.value == AppLockState.OPEN) {
             if (showTrioScenesSheet) {
                 val scenesState by scenesViewModel.uiState.collectAsStateWithLifecycle()
                 ScenesBottomSheet(
@@ -832,15 +828,18 @@ class ComposeMainActivity : MetroAppCompatActivity() {
 
     private var isProtectionCheckActive = false
 
+    /** Starts covered, so nothing is readable in the frames before the first check. */
+    private val appLock = mutableStateOf(AppLockState.CHECKING)
+
     private fun refreshOnResume() {
         permissionsViewModel.refresh()
         if (!isProtectionCheckActive) {
             isProtectionCheckActive = true
+            // Covered before asking, or the app is readable behind the prompt
+            appLock.value = AppLockState.CHECKING
             protectionCheck.requestProtection(ProtectionCheck.Protection.APPLICATION) { result ->
                 isProtectionCheckActive = false
-                if (result != ProtectionResult.GRANTED) {
-                    mainViewModel.setShowAuthFailedDialog(true)
-                }
+                appLock.value = if (result == ProtectionResult.GRANTED) AppLockState.OPEN else AppLockState.REFUSED
             }
         }
     }

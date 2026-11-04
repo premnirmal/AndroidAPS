@@ -379,7 +379,6 @@ class MainViewModel(
             isSimpleMode = ev.isSimpleMode,
             showAboutDialog = ev.showAboutDialog,
             showMaintenanceSheet = ev.showMaintenanceSheet,
-            showAuthFailedDialog = ev.showAuthFailedDialog,
             isProfileLoaded = chip.isProfileLoaded,
             profileName = chip.profileName,
             profilePsId = chip.profilePsId,
@@ -988,10 +987,6 @@ class MainViewModel(
         _eventState.update { it.copy(showMaintenanceSheet = show) }
     }
 
-    fun setShowAuthFailedDialog(show: Boolean) {
-        _eventState.update { it.copy(showAuthFailedDialog = show) }
-    }
-
     // Build about dialog data
     /**
      * Opens the page explaining how to stop this maker's phone from killing background apps.
@@ -1379,8 +1374,7 @@ private data class EventState(
     val isSimpleMode: Boolean = true,
     val smbEnabled: Boolean = false,
     val showAboutDialog: Boolean = false,
-    val showMaintenanceSheet: Boolean = false,
-    val showAuthFailedDialog: Boolean = false
+    val showMaintenanceSheet: Boolean = false
 )
 
 /**

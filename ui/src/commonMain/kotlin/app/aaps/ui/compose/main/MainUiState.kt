@@ -55,9 +55,7 @@ data class MainUiState(
     val reservoirUnits: Double? = null,
     val pumpSuspended: Boolean = false,
     // QuickWizard entries for treatment bottom sheet
-    val quickWizardItems: List<QuickWizardItem> = emptyList(),
-    // Navigation-triggered dialogs
-    val showAuthFailedDialog: Boolean = false
+    val quickWizardItems: List<QuickWizardItem> = emptyList()
 )
 
 @Immutable

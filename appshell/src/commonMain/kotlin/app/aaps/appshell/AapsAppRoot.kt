@@ -112,8 +112,6 @@ fun AapsAppRoot(
     passwordHasher: PasswordHasher,
     passwordCheck: PasswordCheck,
     protectionCheck: ProtectionCheck,
-    showBiometric: (title: String, onGranted: () -> Unit, onCancelled: () -> Unit, onDenied: () -> Unit) -> Unit =
-        { _, _, onCancelled, _ -> onCancelled() },
     showBiometricSimple: (title: String, onSuccess: () -> Unit, onFallback: () -> Unit, onCancel: () -> Unit) -> Unit =
         { _, _, onFallback, _ -> onFallback() },
     exportPasswordDataStore: ExportPasswordDataStore,
@@ -281,9 +279,7 @@ fun AapsAppRoot(
                     // leave every protected action waiting rather than granting or refusing it.
                     ProtectionHost(
                         protectionCheck = protectionCheck,
-                        preferences = preferences,
                         checkPassword = passwordHasher::checkPassword,
-                        showBiometric = showBiometric,
                         showBiometricSimple = showBiometricSimple
                     )
 

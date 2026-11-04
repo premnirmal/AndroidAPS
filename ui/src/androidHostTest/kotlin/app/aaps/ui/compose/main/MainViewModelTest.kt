@@ -93,9 +93,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -741,24 +739,24 @@ internal class MainViewModelTest {
      * protection as doing those things by hand. The overview scenes sheet started one with no check (#5429).
      */
     @Test
-    fun `a scene is not prepared when bolus protection is refused`() = runTest {
+    fun `a scene is not prepared when bolus protection is refused`() = runBlocking {
         resolveProtection(ProtectionResult.DENIED)
 
         sut.requestSceneConfirmation("s1")
-        advanceUntilIdle()
+        mainDispatcher.scheduler.runCurrent()
 
         verify(protectionCheck).requestProtection(eq(ProtectionCheck.Protection.BOLUS), any())
         verify(sceneActions, never()).prepareStart(any(), anyOrNull())
     }
 
     @Test
-    fun `a scene is prepared and confirmed once bolus protection is granted`() = runTest {
+    fun `a scene is prepared and confirmed once bolus protection is granted`() = runBlocking {
         resolveProtection(ProtectionResult.GRANTED)
         whenever(rh.gs(any<TextRef>())).thenReturn("Scene")
         whenever(sceneActions.prepareStart("s1")).thenReturn(ActionProgress.Prepared(id = 3L))
 
         sut.requestSceneConfirmation("s1")
-        advanceUntilIdle()
+        mainDispatcher.scheduler.runCurrent()
 
         val sent = argumentCaptor<Event>()
         verify(rxBus).send(sent.capture())
@@ -767,16 +765,16 @@ internal class MainViewModelTest {
 
     /** Ending a scene reverts what it changed, and "Skip to" starts the next scene. */
     @Test
-    fun `ending a scene from the banner needs bolus protection`() = runTest {
+    fun `ending a scene from the banner needs bolus protection`() = runBlocking {
         resolveProtection(ProtectionResult.DENIED)
         sut.requestSceneDeactivation()
-        advanceUntilIdle()
+        mainDispatcher.scheduler.runCurrent()
         verify(activeSceneManager, never()).getActiveState()
         assertThat(sut.actionConfirmation.value).isNull()
 
         resolveProtection(ProtectionResult.GRANTED)
         sut.requestSceneDeactivation()
-        advanceUntilIdle()
+        mainDispatcher.scheduler.runCurrent()
         verify(activeSceneManager).getActiveState()
         verify(protectionCheck, times(2)).requestProtection(eq(ProtectionCheck.Protection.BOLUS), any())
     }

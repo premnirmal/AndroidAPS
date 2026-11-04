@@ -1,9 +1,15 @@
 package app.aaps.ios.shell.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -15,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.dp
@@ -30,6 +37,7 @@ import app.aaps.appshell.navigation.AppRoute
 import app.aaps.appshell.navigation.ElementNavigator
 import app.aaps.appshell.navigation.appNavGraph
 import app.aaps.appshell.navigation.handleNotificationAction
+import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.LTag
 import app.aaps.core.interfaces.notifications.IosNotificationDelegate
@@ -37,6 +45,7 @@ import app.aaps.core.interfaces.notifications.NotificationHandle
 import app.aaps.core.interfaces.protection.ProtectionCheck
 import app.aaps.core.interfaces.protection.ProtectionResult
 import app.aaps.core.interfaces.resources.TextRefValueRegistry
+import app.aaps.core.interfaces.utils.fabric.CrashReporter
 import app.aaps.core.keys.BooleanNonKey
 import app.aaps.core.keys.StringKey
 import app.aaps.core.objects.di.CoreObjectsGraph
@@ -47,7 +56,9 @@ import app.aaps.core.ui.compose.icons.IcAaps
 import app.aaps.core.ui.compose.metroViewModel
 import app.aaps.core.ui.compose.rememberOwnViewModelStoreOwner
 import app.aaps.core.ui.compose.stringResource
+import app.aaps.core.utils.gitRemoteShort
 import app.aaps.implementation.lifecycle.IosProtectionLifecycle
+import app.aaps.implementation.logging.AAPSLoggerIos
 import app.aaps.implementation.protection.KeychainUnavailableException
 import app.aaps.ios.shell.IosAppStartup
 import app.aaps.ios.shell.PluginStoreRegistry
@@ -78,6 +89,9 @@ import app.aaps.ui.compose.stats.viewmodels.StatsViewModel
 import app.aaps.ui.compose.tempTarget.TempTargetManagementViewModel
 import app.aaps.ui.compose.treatments.viewmodels.TreatmentsViewModel
 import dev.zacsweers.metro.createGraphFactory
+import kotlin.experimental.ExperimentalNativeApi
+import kotlin.native.setUnhandledExceptionHook
+import kotlin.native.terminateWithUnhandledException
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import platform.Foundation.NSNotificationCenter
@@ -98,8 +112,9 @@ import platform.UIKit.UIViewController
  * When the start fails, the window shows [StartupFailedScreen] instead, with "Start fresh" for settings
  * that cannot be read and "Try again" for a Keychain that did not answer.
  */
-fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
-    val startup = runCatching { startApp(nsSocketFactory) }
+fun aapsAppViewController(nsSocketFactory: NsSocketFactory, crashReporter: CrashReporter): UIViewController {
+    installCrashLogging()
+    val startup = runCatching { startApp(nsSocketFactory, crashReporter) }
     return ComposeUIViewController {
         // State, because "Start fresh" and "Try again" on the failure screen start the app a second time
         // in place. iOS gives an app no way to restart itself.
@@ -113,11 +128,11 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
                         explanation = failureExplanation(error),
                         error = error,
                         // A failure of either one lands on this same screen again.
-                        onRetry = if (error is KeychainUnavailableException) ({ current = runCatching { startApp(nsSocketFactory) } }) else null,
+                        onRetry = if (error is KeychainUnavailableException) ({ current = runCatching { startApp(nsSocketFactory, crashReporter) } }) else null,
                         onStartFresh = if (error is StoreUnreadableException) ({
                             current = runCatching {
                                 IosStorage.startFresh()
-                                startApp(nsSocketFactory)
+                                startApp(nsSocketFactory, crashReporter)
                             }
                         }) else null
                     )
@@ -125,6 +140,65 @@ fun aapsAppViewController(nsSocketFactory: NsSocketFactory): UIViewController {
             }
         )
     }
+}
+
+/** Set once. [aapsAppViewController] is called once by Swift, but a second call must not add a second hook. */
+private var crashLoggingInstalled = false
+
+/**
+ * Writes the exception that is about to stop the app into `aaps.log`.
+ *
+ * An uncaught Kotlin exception on iOS ends in `abort()`, so the process dies with SIGABRT. The crash
+ * report iOS keeps afterwards holds the whole Kotlin stack, frame by frame - but not the exception
+ * **type or message**. Kotlin prints those to stdout and stderr, and nothing on a phone records
+ * either. A real crash of this app on 2026-10-25 left 49 readable frames in the system report and
+ * not one line in the app's own log, so the only question anybody actually asks - what went wrong -
+ * was the one thing missing.
+ *
+ * This hook writes the type, the message and the stack to the file the "Send logs" button shares,
+ * and then ends the process the way the runtime would have.
+ *
+ * Installed here rather than inside [startApp], which runs again for "Try again" and "Start fresh".
+ *
+ * The logger is built here instead of taken from the graph on purpose: when this runs the graph may
+ * be half built, or already gone, and a crash reporter that needs a working app is no use.
+ */
+@OptIn(ExperimentalNativeApi::class)
+private fun installCrashLogging() {
+    if (crashLoggingInstalled) return
+    crashLoggingInstalled = true
+    val logger = AAPSLoggerIos()
+    setUnhandledExceptionHook { throwable ->
+        // Nothing in here may throw. A failure inside the hook replaces a readable crash with a
+        // confusing one, and the process still has to end either way.
+        runCatching { logger.error(LTag.CORE, "Uncaught exception, the app is stopping", throwable) }
+        terminateWithUnhandledException(throwable)
+    }
+}
+
+/**
+ * Tells Crashlytics which build this is - the same six keys Android has sent since 2019.
+ *
+ * Without them one report looks like any other. The version in the Crashlytics header comes from
+ * the app bundle, and a clone that has never run `generateIosVersionXcconfig` falls back to the
+ * version typed into the targets with build number 1 - so one person building two hundred times
+ * is indistinguishable from two hundred users. These keys carry the truth instead: the commit,
+ * the repository and whether the tree was clean, which is how a report out of a fork is told
+ * apart from one from upstream.
+ *
+ * Set whether or not collection is on. Nothing leaves the device while it is off, because
+ * Crashlytics writes no report at all then, and setting them unconditionally means a user who turns
+ * reporting on later in the session does not get unlabelled reports until the next launch. A build
+ * with no Firebase config ignores all of this: `CrashlyticsCrashReporter` returns early when it was
+ * never configured, and `NoCrashReporter` does nothing at all.
+ */
+internal fun setBuildIdentityKeys(crashReporter: CrashReporter, config: Config) {
+    crashReporter.setCustomKey("HEAD", config.HEAD)
+    crashReporter.setCustomKey("Version", config.VERSION_NAME)
+    crashReporter.setCustomKey("BuildType", config.BUILD_TYPE)
+    crashReporter.setCustomKey("BuildFlavor", config.FLAVOR)
+    crashReporter.setCustomKey("Remote", gitRemoteShort(config.REMOTE))
+    crashReporter.setCustomKey("Committed", config.COMMITTED.toString())
 }
 
 /** The app, built and started: what the composition needs from outside it. */
@@ -142,13 +216,24 @@ private class StartedApp(
  * message, which the failure screen can act on, instead of failing somewhere inside the first screen.
  * And so that the screen can call this again.
  */
-private fun startApp(nsSocketFactory: NsSocketFactory): StartedApp {
+private fun startApp(nsSocketFactory: NsSocketFactory, crashReporter: CrashReporter): StartedApp {
     val store = IosStorage.open()
     // Built once, outside the composition: a graph rebuilt on each recomposition would hand out new
     // singletons every frame - a new database wrapper, a new preference store.
-    val graph = createGraphFactory<IosAppGraph.Factory>().create(CoreObjectsGraph, ClientGraphBindings, nsSocketFactory)
+    val graph = createGraphFactory<IosAppGraph.Factory>().create(CoreObjectsGraph, ClientGraphBindings, nsSocketFactory, crashReporter)
     val viewModelFactory = ClientViewModelFactory(graph)
     val logger = graph.logger
+
+    // Tell Crashlytics the stored answer before anything can crash. Its own signal handler catches a
+    // fatal crash whether or not Kotlin calls it, so gating the call sites alone would cover the
+    // non-fatals and silently miss the crashes. Pushed here rather than from the reporter's own
+    // constructor, which runs whenever something first injects it - possibly never, possibly late.
+    //
+    // Asked through `fabricEnabled()`, not `preferences.get`: this key is `defaultedBySM`, so
+    // `PreferencesImpl` answers the shared default - true - in Simple Mode, which would switch
+    // collection on for precisely the users whose settings screen never shows them the row.
+    crashReporter.setCollectionEnabled(graph.fabricPrivacy.fabricEnabled())
+    setBuildIdentityKeys(crashReporter, graph.config)
 
     // Before the composition, not beside it: the first view model built reads the active pump, and
     // an empty plugin list there throws from a coroutine and takes the process with it.
@@ -300,7 +385,10 @@ private fun AapsApp(app: StartedApp) {
             // Nothing is drawn until it is granted. Showing the app behind the prompt would make
             // the protection cosmetic - the screen it is meant to hide would be readable through
             // the dialog, and on iOS it would also be in the app-switcher snapshot.
-            if (!unlocked) return@AapsAppRoot
+            if (!unlocked) {
+                AppLockedScreen(showRetry = !asking, onRetry = requestUnlock)
+                return@AapsAppRoot
+            }
 
             // Everything the shared screens ask a platform for that iOS cannot answer ends up in
             // one of these two. Until now they only wrote a line in the log, so from the user's
@@ -365,7 +453,8 @@ private fun AapsApp(app: StartedApp) {
                 // iOS gives an app no way to quit itself, and Apple treats that as a crash.
                 onExit = { reportNotAvailable("exit from the menu") },
                 // Needs a UIDocumentPicker, which nothing on iOS has yet.
-                onRequestDirectoryAccess = { reportNotReady("directory access") }
+                onRequestDirectoryAccess = { reportNotReady("directory access") },
+                onOpenUrl = graph.urlOpener::open
             )
             val chips: ChipsViewModel = viewModel(
                 factory = viewModelFactory {
@@ -503,6 +592,27 @@ private fun AapsApp(app: StartedApp) {
 
 /** One line, one shape, so a run makes it obvious which platform callbacks are still placeholders. */
 private fun AAPSLogger.notWiredYet(what: String) = error(LTag.CORE, "Not wired up on iOS yet: $what")
+
+/**
+ * What is shown instead of the app while it is locked. An iOS app should not close itself, so after a
+ * refusal the user needs a way to ask again: a blank screen looks like a broken app.
+ */
+@Composable
+private fun AppLockedScreen(showRetry: Boolean, onRetry: () -> Unit) {
+    Surface(Modifier.fillMaxSize()) {
+        // While the prompt is up, it says everything already
+        if (showRetry) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(stringResource(CoreUiStrings.biometric_title), style = MaterialTheme.typography.titleLarge)
+                TextButton(onClick = onRetry) { Text(stringResource(CoreUiStrings.retry)) }
+            }
+        }
+    }
+}
 
 /**
  * The app icon, or the plain AAPS mark when the bundle would not give one up.
