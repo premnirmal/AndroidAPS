@@ -1,6 +1,7 @@
 package app.aaps.ui.compose.stats
 
 import app.aaps.core.data.model.CA
+import app.aaps.core.data.time.SystemTimeZone
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.utils.MidnightTime
 
@@ -48,7 +49,7 @@ internal fun calculateTrioCarbStatsData(
         .sortedBy(TrioCarbPoint::timestamp)
 
     val dailyTotals = valid
-        .groupBy { MidnightTime.calc(it.timestamp) }
+        .groupBy { MidnightTime.before(it.timestamp, SystemTimeZone.current()) }
         .map { (_, values) -> values.sumOf(CA::amount) }
 
     return TrioCarbStatsData(
@@ -60,4 +61,4 @@ internal fun calculateTrioCarbStatsData(
 }
 
 private fun Long.bucket(range: TrioStatsRange): Long =
-    if (range.usesHourlyBuckets) this - this % T.hours(1).msecs() else MidnightTime.calc(this)
+    if (range.usesHourlyBuckets) this - this % T.hours(1).msecs() else MidnightTime.before(this, SystemTimeZone.current())

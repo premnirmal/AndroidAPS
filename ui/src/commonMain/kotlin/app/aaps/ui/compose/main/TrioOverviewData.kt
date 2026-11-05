@@ -3,6 +3,7 @@ package app.aaps.ui.compose.main
 import app.aaps.core.data.configuration.Constants
 import app.aaps.core.data.model.GV
 import app.aaps.core.data.model.TE
+import app.aaps.core.data.time.SystemTimeZone
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.db.PersistenceLayer
 import app.aaps.core.interfaces.logging.AAPSLogger
@@ -113,7 +114,7 @@ internal class TrioOverviewData(
 
     /** Uses the overview marks and the same outer limits as the statistics reports. */
     private suspend fun updateTimeInRangeToday() {
-        val start = MidnightTime.calc(dateUtil.now())
+        val start = MidnightTime.before(dateUtil.now(), SystemTimeZone.current())
         val end = dateUtil.now()
         val lowMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewLowMark))
         val highMgdl = profileUtil.convertToMgdlDetect(preferences.get(UnitDoubleKey.OverviewHighMark))

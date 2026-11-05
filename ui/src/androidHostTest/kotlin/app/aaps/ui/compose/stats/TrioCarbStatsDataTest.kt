@@ -1,6 +1,7 @@
 package app.aaps.ui.compose.stats
 
 import app.aaps.core.data.model.CA
+import app.aaps.core.data.time.SystemTimeZone
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.utils.MidnightTime
 import com.google.common.truth.Truth.assertThat
@@ -10,7 +11,7 @@ internal class TrioCarbStatsDataTest {
 
     @Test
     fun `carb entries are bucketed by hour for short ranges`() {
-        val start = MidnightTime.calc(1_700_000_000_000L)
+        val start = MidnightTime.before(1_700_000_000_000L, SystemTimeZone.current())
         val carbs = listOf(
             carb(timestamp = start + T.hours(8).msecs(), amount = 20.0),
             carb(timestamp = start + T.hours(8).msecs() + T.mins(20).msecs(), amount = 10.0),
@@ -27,7 +28,7 @@ internal class TrioCarbStatsDataTest {
 
     @Test
     fun `carb entries are bucketed by day for long ranges`() {
-        val start = MidnightTime.calc(1_700_000_000_000L)
+        val start = MidnightTime.before(1_700_000_000_000L, SystemTimeZone.current())
         val carbs = listOf(
             carb(timestamp = start + T.hours(8).msecs(), amount = 20.0),
             carb(timestamp = start + T.hours(18).msecs(), amount = 30.0),
@@ -43,7 +44,7 @@ internal class TrioCarbStatsDataTest {
 
     @Test
     fun `the average counts only days that have carb entries`() {
-        val start = MidnightTime.calc(1_700_000_000_000L)
+        val start = MidnightTime.before(1_700_000_000_000L, SystemTimeZone.current())
         val carbs = listOf(
             carb(timestamp = start + T.hours(8).msecs(), amount = 40.0),
             carb(timestamp = start + T.days(3).msecs() + T.hours(8).msecs(), amount = 60.0)
@@ -57,7 +58,7 @@ internal class TrioCarbStatsDataTest {
 
     @Test
     fun `invalid and empty entries are left out`() {
-        val start = MidnightTime.calc(1_700_000_000_000L)
+        val start = MidnightTime.before(1_700_000_000_000L, SystemTimeZone.current())
         val carbs = listOf(
             carb(timestamp = start + T.hours(8).msecs(), amount = 40.0),
             carb(timestamp = start + T.hours(9).msecs(), amount = 20.0, isValid = false),

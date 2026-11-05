@@ -1,5 +1,6 @@
 package app.aaps.ui.compose.stats
 
+import app.aaps.core.data.time.SystemTimeZone
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.utils.MidnightTime
 
@@ -11,7 +12,7 @@ enum class TrioStatsRange {
     DAYS_90;
 
     fun startTime(now: Long): Long = when (this) {
-        TODAY    -> MidnightTime.calc(now)
+        TODAY    -> MidnightTime.before(now, SystemTimeZone.current())
         HOURS_24 -> now - T.hours(24).msecs()
         DAYS_7   -> now - T.days(7).msecs()
         DAYS_30  -> now - T.days(30).msecs()

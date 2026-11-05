@@ -2,6 +2,7 @@ package app.aaps.ui.compose.stats
 
 import app.aaps.core.data.model.BS
 import app.aaps.core.data.model.TDD
+import app.aaps.core.data.time.SystemTimeZone
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.utils.MidnightTime
 
@@ -73,6 +74,6 @@ internal fun calculateTrioInsulinStatsData(
 }
 
 private fun Long.bucket(range: TrioStatsRange): Long =
-    if (range.usesHourlyBuckets) this - this % T.hours(1).msecs() else MidnightTime.calc(this)
+    if (range.usesHourlyBuckets) this - this % T.hours(1).msecs() else MidnightTime.before(this, SystemTimeZone.current())
 
 private fun List<Double>.averageOrZero(): Double = ifEmpty { listOf(0.0) }.average()

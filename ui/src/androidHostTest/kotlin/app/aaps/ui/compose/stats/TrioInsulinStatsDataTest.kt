@@ -3,6 +3,7 @@ package app.aaps.ui.compose.stats
 import app.aaps.core.data.model.BS
 import app.aaps.core.data.model.ICfg
 import app.aaps.core.data.model.TDD
+import app.aaps.core.data.time.SystemTimeZone
 import app.aaps.core.data.time.T
 import app.aaps.core.interfaces.utils.MidnightTime
 import com.google.common.truth.Truth.assertThat
@@ -12,7 +13,7 @@ internal class TrioInsulinStatsDataTest {
 
     @Test
     fun `insulin data groups daily TDD and boluses by type`() {
-        val day = MidnightTime.calc(1_700_000_000_000L)
+        val day = MidnightTime.before(1_700_000_000_000L, SystemTimeZone.current())
         val data = calculateTrioInsulinStatsData(
             tdds = listOf(
                 TDD(timestamp = day, basalAmount = 10.0, bolusAmount = 5.0, totalAmount = 15.0),
@@ -37,7 +38,7 @@ internal class TrioInsulinStatsDataTest {
 
     @Test
     fun `insulin day data keeps hourly buckets separate`() {
-        val day = MidnightTime.calc(1_700_000_000_000L)
+        val day = MidnightTime.before(1_700_000_000_000L, SystemTimeZone.current())
         val data = calculateTrioInsulinStatsData(
             tdds = listOf(
                 TDD(timestamp = day + T.hours(1).msecs(), totalAmount = 1.0),
