@@ -632,7 +632,7 @@ class MainViewModel(
         chipBuildStep = "pump status"
         val liveProfile = profileFunction.getProfile()
         val liveReservoirUnits = liveProfile?.let { profile ->
-            activePlugin.activePump.reservoirLevel.value.iU(profile.insulinConcentration())
+            activePlugin.activePump.reservoirLevel.value?.iU(profile.insulinConcentration())
         }
         val profileTargetRange = liveProfile?.let { profile ->
             profileUtil.toTargetRangeString(
