@@ -9,6 +9,9 @@ Instrumented tests that run a real pump driver against its in-tree emulator, thr
 PumpSync and database, with no screen. After each step they compare what AAPS stored with what the emulated pump did.
 They test the core of AAPS and the driver; the screens have their own tests.
 
+What a driver must pass to count as done (driver rules, emulator, scenarios, screens, real pump, CI) is in
+`_docs/PUMP_DRIVER_ACCEPTANCE.md`. This skill is how to build and run it.
+
 Code: `app/src/androidTest/kotlin/app/aaps/e2e/scenario/` (engine `PumpScenario`, shared scenarios
 `AbstractPumpScenarioTest`) and one adapter per pump in `app/src/androidTestPumps/<pump>/`. The test hooks of an
 emulator are `PumpEmulatorControl` in `:core:interfaces`.
@@ -51,6 +54,36 @@ emulator are `PumpEmulatorControl` in `:core:interfaces`.
 - A scanner hands out only what the pump advertises now, as the real one does. A `SharedFlow` with `replay` kept an old
   advertisement for new listeners: Equil's wizard paired with a serial the pump no longer had, and the driver read an
   old log index. Advertise again and again while a scan runs instead, until `stopScan`.
+
+## Order of work for a new pump
+
+The steps below are the order that worked for the Diaconn G8 (2026-11). The code pieces each step needs are in
+"Adding a pump" below.
+
+1. **Read the current driver against the protocol.** List each message, what the driver expects of it, and the bugs
+   you can see. Fix nothing yet: each bug gets a scenario first, so the fix is proven.
+2. **Hook points on Android.** The driver talks through the shared BLE transport, with its own binding, and the build
+   flag picks the emulator in place of the radio. `<Pump>Accessors` lets the tests reach the transport and the plugin.
+   A vendor cloud is off while the pump is emulated. No test code goes into the driver.
+3. **First capture on a real pump**, with the current driver and its logging on: a status read, a bolus, a stop by the
+   user, a temp basal and its cancel, an extended bolus, a profile write, a history read, a saved setting. For each,
+   keep the bytes and the times: how long the answer takes, when the pump carries a setting out, which requests it
+   holds and for how long, the order of its reports, its own sequence numbers, how it rounds minutes. Capture before
+   the emulator is written: the Diaconn emulator was written first and had to be changed three times (a setting carried
+   out 1.8 s after its confirm, requests held until then, the pump's own numbers on its reports).
+4. **Write the emulator** from that capture: its state, answers, history and reports. Every guess is marked
+   `UNVERIFIED`. Its unit tests use the real bytes.
+5. **Adapter and scenario class.** Run the shared scenarios at FAST speed, then once at real speed. For each failure,
+   decide: is the emulator guessing, or is the driver wrong? When not sure, check on the real pump.
+6. **Fix the driver, one bug at a time:** the scenario fails, the fix, a test on the real pump, a commit. A driver
+   change is never pushed before its real-pump test.
+7. **Second capture.** What the scenarios raised (a hold, a report that comes early, a refusal) is checked on the real
+   pump, then copied into the emulator with the date and the firmware. A wait that the real pump has not been seen to
+   allow is not shortened in the driver.
+8. **Screen test** `<Pump>UiTest`: pairing, the history with a record the pump made, a setting saved and seen on the
+   pump, System Back, unpairing. The shared treatment dialogs are not tested again.
+9. **Acceptance and CI.** Go through `_docs/PUMP_DRIVER_ACCEPTANCE.md`. Add the class to `part_seconds` once CI has
+   run it, run the full gate, push, and check CircleCI and the module's coverage on Codecov.
 
 ## Adding a pump
 
@@ -173,3 +206,33 @@ Shard C's logcat can rotate before CI reads it, so the UI base adds the screen t
   thread as the alarm screen. `checkUrgentAlarmSince` accepts either.
 - A driver's own database, as the stored pump log of Aaruy, is a file. It outlives the test graph, so a test finds the
   rows of the tests before it. A driver must not take an old row for a new event; Aaruy tells them apart by the row id.
+- After a profile write AAPS stores the switch with the basal the pump reports (`deliveredBasal`), not the asked one. A
+  write the driver took as done by mistake therefore does not show as the new basal: AAPS runs the switch with the old
+  basal. Check whether AAPS stored the switch (`profileWrittenOnce`), not its basal. A report further than
+  max(0.1 U/h, 2 basal steps) from the asked basal is refused with its own FAILED_UPDATE_PROFILE alarm, which hides
+  the driver's own result: keep the new basal close to the old one in such a test.
+- Both a stored profile switch and `EventProfileChangeRequested` make AAPS write the profile. `switchProfile` sends
+  both and tries again until the pump has it; to see the result of one write, only store the switch.
+- A temp basal at the base rate of the test profile (`PumpScenario.BASAL_RATE`) is no temp basal: a driver cancels
+  instead and AAPS stores none. A pump-specific test that wants a temp basal asks a rate above it.
+- A driver may wait a fixed time after a write: the Diaconn G8 waits 30 s after a basal write. The pairing writes the
+  profile, so give such a pump a longer pairing limit, and expect each profile step to take that long.
+- A pump with a vendor cloud (the Diaconn G8 sends its log there): an emulated pump must never reach it. The driver skips
+  the cloud while it is emulated, the emulated serial is random and not a real pump's, and the adapter turns the cloud
+  setting off. One run with a copied real serial once asked the real cloud for that pump's log.
+- A real pump may carry out a setting a moment after it answered the confirm: a Diaconn G8 starts a temp basal 1.8 s
+  later and stops one 1.2 s later. It holds a request that comes in between and answers it when the setting is done. An
+  emulator that answers at once with the old state makes failures no real pump gives (a start after a stop refused, a
+  history read with no record yet). Copy the hold, not only the delay.
+- A driver may take the time of a pump record, in whole seconds, as its id (the Diaconn G8 does). A real pump's own
+  timing keeps two records of one kind out of one second; an emulator at FAST speed does not, and AAPS then takes two
+  records for one. Keep the FAST time of such an action at 1 s or more.
+- The queue's idle check passes in the gap when a driver queues a follow-up (a history read) from a launched coroutine
+  after its command ends. The check then misses the record the read stores, now and then, in CI only. The driver queues
+  it before the command ends: `launch(start = CoroutineStart.UNDISPATCHED)` adds it at once.
+- AAPS can run the profile before the pump has it: the write is queued a moment later. `pair()` waits until the pump
+  gives the profile's basal, or a fault a test sets right after the pairing hits the pairing's write.
+- A report of the pump is not always "ready". The Diaconn G8 reports a basal write at about 23.5 s, then still refuses
+  the start of that basal; it took it at 30.5 s. Test a shorter wait on the real pump before the emulator copies it.
+- A percent pump turns the loop's rate into a percent of the base rate. A trap needs a base on which the rate is a
+  float error away from a step and still under the limits (1 U/h, 200 %): the amount scenario switches to 80 %.
