@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
@@ -390,5 +391,32 @@ internal fun TrendArrow.toArcIndicator(): ArcIndicator? {
         TrendArrow.DOUBLE_DOWN     -> ArcIndicator(centerAngle = 90f, sweepAngle = sweepAngle, triangleCount = 2)
         TrendArrow.TRIPLE_UP       -> ArcIndicator(centerAngle = -90f, sweepAngle = sweepAngle, triangleCount = 3)
         TrendArrow.TRIPLE_DOWN     -> ArcIndicator(centerAngle = 90f, sweepAngle = sweepAngle, triangleCount = 3)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun TrioBgInfoSectionPreview() {
+    MaterialTheme {
+        BgInfoSection(
+            bgInfo = BgInfoData(
+                bgValue = 120.0,
+                bgText = "120",
+                bgRange = BgRange.IN_RANGE,
+                isOutdated = false,
+                timestamp = 1_780_000_000_000L,
+                trendArrow = TrendArrow.FLAT,
+                trendDescription = "Flat",
+                delta = 2.0,
+                deltaText = "+2",
+                shortAvgDelta = 1.5,
+                shortAvgDeltaText = "+1.5",
+                longAvgDelta = 1.0,
+                longAvgDeltaText = "+1.0"
+            ),
+            timeAgoText = "2 min",
+            useGradientRing = true,
+            elevation = 4.dp,
+        )
     }
 }

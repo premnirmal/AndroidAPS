@@ -79,7 +79,6 @@ fun AllPreferencesScreen(
     onConfigurationClick: (() -> Unit)? = null,
     onManageClick: (() -> Unit)? = null,
     onMaintenanceClick: (() -> Unit)? = null,
-    onAboutClick: (() -> Unit)? = null
 ) {
     val preferences = LocalPreferences.current
     val trioMode by preferences.observe(BooleanKey.GeneralTrioMode).collectAsStateWithLifecycle()
@@ -209,10 +208,11 @@ fun AllPreferencesScreen(
                     addPreferenceContent(maintenancePreferences, onShowMessage, sectionState)
 
                     if (trioMode) {
-                        onManageClick?.let { onClick ->
+                        onConfigurationClick?.let { onClick ->
                             item {
                                 Preference(
-                                    title = { Text(stringResource(CoreUiStrings.manage)) },
+                                    title = { Text(stringResource(CoreUiStrings.nav_configuration)) },
+                                    summary = { Text(stringResource(CoreUiStrings.nav_configuration_desc)) },
                                     onClick = onClick
                                 )
                             }
@@ -220,10 +220,6 @@ fun AllPreferencesScreen(
                                 HorizontalDivider()
                             }
                         }
-                    }
-
-                    // The extra maintenance entrypoint is only part of Trio settings.
-                    if (trioMode) {
                         onMaintenanceClick?.let { onClick ->
                             item {
                                 Preference(
@@ -236,27 +232,10 @@ fun AllPreferencesScreen(
                                 HorizontalDivider()
                             }
                         }
-                    }
-
-                    onConfigurationClick?.let { onClick ->
-                        item {
-                            Preference(
-                                title = { Text(stringResource(CoreUiStrings.nav_configuration)) },
-                                summary = { Text(stringResource(CoreUiStrings.nav_configuration_desc)) },
-                                onClick = onClick
-                            )
-                        }
-                        item {
-                            HorizontalDivider()
-                        }
-                    }
-
-                    if (!trioMode) {
-                        onAboutClick?.let { onClick ->
+                        onManageClick?.let { onClick ->
                             item {
                                 Preference(
-                                    title = { Text(stringResource(CoreUiStrings.nav_about)) },
-                                    summary = { Text(stringResource(CoreUiStrings.nav_about_desc)) },
+                                    title = { Text(stringResource(CoreUiStrings.manage)) },
                                     onClick = onClick
                                 )
                             }

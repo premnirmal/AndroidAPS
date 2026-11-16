@@ -474,7 +474,7 @@ private fun TrioOverviewContent(
                                     size = bgInfoSize,
                                     modifier = Modifier.clickable(onClick = onBgClick),
                                     useGradientRing = true,
-                                    elevation = AapsSpacing.medium
+                                    elevation = AapsSpacing.small
                                 )
                             }
 
