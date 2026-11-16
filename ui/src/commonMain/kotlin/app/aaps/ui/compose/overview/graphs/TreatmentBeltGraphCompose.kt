@@ -399,7 +399,7 @@ fun TreatmentBeltGraphCompose(
     val nowLineColor = MaterialTheme.colorScheme.onSurface
     val nowLine = rememberNowLine(minTimestamp, nowTimestamp, nowLineColor)
     val inspectLine = rememberInspectLine(inspect)
-    val clockChanges = rememberClockChangeDecoration(minTimestamp, maxTimestamp, bgReadings)
+    val clockChanges = rememberClockChangeDecoration(minTimestamp, maxTimestamp)
     val beltDecorations = remember(nowLine, clockChanges, inspectLine) { listOfNotNull(nowLine, clockChanges, inspectLine) }
 
     val rangeProvider = remember(maxX) {

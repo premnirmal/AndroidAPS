@@ -408,8 +408,8 @@ private fun GlucoseChartContent(
     var zoomCycleIndex by remember { mutableIntStateOf(-1) }
     var lastFollowedEndMillis by remember { mutableLongStateOf(viewportEndMillis) }
     val timeZone = TimeZone.currentSystemDefault()
-    val clockChanges = remember(viewportEndMillis, viewportDurationMillis, timeZone, readings) {
-        graphClockChanges(viewportEndMillis - viewportDurationMillis, viewportEndMillis, timeZone, readings)
+    val clockChanges = remember(viewportEndMillis, viewportDurationMillis, timeZone) {
+        graphClockChanges(viewportEndMillis - viewportDurationMillis, viewportEndMillis, timeZone)
             .map { it.timestamp }
     }
     val clockChangeDescription = stringResource(R.string.trio_graph_clock_change)

@@ -1,8 +1,5 @@
 package app.aaps.trio.ui.compose.overview
 
-import app.aaps.core.interfaces.overview.graph.BgDataPoint
-import app.aaps.core.interfaces.overview.graph.BgRange
-import app.aaps.core.interfaces.overview.graph.BgType
 import app.aaps.ui.compose.overview.graphs.graphClockChanges
 import com.google.common.truth.Truth.assertThat
 import kotlinx.datetime.TimeZone
@@ -58,31 +55,8 @@ class ChartClockChangesTest {
             .inOrder()
     }
 
-    @Test
-    fun `marks stored time zone changes even when the earlier reading is outside the viewport`() {
-        val readings = listOf(
-            reading("2026-10-24T23:55:00Z", 60),
-            reading("2026-10-25T00:05:00Z", -240)
-        )
-        assertThat(changes("2026-10-25T00:00:00Z", "2026-10-25T04:00:00Z", TimeZone.UTC, readings))
-            .containsExactly(millis("2026-10-25T00:05:00Z"))
-    }
-
-    @Test
-    fun `stored daylight saving changes do not add a second marker`() {
-        val readings = listOf(
-            reading("2026-10-25T00:55:00Z", 60),
-            reading("2026-10-25T01:05:00Z", 0)
-        )
-        assertThat(changes("2026-10-25T00:00:00Z", "2026-10-25T04:00:00Z", london, readings))
-            .containsExactly(millis("2026-10-25T01:00:00Z"))
-    }
-
-    private fun reading(time: String, offsetMinutes: Int) =
-        BgDataPoint(millis(time), 100.0, BgRange.IN_RANGE, BgType.REGULAR, utcOffset = offsetMinutes * 60_000L)
-
-    private fun changes(start: String, end: String, zone: TimeZone = london, readings: List<BgDataPoint> = emptyList()): List<Long> =
-        graphClockChanges(millis(start), millis(end), zone, readings).map { it.timestamp }
+    private fun changes(start: String, end: String, zone: TimeZone = london): List<Long> =
+        graphClockChanges(millis(start), millis(end), zone).map { it.timestamp }
 
     private fun millis(value: String): Long = Instant.parse(value).toEpochMilli()
 }
