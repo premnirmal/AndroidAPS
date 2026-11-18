@@ -38,7 +38,7 @@ object AapsSpacing {
 
     // BG circle dimensions
     val bgCircleSize = 126.dp
-    val bgRingStrokeWidth = 10.dp
+    val bgRingStrokeWidth = 8.dp
     val tirPieChartCircleSize = 120.dp
     val tirPieChartStrokeWidth = 20.dp
 
