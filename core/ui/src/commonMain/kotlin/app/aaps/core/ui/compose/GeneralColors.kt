@@ -46,6 +46,8 @@ import androidx.compose.ui.graphics.Color
  * @property trioBgAccent Color for the Trio BG trend arrow and the cyan ring stop
  * @property trioBgGlow Color and opacity for the Trio BG glow
  * @property trioBgCircle Color inside the Trio BG ring
+ * @property trioBgHighThreshold Static high threshold colour from Trio iOS (purple)
+ * @property trioBgLowThreshold Static low threshold colour from Trio iOS (red)
  * @property trioCarbs Color for carbohydrate bars in the Trio statistics screen (orange)
  * @property originalBgValue Color for regular CGM BG readings (white/outlined dots)
  * @property iobPrediction Color for IOB-based BG predictions (blue)
@@ -85,6 +87,8 @@ data class GeneralColors(
     val trioBgRingIndigo: Color,
     val trioBgRingBlue: Color,
     val trioBgCircle: Color,
+    val trioBgHighThreshold: Color,
+    val trioBgLowThreshold: Color,
     val trioInsulin: Color,
     val trioBasal: Color,
     val trioSmb: Color,
@@ -159,6 +163,8 @@ val LightGeneralColors = GeneralColors(
     trioBgRingIndigo = Color(0xFF7C8BF3),
     trioBgRingBlue = Color(0xFF57AAEC),
     trioBgCircle = Color(0xFFFFFFFF),
+    trioBgHighThreshold = Color.hsv(270f, 0.6f, 0.9f),
+    trioBgLowThreshold = Color.hsv(0f, 0.6f, 0.9f),
     trioInsulin = Color(0xFF1E96FC),
     trioBasal = Color(0x801E96FC),
     trioSmb = Color(0xFF007AFF),
@@ -229,6 +235,8 @@ val DarkGeneralColors = GeneralColors(
     trioBgRingIndigo = Color(0xFF7C8BF3),
     trioBgRingBlue = Color(0xFF57AAEC),
     trioBgCircle = Color(0xFF21212E),
+    trioBgHighThreshold = Color.hsv(270f, 0.6f, 0.9f),
+    trioBgLowThreshold = Color.hsv(0f, 0.6f, 0.9f),
     trioInsulin = Color(0xFF1E96FC),
     trioBasal = Color(0x801E96FC),
     trioSmb = Color(0xFF007AFF),

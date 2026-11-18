@@ -357,7 +357,8 @@ private fun GlucoseChartContent(
     val iobColor = colors.iobPrediction
     val cobColor = colors.cobPrediction
     val targetColor = colors.loopClosed
-    val targetRangeColor = colors.bgTargetRangeArea
+    val lowThresholdColor = colors.trioBgLowThreshold
+    val highThresholdColor = colors.trioBgHighThreshold
     val lowColor = colors.bgLow
     val highColor = colors.bgHigh
     val predictionColors = mapOf(
@@ -652,15 +653,6 @@ private fun GlucoseChartContent(
                 return glucoseBottom - (((clamped - yMin) / ySpan).toFloat()) * glucoseChartHeight
             }
 
-            // Target BG range as a light translucent green band .
-            val targetTop = yFor(highMark)
-            val targetBottom = yFor(lowMark)
-            drawRect(
-                color = targetRangeColor,
-                topLeft = Offset(leftGutter, targetTop),
-                size = Size(chartWidth, (targetBottom - targetTop).coerceAtLeast(0f)),
-            )
-
             // Horizontal gridlines with value labels.
             val yStep = chooseYGridStep(ySpan)
             var yValue = ceil(yMin / yStep) * yStep
@@ -677,22 +669,22 @@ private fun GlucoseChartContent(
                 yValue += yStep
             }
 
-            // // Dashed low/high target lines.
-            // val dash = PathEffect.dashPathEffect(floatArrayOf(12f, 8f))
-            // drawLine(
-            //     color = lowColor,
-            //     start = Offset(leftGutter, yFor(lowMark)),
-            //     end = Offset(size.width, yFor(lowMark)),
-            //     strokeWidth = 1.5.dp.toPx(),
-            //     pathEffect = dash,
-            // )
-            // drawLine(
-            //     color = highColor,
-            //     start = Offset(leftGutter, yFor(highMark)),
-            //     end = Offset(size.width, yFor(highMark)),
-            //     strokeWidth = 1.5.dp.toPx(),
-            //     pathEffect = dash,
-            // )
+            val dashLength = AapsSpacing.glucoseThresholdDashLength.toPx()
+            val thresholdDash = PathEffect.dashPathEffect(floatArrayOf(dashLength, dashLength))
+            drawLine(
+                color = lowThresholdColor,
+                start = Offset(leftGutter, yFor(lowMark)),
+                end = Offset(size.width, yFor(lowMark)),
+                strokeWidth = AapsSpacing.glucoseThresholdStrokeWidth.toPx(),
+                pathEffect = thresholdDash,
+            )
+            drawLine(
+                color = highThresholdColor,
+                start = Offset(leftGutter, yFor(highMark)),
+                end = Offset(size.width, yFor(highMark)),
+                strokeWidth = AapsSpacing.glucoseThresholdStrokeWidth.toPx(),
+                pathEffect = thresholdDash,
+            )
 
             // Time grid lines; spacing adapts to keep lines roughly a finger apart
             val tickIntervalMillis = chooseTimeGridInterval(viewportDurationMillis, chartWidth)

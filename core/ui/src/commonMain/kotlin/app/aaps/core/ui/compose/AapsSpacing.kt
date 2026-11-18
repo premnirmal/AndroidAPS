@@ -42,6 +42,10 @@ object AapsSpacing {
     val tirPieChartCircleSize = 120.dp
     val tirPieChartStrokeWidth = 20.dp
 
+    // Glucose threshold lines, matching Trio iOS
+    val glucoseThresholdStrokeWidth = 1.dp
+    val glucoseThresholdDashLength = 5.dp
+
     // Trend arrow drawn next to a BG value
     val trendArrowSize = 20.dp
 
