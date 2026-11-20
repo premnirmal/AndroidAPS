@@ -594,8 +594,11 @@ class ComposeMainActivity : MetroAppCompatActivity() {
                         else searchViewModel.onSearchModeDeactivated()
                     },
                     onSearchResultClick = { entry ->
+                        searchViewModel.recordCurrentQuery()
                         handleSearchResultClick(entry, navController)
                     },
+                    onSearchHistoryClick = { searchViewModel.onQueryChanged(it) },
+                    onSearchHistoryRemove = { searchViewModel.removeFromHistory(it) },
                     onSearchPluginToggle = { plugin -> searchViewModel.togglePlugin(plugin) },
                     onConfirmSearchPluginSwitch = { searchViewModel.confirmPluginSwitch() },
                     onDismissSearchPluginSwitch = { searchViewModel.dismissPluginSwitch() },

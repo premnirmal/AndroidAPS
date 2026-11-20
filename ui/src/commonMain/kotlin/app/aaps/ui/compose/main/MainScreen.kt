@@ -102,6 +102,8 @@ fun MainScreen(
     onSearchClear: () -> Unit,
     onSearchActiveChange: (Boolean) -> Unit,
     onSearchResultClick: (SearchIndexEntry) -> Unit,
+    onSearchHistoryClick: (String) -> Unit,
+    onSearchHistoryRemove: (String) -> Unit,
     onSearchPluginToggle: (PluginBase) -> Unit,
     onConfirmSearchPluginSwitch: () -> Unit,
     onDismissSearchPluginSwitch: () -> Unit,
@@ -336,6 +338,10 @@ fun MainScreen(
                             revision = searchUiState.revision,
                             onResultClick = onSearchResultClick,
                             onPluginToggle = onSearchPluginToggle,
+                            query = searchUiState.query,
+                            history = searchUiState.history,
+                            onHistoryClick = onSearchHistoryClick,
+                            onHistoryRemove = onSearchHistoryRemove,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(contentPadding)

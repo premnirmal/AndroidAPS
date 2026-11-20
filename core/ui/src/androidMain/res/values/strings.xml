@@ -1126,6 +1126,8 @@
     <!--    Search-->
     <string name="search">Search</string>
     <string name="clear">Clear</string>
+    <string name="search_recent">Recent searches</string>
+    <string name="search_history_remove">Remove from recent searches</string>
 
     <!--    Food Management -->
     <string name="food_management">Food</string>
