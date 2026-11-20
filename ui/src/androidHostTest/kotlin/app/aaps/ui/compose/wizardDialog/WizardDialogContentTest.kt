@@ -177,7 +177,7 @@ class WizardDialogContentTest {
     }
 
     private fun checkCorrectionButtonPositions(expanded: Boolean) {
-        var state by mutableStateOf(loaded().copy(hasResult = true, calculationExpanded = true, totalInsulin = 1.0, showNotes = true))
+        var state by mutableStateOf(loaded().copy(hasResult = true, calculationExpanded = true, totalInsulin = 1.0))
         setWizard(
             uiState = { state },
             onDirectCorrectionChange = { state = state.copy(directCorrection = it) }
@@ -228,7 +228,7 @@ class WizardDialogContentTest {
 
     private fun checkPercentageButtonPositions(expanded: Boolean, atBottom: Boolean = false) {
         var state by mutableStateOf(
-            loaded().copy(hasResult = true, calculationExpanded = true, totalInsulin = 1.0, showNotes = !atBottom, simpleMode = atBottom)
+            loaded().copy(hasResult = true, calculationExpanded = true, totalInsulin = 1.0, simpleMode = atBottom)
         )
         setWizard(uiState = { state }, onPercentageChange = { state = state.copy(percentage = it.toInt()) })
         if (expanded) {

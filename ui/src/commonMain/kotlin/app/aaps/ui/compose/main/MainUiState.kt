@@ -53,9 +53,7 @@ data class MainUiState(
     val smbEnabled: Boolean = false,
     val pumpEndTimeMillis: Long? = null,
     val reservoirUnits: Double? = null,
-    val pumpSuspended: Boolean = false,
-    // QuickWizard entries for treatment bottom sheet
-    val quickWizardItems: List<QuickWizardItem> = emptyList()
+    val pumpSuspended: Boolean = false
 )
 
 @Immutable

@@ -20,7 +20,8 @@ emulator are `PumpEmulatorControl` in `:core:interfaces`.
 
 - **The start loads everything, the stop drops everything.** `onStart` reads all the driver needs from storage and
   the pump, and `onStop` leaves nothing in memory that the next start would trust. Then a driver reload, as a settings
-  import does it, gives the same pump as before. `aDriverReloadKeepsThePump` checks it.
+  import does it, gives the same pump as before. `aDriverReloadKeepsThePump` checks it. A switch to another pump and
+  back is a stop and a start too, with a pump that went on alone: `aPumpSwitchedAwayAndBackKeepsItsTempBasal`.
 - **No test code in drivers.** Faults, events and speed live in the emulator and its transport only, so the driver
   cannot tell a test from a real pump.
 
@@ -111,8 +112,8 @@ The steps below are the order that worked for the Diaconn G8 (2026-11). The code
 Only on a temporary emulator: the tests clear the app's settings. For example
 `emulator -avd <avd> -read-only -no-snapshot -port 5590`, then point every `adb` call at that serial.
 
-- Build: `./gradlew.bat :app:assembleFullDebug :app:assembleFullDebugAndroidTest` (a 4.0.0 tree must be committed to
-  build the app).
+- Build: `./gradlew.bat :app:assembleFullDebug :app:assembleFullDebugAndroidTest` (`./gradlew` on macOS). When
+  `Versions.appVersion` has no `-`, as in a release, uncommitted changes stop the build.
 - Run: `adb -s <serial> shell am instrument -w -r -e class app.aaps.e2e.<Pump>ScenarioTest
   info.nightscout.androidaps.test/app.aaps.runners.AapsTestRunner`
 - At real speed: add `-e emulatorSpeed real`. Use it to look for timing faults.
@@ -155,6 +156,18 @@ CI does (on Windows through `cmd`: PowerShell puts a byte-order mark before the 
 cmd /c "echo no| <sdk>\cmdline-tools\latest\bin\avdmanager.bat create avd -n citest_local -k system-images;android-31;google_apis_playstore;x86_64"
 ```
 
+With no `android-31` image at hand, any phone AVD shows the same layout faults once it is set to that screen:
+`adb -s <serial> shell wm size 320x640` and `adb -s <serial> shell wm density 160`. On a `-read-only` emulator the
+change is gone with the emulator.
+
+What the small screen has shown so far, all in `ScreenDriver`:
+
+- `UiObject2.scroll()` is not used. It did not move a pump settings list (a scrolling Compose column), and it returned
+  "at the end" after every step, so a search went one step down and one step up for ever. `ScreenDriver` swipes by
+  itself, near the left edge where no slider or button is, and turns around when a step moved nothing.
+- A bottom sheet as tall as the screen covers its scrim, so "Close sheet" is not there. The drag handle is the sign
+  then. The permissions sheet at the app start is that tall on a newer Android, which asks for more.
+
 Shard C's logcat can rotate before CI reads it, so the UI base adds the screen to the error, which the test output keeps.
 
 ## Traps
@@ -186,7 +199,8 @@ Shard C's logcat can rotate before CI reads it, so the UI base adds the screen t
   A record it sets to 0 U counts as no record.
 - A pump clock can be a second or two behind the phone, so the record of the first command can be timed just before the
   first profile. AAPS once dropped it ("No profile running") and the first Dana temp basal failed now and then in CI;
-  now PumpSync gives such a record the first profile. `pair()` does not wait, so the scenarios keep checking that.
+  now PumpSync gives such a record the first profile. `pair()` adds no extra wait after the profile, so the scenarios
+  keep checking that.
 - A scenario checks the records as soon as the queue is idle. A driver that stores what a status read found from a
   launched coroutine can store it after the check: the Equil decision on an extended bolus whose answer was lost was
   right in the log and still failed the check. Store it before the read ends.
@@ -204,8 +218,9 @@ Shard C's logcat can rotate before CI reads it, so the UI base adds the screen t
   `isFakingTempsByExtendedBoluses` says.
 - An alarm reaches the user in two ways: from a background thread as the full-screen alarm notification, from the main
   thread as the alarm screen. `checkUrgentAlarmSince` accepts either.
-- A driver's own database, as the stored pump log of Aaruy, is a file. It outlives the test graph, so a test finds the
-  rows of the tests before it. A driver must not take an old row for a new event; Aaruy tells them apart by the row id.
+- A driver's own database, as the stored pump log of Aaruy (the driver lives on the `aaruy` branch, not on dev), is a
+  file. It outlives the test graph, so a test finds the rows of the tests before it. A driver must not take an old row
+  for a new event; Aaruy tells them apart by the row id.
 - After a profile write AAPS stores the switch with the basal the pump reports (`deliveredBasal`), not the asked one. A
   write the driver took as done by mistake therefore does not show as the new basal: AAPS runs the switch with the old
   basal. Check whether AAPS stored the switch (`profileWrittenOnce`), not its basal. A report further than
@@ -234,5 +249,17 @@ Shard C's logcat can rotate before CI reads it, so the UI base adds the screen t
   gives the profile's basal, or a fault a test sets right after the pairing hits the pairing's write.
 - A report of the pump is not always "ready". The Diaconn G8 reports a basal write at about 23.5 s, then still refuses
   the start of that basal; it took it at 30.5 s. Test a shorter wait on the real pump before the emulator copies it.
+- A driver may read "connected" from a value its own radio code writes. The Omnipod drivers keep the link state in the
+  pod state, written by the real connection class. The emulator replaces that class, so it must write the same value
+  at the same moments, or the queue asks for a connection again and again while the link is up.
+- A driver without the shared BLE transport (the Omnipod drivers) needs its own seam: an interface for all it asks of
+  Bluetooth (scan, connect, bond), with the real radio and the emulator behind it. Put the emulator at the lowest
+  interface the driver has, so its own packet, pairing and encryption code still runs against the emulated pump.
+- A pump that reports its reservoir only below a limit (a pod says only "more than 50 U" above 50 U): the scenarios
+  follow a bolus by the reservoir, so the emulated pump starts at that limit. Say so in the emulator: it is not what a
+  new pump holds.
+- A pod has no stop on its screens, but its drivers write a profile as "stop the pod, then send the basal". A test
+  that needs a stopped pod loses the second command (`loseCommand(BASAL_PROFILE)`, then `profileWrittenOnce`). That is
+  also how a user comes to see "Resume Delivery".
 - A percent pump turns the loop's rate into a percent of the base rate. A trap needs a base on which the rate is a
   float error away from a step and still under the limits (1 U/h, 200 %): the amount scenario switches to 80 %.

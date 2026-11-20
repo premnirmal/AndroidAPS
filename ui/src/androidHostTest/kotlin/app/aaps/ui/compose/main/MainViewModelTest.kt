@@ -25,9 +25,7 @@ import app.aaps.core.interfaces.clientcontrol.ClientControlActionDispatcher
 import app.aaps.core.interfaces.clientcontrol.FailureReason
 import app.aaps.core.interfaces.configuration.Config
 import app.aaps.core.interfaces.configuration.InitProgress
-import app.aaps.core.interfaces.constraints.ConstraintsChecker
 import app.aaps.core.interfaces.db.PersistenceLayer
-import app.aaps.core.interfaces.iob.IobCobCalculator
 import app.aaps.core.interfaces.logging.AAPSLogger
 import app.aaps.core.interfaces.logging.UserEntryLogger
 import app.aaps.core.interfaces.nsclient.ProcessedDeviceStatusData
@@ -125,10 +123,8 @@ internal class MainViewModelTest {
     @Mock private lateinit var rh: ResourceHelper
     @Mock private lateinit var dateUtil: DateUtil
     @Mock private lateinit var overviewDataCache: OverviewDataCache
-    @Mock private lateinit var iobCobCalculator: IobCobCalculator
     @Mock private lateinit var profileFunction: ProfileFunction
     @Mock private lateinit var profileUtil: ProfileUtil
-    @Mock private lateinit var constraintChecker: ConstraintsChecker
     @Mock private lateinit var quickWizard: QuickWizard
     @Mock private lateinit var automation: Automation
     @Mock private lateinit var persistenceLayer: PersistenceLayer
@@ -176,10 +172,11 @@ internal class MainViewModelTest {
         whenever(overviewDataCache.profileFlow).thenReturn(MutableStateFlow<ProfileDisplayData?>(null))
         whenever(overviewDataCache.runningModeFlow).thenReturn(MutableStateFlow<RunningModeDisplayData?>(null))
         whenever(overviewDataCache.tbrFlow).thenReturn(MutableStateFlow<TbrDisplayData?>(null))
+        // Folded into the toolbar's combine: a QuickWizard entry outside its time window is hidden.
         whenever(quickWizard.changes).thenReturn(MutableStateFlow(0))
         whenever(loop.isRunning).thenReturn(loopRunning)
         whenever(activePlugin.activePump).thenReturn(pump)
-        // App init, also folded into chipStateFlow: the QuickWizard items are built once it completes.
+        // App init is also folded into chipStateFlow.
         whenever(config.initProgressFlow).thenReturn(MutableStateFlow(InitProgress(done = true)))
 
         // Active scene state and the scene catalog, read as fields (activeSceneState, sceneExpired.map,
@@ -214,7 +211,7 @@ internal class MainViewModelTest {
 
     private fun createViewModel() = MainViewModel(
         activePlugin, config, urlOpener, preferences, fabricPrivacy, rh, dateUtil,
-        overviewDataCache, iobCobCalculator, profileFunction, profileUtil, constraintChecker, quickWizard,
+        overviewDataCache, profileFunction, profileUtil, quickWizard,
         automation, persistenceLayer, aapsLogger, quickLaunchResolver, wizardExecutor,
         batchExecutor, uel, loop, processedDeviceStatusData, protectionCheck, sceneActions, sceneChainTargetResolver,
         sceneStore, activeSceneManager, rxBus, nsClient, visibilityContext,
@@ -257,7 +254,6 @@ internal class MainViewModelTest {
         assertThat(state.isDrawerOpen).isFalse()
         assertThat(state.runningMode).isEqualTo(RM.Mode.DISABLED_LOOP)
         assertThat(sut.profileCardTempTargetStateFlow.value.state).isEqualTo(TempTargetChipState.None)
-        assertThat(state.quickWizardItems).isEmpty()
     }
 
     @Test
