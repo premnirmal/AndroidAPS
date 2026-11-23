@@ -9,7 +9,7 @@
     <string name="application_expired">Приложението е твърде старо!</string>
     <string name="running_invalid_version">Използвате грешна версия. APS е изключен!</string>
     <string name="versionavailable">Има налично обновяване до версия %1$s </string>
-    <string name="version_expire">Версия %1$s изтича на %2$s и ще превключи на LGS режим</string>
+    <string name="version_expire">Версия %1$s изтича на %2$s и ще премине в режим LGS</string>
     <!-- Signature verifier -->
     <!-- BG Quality -->
     <string name="recalculated_data_used">Рекалкулирани използвани данни</string>
@@ -28,5 +28,18 @@
     <string name="smbnotallowedinopenloopmode">SMB не е позволен в режим Отворен кръг</string>
     <string name="maxvalueinpreferences">макс. стойност в настройките</string>
     <string name="hardlimit">твърд лимит</string>
+    <!-- Objectives -->
+    <string name="completed_well_done">Приключихме, Браво!</string>
+    <string name="not_completed_yet">Все още не е завършено</string>
+    <string name="time_elapsed">Изминало време</string>
+    <string name="hasbgdata">Има данни за КЗ от избрания източник</string>
+    <string name="synchaswritepermission">Услугата за синхронизация има разрешение за запис</string>
+    <string name="loopenabled">APS разрешен</string>
+    <string name="apsselected">Избран APS</string>
+    <string name="closedmodeenabled">APS - Затворен кръг е позволен</string>
+    <string name="description_objectives">Разучаване на програмата</string>
+    <string name="doyouwantresetstart">Искате ли да нулирате началото на целта? Може да загубите напредъка си.</string>
+    <string name="objectives_button_unfinish">Изчисти завършените</string>
+    <string name="objectives_button_unstart">Изчисти стартираните</string>
     <string name="bg_doubled_lgs">LGS режим поради дублирани данни за КЗ</string>
 </resources>

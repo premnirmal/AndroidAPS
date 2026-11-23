@@ -31,8 +31,8 @@ dependencies {
     implementation(libs.androidx.room.rxjava3)
     implementation(libs.kotlinx.coroutines.rx3)
 
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    debugImplementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.jetbrains.compose.ui.tooling.preview)
+    debugImplementation(libs.jetbrains.compose.ui.tooling)
 
     implementation(libs.androidx.webkit)
 
