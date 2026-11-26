@@ -380,6 +380,8 @@ class MainViewModel(
             algorithmReasoning = chip.algorithmReasoning,
             loopStoppedReason = chip.loopStoppedReason,
             tbrState = chip.tbrState,
+            tbrText = chip.tbrText,
+            tbrProgress = chip.tbrProgress,
             smbEnabled = ev.smbEnabled,
             pumpEndTimeMillis = chip.pumpEndTimeMillis,
             reservoirUnits = chip.reservoirUnits,
@@ -558,6 +560,11 @@ class MainViewModel(
         val tbrExpired = tbrData != null && tbrData.state != TbrState.NONE && tbrData.duration > 0
             && now >= tbrData.timestamp + tbrData.duration
         if (tbrExpired) overviewDataCache.refreshTbr()
+        val tbrRunning = tbrData != null && tbrData.state != TbrState.NONE && !tbrExpired
+        val tbrProgress = if (tbrRunning && tbrData.duration > 0) {
+            ((now - tbrData.timestamp).toFloat() / tbrData.duration.toFloat()).coerceIn(0f, 1f)
+        } else 0f
+        val tbrText = if (tbrRunning) tbrData.percent?.let { rh.gs(CoreUiStrings.formatPercent, it.toDouble()) } ?: "" else ""
 
         // TT progress and display text
         val ttProgress = if (ttIsFinite && !ttExpired) {
@@ -661,6 +668,8 @@ class MainViewModel(
             algorithmReasoning = currentAlgorithmReasoning(),
             loopStoppedReason = currentLoopStoppedReason(),
             tbrState = if (tbrExpired) TbrState.NONE else tbrData?.state ?: TbrState.NONE,
+            tbrText = tbrText,
+            tbrProgress = tbrProgress,
             pumpEndTimeMillis = if (isOverviewHydrated) livePumpEndTimeMillis else cachedOverviewStatus.pumpEndTimeMillis,
             reservoirUnits = if (isOverviewHydrated) liveReservoirUnits else cachedOverviewStatus.reservoirUnits,
             pumpSuspended = activePlugin.activePump.isSuspended()
@@ -1281,6 +1290,8 @@ private data class ChipState(
     val algorithmReasoning: String? = null,
     val loopStoppedReason: String? = null,
     val tbrState: TbrState = TbrState.NONE,
+    val tbrText: String = "",
+    val tbrProgress: Float = 0f,
     val pumpEndTimeMillis: Long? = null,
     val reservoirUnits: Double? = null,
     val pumpSuspended: Boolean = false

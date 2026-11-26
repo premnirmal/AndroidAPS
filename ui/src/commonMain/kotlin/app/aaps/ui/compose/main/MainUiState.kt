@@ -49,6 +49,10 @@ data class MainUiState(
     val loopStoppedReason: String? = null,
     // Running TBR state for chip (HIGH / LOW / NONE)
     val tbrState: TbrState = TbrState.NONE,
+    /** The TBR as a share of the profile basal, e.g. "140%", empty with no TBR */
+    val tbrText: String = "",
+    /** Share of the TBR's time that has passed, 0 with no end */
+    val tbrProgress: Float = 0f,
     // SMB enabled in APS preferences — drives a small triangle marker on the running-mode chip
     val smbEnabled: Boolean = false,
     val pumpEndTimeMillis: Long? = null,

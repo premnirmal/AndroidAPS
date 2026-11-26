@@ -56,6 +56,9 @@ import androidx.compose.ui.graphics.Color
  * @property uamPrediction Color for UAM (unannounced meals) predictions (yellow)
  * @property ztPrediction Color for zero-temp predictions (cyan)
  * @property graphGrid Color for the grid lines on the overview graphs, translucent so a band drawn under them shows through
+ * @property graphBgInRange In-range readings on the BG graph: a softer green than [bgInRange], which stays for the big BG number
+ * @property graphBgHigh High readings and the HIGH band on the BG graph: as soft as [graphBgInRange], [bgHigh] stays for the big BG number
+ * @property graphBgLow Low readings and the LOW band on the BG graph: as soft as [graphBgInRange], [bgLow] stays for the big BG number
  */
 data class GeneralColors(
     val activeInsulinText: Color,
@@ -101,6 +104,9 @@ data class GeneralColors(
     val uamPrediction: Color,
     val ztPrediction: Color,
     val graphGrid: Color,
+    val graphBgInRange: Color,
+    val graphBgHigh: Color,
+    val graphBgLow: Color,
     // Loop mode colors
     val loopClosed: Color,
     val loopOpened: Color,
@@ -176,7 +182,10 @@ val LightGeneralColors = GeneralColors(
     aCobPrediction = Color(0x80FB8C00),      // lighter orange for absorbed COB (50% alpha)
     uamPrediction = Color(0xFFC9BD60),       // yellow-ish for UAM predictions (matches uamColor attr)
     ztPrediction = Color(0xFF00D2D2),        // cyan for zero-temp predictions (matches ztColor attr)
-    graphGrid = Color(0x80CAC4D0),           // Material outlineVariant at 50%
+    graphGrid = Color(0x6679747E),           // Material outline at 40%, as in dark: outlineVariant at 50% left the grid dots almost invisible on white
+    graphBgInRange = Color(0xFF2E9E3E),      // darker soft green: pure green is hard to see on white
+    graphBgHigh = Color(0xFFE08A1E),         // soft orange
+    graphBgLow = Color(0xFFD84848),          // soft red
     // Loop mode colors
     loopClosed = Color(0xFF00C03E),          // green for closed loop
     loopOpened = Color(0xFF4983D7),          // blue for open loop
@@ -248,7 +257,10 @@ val DarkGeneralColors = GeneralColors(
     aCobPrediction = Color(0x80FFB74D),      // lighter orange for absorbed COB (50% alpha, dark mode)
     uamPrediction = Color(0xFFE6D39A),       // lighter yellow for UAM predictions (dark mode)
     ztPrediction = Color(0xFF4DD4D4),        // lighter cyan for zero-temp predictions (dark mode)
-    graphGrid = Color(0x40938F99),           // Material outline at 25%: outlineVariant at 50% was barely visible on the dark surface
+    graphGrid = Color(0x66938F99),           // Material outline at 40%, about as strong as a Material divider on the dark surface: at 25% the grid almost disappeared
+    graphBgInRange = Color(0xFF5CD66A),      // soft green: pure green looks neon on the dark surface
+    graphBgHigh = Color(0xFFE3D45A),         // soft yellow
+    graphBgLow = Color(0xFFEF6060),          // soft red
     // Loop mode colors (same in both modes)
     loopClosed = Color(0xFF00C03E),          // green for closed loop
     loopOpened = Color(0xFF4983D7),          // blue for open loop

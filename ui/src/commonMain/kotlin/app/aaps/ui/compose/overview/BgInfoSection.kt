@@ -58,6 +58,10 @@ import kotlin.math.sqrt
  *   value only if you want to override the tablet-aware default.
  * @param showTimeAgo Whether to render the small "time ago" line below the BG value.
  * @param useGradientRing Whether to use the Trio gradient around the BG circle.
+ * @param updateProgress How far the calculation after this reading has got, 0 to 1, or 0 when nothing
+ *   is being calculated. While it runs, a thin neutral ring inside the BG ring grows clockwise from the
+ *   top: it tells when IOB, COB and the predictions catch up with this reading. Inside, not outside,
+ *   where the trend triangles are; neutral, not in the BG colour, so it is not read as range or trend.
  *
  * @see BgInfoSectionInRangePreview
  * @see BgInfoSectionHighPreview
@@ -72,7 +76,8 @@ fun BgInfoSection(
     size: Dp = AapsSpacing.bgCircleSize * LocalAapsScale.current,
     showTimeAgo: Boolean = true,
     useGradientRing: Boolean = false,
-    elevation: Dp = 0.dp
+    elevation: Dp = 0.dp,
+    updateProgress: Float = 0f
 ) {
     if (bgInfo == null) {
         // Show placeholder when no data
@@ -108,6 +113,9 @@ fun BgInfoSection(
         trioColors.trioBgAccent,
         trioColors.trioBgRingPurple
     )
+    val progressStrokeWidth = UPDATE_RING_WIDTH * LocalAapsScale.current
+    val progressGap = UPDATE_RING_GAP * LocalAapsScale.current
+    val progressColor = MaterialTheme.colorScheme.onSurfaceVariant
 
     // High/low is the colour and an old reading is struck through, so the description says both.
     val a11yDescription = bgSpokenDescription(
@@ -223,12 +231,27 @@ fun BgInfoSection(
                     }
                 }
             }
+
+            // Update progress: a thin ring inside the BG ring, growing clockwise from the top
+            if (updateProgress > 0f) {
+                val inset = strokeWidth + progressGap.toPx() + progressStrokeWidth.toPx() / 2
+                val diameter = size.toPx() - 2 * inset
+                drawArc(
+                    color = progressColor,
+                    startAngle = -90f,
+                    sweepAngle = 360f * updateProgress.coerceAtMost(1f),
+                    useCenter = false,
+                    topLeft = Offset(inset, inset),
+                    size = Size(diameter, diameter),
+                    style = Stroke(width = progressStrokeWidth.toPx(), cap = StrokeCap.Round)
+                )
+            }
         }
 
         // Center content: delta on top, BG value, time ago below
         LinesInsideRing(
             circleSize = size,
-            ringStrokeWidth = ringStrokeWidth,
+            ringStrokeWidth = ringStrokeWidth + progressGap + progressStrokeWidth,
             delta = {
                 bgInfo.deltaText?.let { delta ->
                     Text(
@@ -420,3 +443,9 @@ private fun TrioBgInfoSectionPreview() {
         )
     }
 }
+
+/** Width of the update progress ring inside the BG ring. */
+private val UPDATE_RING_WIDTH = 2.dp
+
+/** Space between the BG ring and the update progress ring, so the two read as separate things. */
+private val UPDATE_RING_GAP = 2.dp
